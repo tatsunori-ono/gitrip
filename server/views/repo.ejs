@@ -1,0 +1,2973 @@
+<!-- server/views/repo.ejs -->
+<% const isOwner = repo.owner_user_id && currentUser && currentUser.id === repo.owner_user_id; %>
+
+<section class="container repo-container">
+  <!-- Title + meta row -->
+  <div class="repo-header-row">
+    <div style="flex:1; min-width:0">
+      <h1 style="margin:0"><%= repo.title %></h1>
+
+      <div class="kv" style="margin-top:8px">
+        <span class="repo-id-label">Branch</span>
+        <code><%= currentBranch %></code>
+
+        <span class="repo-id-label">Repo</span>
+        <code><%= String(repo.id || '').slice(0, 8) %></code>
+
+        <% if (repo.visibility) { %>
+          <span class="repo-id-label">Visibility</span>
+          <code><%= repo.visibility %></code>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Advanced mode toggle -->
+    <div class="mode-toggle">
+      <label class="toggle-switch">
+        <input type="checkbox" id="advancedToggle" />
+        <span class="toggle-label">Git mode</span>
+      </label>
+    </div>
+
+    <form method="post"
+          action="/ui/repos/<%= repo.id %>/star"
+          class="repo-star"
+          data-tab-only="view">
+      <input type="hidden" name="next" value="/ui/repos/<%= repo.id %>?tab=view" />
+      <button class="btn star-btn <%= isStarred ? 'star-btn--active' : '' %>"
+              type="submit"
+              aria-pressed="<%= isStarred ? 'true' : 'false' %>">
+        <i class="<%= isStarred ? 'fa-solid' : 'fa-regular' %> fa-star" aria-hidden="true"></i>
+        <span><%= starCount %></span>
+      </button>
+    </form>
+  </div>
+
+  <% if (forkedFrom) { %>
+    <p class="time" style="margin:8px 0 0">
+      Forked from
+      <a href="/ui/repos/<%= forkedFrom.id %>"><%= forkedFrom.title %></a>
+    </p>
+  <% } else if (forkedFromRestricted) { %>
+    <p class="time" style="margin:8px 0 0">
+      Forked from a private trip
+    </p>
+  <% } %>
+
+  <!-- Secondary navbar -->
+  <nav class="repo-tabs" role="tablist" aria-label="Trip sections">
+    <button type="button" class="repo-tab" role="tab" data-tab="view" title="Preview the trip plan and map">
+      <i class="fa-solid fa-eye" aria-hidden="true"></i> View
+    </button>
+    <button type="button" class="repo-tab" role="tab" data-tab="edit" title="Edit stops, timeline, and routes">
+      <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Edit
+    </button>
+    <button type="button" class="repo-tab" role="tab" data-tab="settings" title="Manage sharing, visibility, and settings">
+      <i class="fa-solid fa-gear" aria-hidden="true"></i> Settings
+    </button>
+  </nav>
+
+  <!-- PLAN PANEL: used by View + Edit -->
+  <div id="repoPanelPlan" class="repo-panel" data-tab-show="view,edit">
+    <div class="section-actions" data-tab-only="edit">
+      <!-- Branch switcher (advanced-only) -->
+      <form class="row advanced-only" onsubmit="return switchBranch(event)">
+        <label>View branch
+          <select id="branchSelect">
+            <% branches.forEach(b=> { %>
+              <option value="<%= b.name %>" <%=b.name===currentBranch ? 'selected' : '' %>><%= b.name %></option>
+            <% }) %>
+          </select>
+        </label>
+        <button class="btn">Switch</button>
+      </form>
+
+      <!-- Auto planner (Edit tab only) -->
+      <form method="get" action="/ui/planner/<%= repo.id %>" data-tab-only="edit">
+        <button class="btn btn-primary">Auto-plan</button>
+      </form>
+
+      <!-- New Branch (advanced-only) -->
+      <form id="branchForm" class="row advanced-only" onsubmit="return createBranch(event)">
+        <label>New branch name
+          <input id="newBranchName" placeholder="feature/food-route" />
+        </label>
+        <button class="btn" type="submit">Create</button>
+        <span id="branchMsg" class="time"></span>
+      </form>
+
+      <!-- Merge (advanced-only) -->
+      <form id="mergeForm" class="row advanced-only" method="get" action="/ui/repos/<%= repo.id %>/merge">
+        <label>Source
+          <select name="source">
+            <% branches.forEach(b=> { %>
+              <option value="<%= b.name %>" <%=b.name===currentBranch ? 'selected' : '' %>><%= b.name %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label>Target
+          <select name="target">
+            <% branches.forEach(b=> { %>
+              <option value="<%= b.name %>" <%=b.name==='main' ? 'selected' : '' %>><%= b.name %></option>
+            <% }) %>
+          </select>
+        </label>
+        <button class="btn">Merge…</button>
+      </form>
+    </div>
+    <div class="section-actions" data-tab-only="view">
+      <button class="btn" type="button" onclick="exportPlanPdf()" data-tab-only="view">
+        Export to PDF
+      </button>
+      <button class="btn"
+              type="button"
+              data-tab-only="view"
+              onclick="location.href='/ui/repos/<%= repo.id %>/ical?branch=<%= encodeURIComponent(currentBranch) %>'">
+        Download iCal
+      </button>
+    </div>
+
+    <div class="repo-grid">
+      <!-- Left: Plan + timeline -->
+      <div>
+        <!-- Easy-mode multi-place quick add (Edit only) -->
+        <div class="card easy-only" data-tab-only="edit" style="margin:0 0 12px">
+          <h3>Add places (easy mode)</h3>
+          <p class="time">
+            Type one place per line. GiTrip will add them to
+            <strong><%= currentBranch %></strong> and auto‑schedule a new version.
+          </p>
+
+          <%
+            const easyPlaces = [];
+            const inputPlaces =
+              snapshot &&
+              snapshot.planInput &&
+              Array.isArray(snapshot.planInput.places)
+                ? snapshot.planInput.places
+                : null;
+            const primaryName = (raw) => {
+              const label = String(raw || '').trim();
+              if (!label) return '';
+              const commaIdx = label.indexOf(',');
+              return commaIdx === -1 ? label : label.slice(0, commaIdx).trim();
+            };
+            if (inputPlaces && inputPlaces.length) {
+              inputPlaces.forEach((p) => {
+                const name = primaryName(p && p.name);
+                if (name) easyPlaces.push(name);
+              });
+            } else if (snapshot && snapshot.plan && Array.isArray(snapshot.plan.days)) {
+              snapshot.plan.days.forEach((d) => {
+                const stops = Array.isArray(d.stops) ? d.stops : [];
+                stops.forEach((s) => {
+                  const name = primaryName(s && s.name);
+                  if (name) easyPlaces.push(name);
+                });
+              });
+            }
+            const easyPlacesText = easyPlaces.join('\n');
+          %>
+
+          <form method="post"
+                action="/ui/repos/<%= repo.id %>/easy-add"
+                class="row"
+                style="margin-top:8px; align-items:flex-end"
+                id="easyAddForm">
+            <label style="flex:2">
+              Places (one per line)
+              <textarea name="placeNames"
+                        rows="3"
+                        placeholder="e.g. British Museum&#10;Covent Garden&#10;Tower Bridge"><%= easyPlacesText %></textarea>
+            </label>
+
+            <label style="flex:1">
+              Stay per place (minutes)
+              <input type="number"
+                     name="stayMin"
+                     min="5"
+                     step="5"
+                     placeholder="60" />
+            </label>
+
+            <input type="hidden" name="branch" value="<%= currentBranch %>" />
+
+            <div style="align-self:flex-end">
+              <button class="btn btn-primary" type="submit">
+                Add &amp; auto-plan
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px">
+          <h2 style="margin:0">Latest Plan (<%= currentBranch %>)</h2>
+        </div>
+
+        <%
+          const planTransport = (snapshot.plan && snapshot.plan.transport) || 'driving';
+          function modeIconHtml(mode) {
+            if (mode === 'walking') return '<i class="fa-solid fa-person-walking" aria-hidden="true"></i>';
+            if (mode === 'cycling') return '<i class="fa-solid fa-bicycle" aria-hidden="true"></i>';
+            if (mode === 'transit') return '<i class="fa-solid fa-train" aria-hidden="true"></i>';
+            return '<i class="fa-solid fa-car" aria-hidden="true"></i>';
+          }
+        %>
+
+        <% if (snapshot.plan && snapshot.plan.days && snapshot.plan.days.length) { %>
+          <% snapshot.plan.days.forEach((d, di)=> { %>
+            <div class="card">
+              <div class="day">
+                <div class="day-header">
+                  <h3>
+                    <span>Day <%= di + 1 %> (<%= d.date %>)</span>
+                    <span class="day-weather" data-day-date="<%= d.date %>"></span>
+                    <span class="day-alert-badge" data-day-date="<%= d.date %>" hidden>
+                      Travel alert
+                    </span>
+                  </h3>
+                  <div class="day-actions" data-tab-only="edit">
+                    <button class="btn btn-primary" type="button" onclick="commitTimeline('<%= d.id %>')">
+                      Save timeline
+                    </button>
+                    <span class="time" id="tlmsg-<%= d.id %>" role="status" aria-live="polite"></span>
+                  </div>
+                </div>
+
+                <!-- Inline editable SVG timeline -->
+                <div style="margin:8px 0">
+                  <svg class="timeline" data-day="<%= d.id %>" viewBox="0 0 1000 120" width="100%" height="120"
+                    aria-label="timeline">
+                    <%
+                      const toMin = s => {
+                        const parts = String(s || '00:00').split(':').map(Number);
+                        const h = parts[0] || 0;
+                        const m = parts[1] || 0;
+                        return h * 60 + m;
+                      };
+                      const actS = 8 * 60, actE = 22 * 60;
+                      const span = actE - actS;
+                      const scale = x => Math.max(0, Math.min(1000, (x - actS) / span * 1000));
+                    %>
+
+                    <!-- background + axis -->
+                    <rect x="0" y="26" width="1000" height="28" fill="#ffffff" stroke="#e0e0e6" />
+                  <% for (let h=8; h <=22; h +=1) {
+                       const x=scale(h * 60); %>
+                    <line x1="<%= x %>" y1="26" x2="<%= x %>" y2="54" stroke="#e5e7eb" />
+                    <text x="<%= x + 4 %>" y="20" font-size="10" fill="#6b7280">
+                        <%= h %>:00
+                      </text>
+                    <% } %>
+
+                    <!-- blocks -->
+                    <% d.stops.forEach((s, idx)=> {
+                         const a = toMin(s.arrive);
+                         const b = toMin(s.depart);
+                         const x = scale(a);
+                         const w = Math.max(8, scale(b) - scale(a));
+                         const baseName = String(s.name || '');
+                         const labelSource = String(s.fullName || s.name || '');
+                         const commaIdx = labelSource.indexOf(',');
+                         let shortName = baseName;
+                         if (!shortName || baseName === labelSource) {
+                           shortName = commaIdx === -1 ? labelSource : labelSource.slice(0, commaIdx);
+                         }
+                         const labelYOffset = (idx % 2) ? 22 : 38;
+                         const labelY = 68 + labelYOffset;
+                   %>
+                      <g class="tl-block" data-index="<%= idx %>">
+                        <rect class="tl-block-rect" x="<%= x %>" y="30" width="<%= w %>" height="20" rx="6" />
+                        <circle class="tl-handle" data-side="left" cx="<%= x %>" cy="40" r="5" />
+                        <circle class="tl-handle" data-side="right" cx="<%= x + w %>" cy="40" r="5" />
+                        <line class="tl-leader" x1="<%= x + 6 %>" y1="52" x2="<%= x + 6 %>" y2="<%= labelY - 10 %>"
+                              stroke="#9ca3af" stroke-width="1" stroke-dasharray="2,2" />
+                        <text class="tl-label" x="<%= x + 6 %>" y="<%= labelY %>" font-size="10" fill="#111">
+                          <%= shortName %>
+                        </text>
+                      </g>
+                    <% }); %>
+
+                    <!-- travel segments (per-leg mode) -->
+                    <% d.stops.forEach((s, idx)=> {
+                         if (idx === 0) return;
+                         const prev = d.stops[idx - 1];
+                         const px = scale(toMin(prev.depart));
+                         const x = scale(toMin(s.arrive));
+                         const mid = (px + x) / 2;
+                         const tmin = Number(s.prevTravelMin || 0);
+                         const legIcon = modeIconHtml(s.routeMode || planTransport);
+                    %>
+                      <line class="tl-travel" x1="<%= px %>" y1="40" x2="<%= x %>" y2="40" />
+                      <foreignObject x="<%= mid - 18 %>" y="24" width="80" height="20">
+                        <div xmlns="http://www.w3.org/1999/xhtml"
+                             class="timeline-leg-label"
+                             data-day-id="<%= d.id %>"
+                             data-leg-index="<%= idx %>"
+                             data-leg-minutes="<%= tmin %>"
+                             data-leg-mode="<%= s.routeMode || planTransport %>">
+                          <span class="timeline-leg-minutes"><%= tmin %> min</span>
+                          <span class="timeline-leg-icon"><%- legIcon %></span>
+                        </div>
+                      </foreignObject>
+                    <% }); %>
+                  </svg>
+                </div>
+
+                <!-- Stops + per-leg travel details -->
+                <% if (d.stops.length) { %>
+                  <ol class="day-stop-list" data-day-id="<%= d.id %>">
+                    <% d.stops.forEach((s, i)=> {
+                         const labelSource = String(s.fullName || s.name || '');
+                         const commaIdx = labelSource.indexOf(',');
+                         const derivedPrimary = commaIdx === -1 ? labelSource : labelSource.slice(0, commaIdx);
+                         const customName = (s.name || '').trim();
+                         const mainName = customName && customName !== labelSource ? customName : derivedPrimary;
+                         const restName = commaIdx === -1 ? '' : labelSource.slice(commaIdx + 1).trim();
+                         const nextStop = d.stops[i + 1];
+                         const legMode = nextStop ? (nextStop.routeMode || planTransport) : null;
+                         const legIcon = legMode ? modeIconHtml(legMode) : null;
+                   %>
+                      <li class="day-stop" data-stop-index="<%= i %>">
+                        <div>
+                          <strong><%= mainName %></strong>
+                          <% if (restName) { %>
+                            <span class="place-secondary">, <%= restName %></span>
+                          <% } %>
+                          <% if (s.openingHours) { %>
+                            <span class="place-secondary"> • <%= s.openingHours %></span>
+                          <% } %>
+                          <span class="time">
+                            • <%= s.arrive %> → <%= s.depart %>
+                          </span>
+                          <% if (s.__nudged) { %>
+                            <span class="time"> • adjusted due to <%= s.__nudged %></span>
+                          <% } %>
+                        </div>
+
+                        <% if (nextStop && legMode && legIcon) { %>
+                          <ul class="day-leg-bullets">
+                            <li class="day-leg"
+                                data-day-id="<%= d.id %>"
+                                data-leg-index="<%= i + 1 %>">
+                              <span class="time">
+                                <span class="leg-minutes"><%= (nextStop.prevTravelMin || 0) %> min</span>
+                                <span class="leg-icon"
+                                      data-day-id="<%= d.id %>"
+                                      data-leg-index="<%= i + 1 %>"
+                                      data-leg-mode="<%= legMode %>">
+                                  <%- legIcon %>
+                                </span>
+                                →
+                              </span>
+                              <ul class="transit-leg-details"
+                                  data-day-id="<%= d.id %>"
+                                  data-leg-index="<%= i + 1 %>">
+                              </ul>
+                            </li>
+                          </ul>
+                        <% } %>
+                      </li>
+                    <% }); %>
+                  </ol>
+
+                <% } else { %>
+                  <p class="time">No activities planned</p>
+                <% } %>
+              </div>
+            </div>
+
+            <% if (d.stops.length) { %>
+              <div class="card" data-tab-only="view">
+                <div class="day">
+                  <h3>Rationale</h3>
+                  <ul class="list rationale-list">
+                    <% d.stops.forEach((s, i)=> {
+                         const toMin = (t) => {
+                           const parts = String(t || '').split(':').map(Number);
+                           if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) return null;
+                           return (parts[0] || 0) * 60 + (parts[1] || 0);
+                         };
+                         const aMin = toMin(s.arrive);
+                         const bMin = toMin(s.depart);
+                         const stayMin = Number(s.stayMin || 0) || (aMin != null && bMin != null ? Math.max(0, bMin - aMin) : 0);
+                         const reasons = [];
+                         reasons.push(`Order: stop ${i + 1} in the day sequence`);
+                         if (s.arrive && s.depart) {
+                           reasons.push(`Time: ${s.arrive} -> ${s.depart} (${stayMin} min stay)`);
+                         }
+                         if (i > 0) {
+                           const travelMin = Number(s.prevTravelMin || 0);
+                           const mode = s.routeMode || planTransport;
+                           reasons.push(`Travel from previous: ${travelMin} min via ${mode}`);
+                         }
+                         if (s.startFirst) reasons.push('Start here was selected');
+                         if (s.strictOrder != null && s.strictOrder !== '') {
+                           reasons.push(`Ordering input: ${s.strictOrder}`);
+                         }
+                         if (s.fixedTime) {
+                           if (s.desiredStart || s.desiredEnd) {
+                             const window = [s.desiredStart, s.desiredEnd].filter(Boolean).join('–');
+                             reasons.push(`Fixed time: desired window ${window}`);
+                           } else {
+                             reasons.push('Fixed time enabled');
+                           }
+                         } else if (s.desiredStart || s.desiredEnd) {
+                           const window = [s.desiredStart, s.desiredEnd].filter(Boolean).join('–');
+                           reasons.push(`Desired window: ${window}`);
+                         }
+                         if (s.openingHours) reasons.push(`Opening hours: ${s.openingHours}`);
+                         if (s.__nudged) reasons.push(`Adjusted: ${s.__nudged}`);
+                    %>
+                      <li>
+                        <strong><%= s.name || `Stop ${i + 1}` %></strong>: <%= reasons.join('; ') %>
+                      </li>
+                    <% }); %>
+                  </ul>
+                </div>
+              </div>
+            <% } %>
+          <% }); %>
+        <% } else { %>
+          <div class="card">
+            <p class="time">No planned stops yet. Use "Auto-plan" or add places in easy mode to create a schedule.</p>
+          </div>
+        <% } %>
+
+        <% const overflow = (snapshot.plan && snapshot.plan.overflow) || []; %>
+        <% if (overflow.length) { %>
+          <div class="card" data-tab-show="view,edit">
+            <h3>Unscheduled places</h3>
+            <p class="time">
+              Not enough time in your chosen dates to fit these. Try extending your date range
+              or shortening stays.
+            </p>
+            <ul class="list">
+              <% overflow.forEach(p => { %>
+                <li>
+                  <strong><%= p.name %></strong>
+                  <% if (p.stayMin) { %>
+                    <span class="time"> • ~<%= p.stayMin %> min</span>
+                  <% } %>
+                </li>
+              <% }); %>
+            </ul>
+          </div>
+        <% } %>
+
+        <div class="card" data-tab-show="view,edit" style="margin-top:12px">
+          <h3>Travel alerts</h3>
+          <p class="time" style="margin-top:0">
+            Paste notes about strikes, closures, or public holidays for this trip.
+          </p>
+          <label class="time" for="travelAlertsNotes">Notes</label>
+          <textarea id="travelAlertsNotes"
+                    rows="3"
+                    placeholder="e.g., Underground strike on 12 Dec, city centre closures on marathon day."></textarea>
+          <div class="row" style="margin-top:8px; align-items:center; gap:10px" data-tab-only="edit">
+            <button id="travelAlertsSave"
+                    class="btn btn-primary"
+                    type="button"
+                    <%= currentUser ? '' : 'disabled' %>>
+              Save notes
+            </button>
+            <span id="travelAlertsStatus" class="time" role="status" aria-live="polite"></span>
+          </div>
+          <% if (!currentUser) { %>
+            <p class="time" style="margin-top:6px">Log in to save travel alert notes.</p>
+          <% } %>
+          <div id="travelAlertsFeed" class="travel-alerts-feed" style="margin-top:10px"></div>
+        </div>
+
+        <div class="card" data-tab-show="view,edit" style="margin-top:12px">
+          <h3>Packing checklist</h3>
+          <p class="time" style="margin-top:0">
+            Track what to bring for this trip.
+          </p>
+          <div class="row checklist-add-row" data-tab-only="edit">
+            <input id="checklistInput" placeholder="Add item (e.g., power adapter)" />
+            <button id="checklistAddBtn" class="btn btn-primary" type="button">Add</button>
+          </div>
+          <ul id="checklistList" class="list checklist-list"></ul>
+          <div class="row" style="margin-top:6px; align-items:center; gap:10px" data-tab-only="edit">
+            <span id="checklistStatus" class="time" role="status" aria-live="polite"></span>
+          </div>
+          <% if (!currentUser) { %>
+            <p class="time" style="margin-top:6px">Log in to update the checklist.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Right: Per-day map + branches/commits -->
+      <aside>
+        <div class="card">
+        <div class="map-header">
+            <h2>Map <br> (per day)</h2>
+            <div class="map-header-controls">
+              <div class="row map-controls">
+                <label>Day
+                  <select id="daySelect"></select>
+                </label>
+              </div>
+              <div class="row map-controls">
+                <label>Mode
+                  <select id="modeSelect">
+                    <option value="driving" <%= planTransport==='driving' ? 'selected' : '' %>>Driving</option>
+                    <option value="walking" <%= planTransport==='walking' ? 'selected' : '' %>>Walking</option>
+                    <option value="cycling" <%= planTransport==='cycling' ? 'selected' : '' %>>Cycling</option>
+                    <option value="transit" <%= planTransport==='transit' ? 'selected' : '' %>>Transit</option>
+                  </select>
+                </label>
+                <button id="recomputeTravel" class="btn" type="button">Recompute travel</button>
+              </div>
+            </div>
+          </div>
+          <div id="mapFrame" class="map-frame">
+            <div id="map" class="map-canvas"></div>
+            <button id="mapFsBtn"
+                    type="button"
+                    class="map-fs-btn"
+                    title="Toggle full screen"
+                    aria-label="Toggle full screen">
+              <i class="fa-solid fa-expand" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="section-actions map-actions" data-tab-only="edit">
+            <label class="time map-edit-toggle"
+                   data-tab-only="edit"
+                   data-tab-show="edit">
+              <input id="toggleEdit" type="checkbox" />
+              <span class="toggle-label">Edit on map</span>
+            </label>
+            <button id="saveMapEdits" class="btn btn-primary" disabled>Save map</button>
+            <span class="time" id="saveMsg" role="status" aria-live="polite"></span>
+          </div>
+        </div>
+
+        <div class="card" data-tab-show="view,edit" style="margin-top:12px">
+          <h2>
+            <span class="mode-advanced">Compare branches</span>
+            <span class="mode-easy">Compare routes</span>
+          </h2>
+          <p class="time" style="margin-top:0">
+            <span class="mode-advanced">Overlay multiple branches on the map and compare travel costs.</span>
+            <span class="mode-easy">Overlay multiple versions on the map and compare travel costs.</span>
+          </p>
+          <div class="compare-branches">
+            <% branches.forEach(b => { %>
+              <label class="compare-branch">
+                <input type="checkbox"
+                       data-compare-branch
+                       value="<%= b.name %>"
+                       <%= b.name === currentBranch ? 'checked' : '' %> />
+                <span><%= b.name %></span>
+              </label>
+            <% }); %>
+          </div>
+          <div id="compareLegend" class="compare-legend"></div>
+          <div id="compareCosts" class="compare-costs"></div>
+          <p class="time compare-note">
+            Costs use placeholder rates per mode for quick comparison.
+          </p>
+        </div>
+
+        <div class="card" data-tab-show="view,edit" style="margin-top:12px">
+          <h2>
+            <span>Contributions</span>
+          </h2>
+          <p class="time" style="margin-top:0">
+            <span class="mode-advanced">Commit counts and contributor roles for this trip.</span>
+            <span class="mode-easy">Edits and collaborator roles for this trip.</span>
+          </p>
+          <div id="contribGraph" class="contrib-graph" aria-live="polite"></div>
+          <h3 style="margin:10px 0 6px">
+            <span class="mode-advanced">Contributors</span>
+            <span class="mode-easy">Collaborators</span>
+          </h3>
+          <ul id="contribList" class="list contrib-list"></ul>
+        </div>
+
+        <div class="card advanced-only" data-tab-only="edit" style="margin-top:12px">
+          <h2>Branches</h2>
+          <div class="chips">
+            <% branches.forEach(b=> { %>
+              <span class="chip">
+                <strong>
+                  <%= b.name %>
+                </strong>
+                <span class="time">
+                  HEAD: <code><%= (b.head_commit_id || '').slice(0,8) || 'null' %></code>
+                </span>
+              </span>
+            <% }); %>
+          </div>
+        </div>
+
+        <div class="card advanced-only" data-tab-only="edit" style="margin-top:12px">
+          <h2 style="display:flex; align-items:center; justify-content:space-between; gap:12px">
+            <span>Commits</span>
+            <button id="toggleCommits" type="button" class="btn btn-sm">
+              Show more
+            </button>
+          </h2>
+          <p class="time" style="margin-top:0">
+            “Restore this version” creates a new commit on <strong><%= currentBranch %></strong> that matches that snapshot.
+          </p>
+          <ul class="list" id="commitList">
+            <% commits.forEach((c, idx)=> { %>
+              <li class="commit-item <%= idx >= 3 ? 'commit-hidden' : '' %>"
+                  data-key-reason="<%= c.keyChangeReason || '' %>">
+                <% const isKeyChange = c.keyChangeManual || c.keyChangeAuto; %>
+                <div>
+                  <code><%= c.id.slice(0,8) %></code> — <em><%= c.message %></em>
+                  <% if (isKeyChange) { %>
+                    <span class="commit-badge <%= c.keyChangeManual ? 'commit-badge--manual' : 'commit-badge--auto' %>"
+                          title="<%= c.keyChangeManual ? 'Marked as key change' : (c.keyChangeReason || 'Key change') %>">
+                      Key change
+                    </span>
+                  <% } %>
+                </div>
+                <div class="time">parents: <%= c.parents.map(p=> p.slice(0,8)).join(', ') || '—' %></div>
+                <div class="time">by <%= c.author %> at <%= c.createdAt %></div>
+                <div style="margin-top:4px">
+                  <button type="button"
+                          class="btn btn-sm"
+                          onclick="restoreCommit('<%= c.id %>')">
+                    Restore this version
+                  </button>
+                  <% if (currentUser) { %>
+                    <button type="button"
+                            class="btn btn-sm"
+                            data-commit-key-toggle
+                            data-commit-id="<%= c.id %>"
+                            data-key-auto="<%= c.keyChangeAuto ? '1' : '0' %>"
+                            data-key-manual="<%= c.keyChangeManual ? '1' : '0' %>">
+                      <%= c.keyChangeManual ? 'Unmark key change' : 'Mark key change' %>
+                    </button>
+                  <% } %>
+                  <span class="time"> Takes you back to how the trip looked then.</span>
+                </div>
+              </li>
+            <% }); %>
+          </ul>
+        </div>
+
+        <!-- Visual workflow graph (advanced-only) -->
+        <div class="card advanced-only" data-tab-only="edit" style="margin-top:12px">
+          <h2>Workflow graph</h2>
+          <p class="time">
+            Coloured dots show commit history; labels mark branch heads (current branch is highlighted).
+          </p>
+          <div id="branchGraph" class="branch-graph"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <!-- end repoPanelPlan -->
+
+  <!-- SETTINGS PANEL -->
+  <div id="repoPanelSettings" class="repo-panel" data-tab-only="settings">
+    <div class="card">
+      <h2>Trip settings</h2>
+
+      <% if (!repo.owner_user_id || isOwner) { %>
+        <form method="post"
+              action="/ui/repos/<%= repo.id %>/rename"
+              class="row"
+              style="align-items:flex-end; gap:12px; margin:0">
+          <label style="flex:2">
+            Trip name
+            <input type="text" name="title" value="<%= repo.title %>" required />
+          </label>
+          <button class="btn btn-primary" type="submit">Rename</button>
+        </form>
+      <% } else { %>
+        <p class="time">Only the owner can rename this trip.</p>
+      <% } %>
+
+      <p class="time" style="margin-top:10px">
+        <span class="mode-advanced">Repo:</span>
+        <span class="mode-easy">Trip ID:</span>
+        <code><%= repo.id %></code>
+        •
+        <span class="mode-advanced">Branch:</span>
+        <span class="mode-easy">Version:</span>
+        <code><%= currentBranch %></code>
+      </p>
+    </div>
+
+    <!-- Share / Collaborate -->
+    <div class="card" style="margin-top:12px">
+      <h2>Share / Collaborate</h2>
+
+      <% if (!currentUser) { %>
+        <p class="time">
+          This trip is private to this browser/server. You only need an
+          account if you want to share,
+          <span class="mode-advanced">fork</span>
+          <span class="mode-easy">copy</span>,
+          or collaborate on trips.
+        </p>
+        <a
+          class="btn btn-primary"
+          href="/ui/signup?next=<%= encodeURIComponent('/ui/repos/' + repo.id) %>">
+          Sign up to share or
+          <span class="mode-advanced">fork</span>
+          <span class="mode-easy">copy</span>
+          this trip
+        </a>
+      <% } else { %>
+        <p class="time">
+          Owner:
+          <% if (repo.owner_user_id) { %>
+            <% if (isOwner) { %>
+              you (<%= currentUser.email %>)
+            <% } else { %>
+              <%= (collaborators || []).find(c => c.user_id === repo.owner_user_id)?.email
+                    || 'unknown' %>
+            <% } %>
+          <% } else { %>
+            —
+          <% } %>
+        </p>
+
+        <!-- Visibility toggle -->
+        <form method="post"
+              action="/ui/repos/<%= repo.id %>/visibility"
+              class="row"
+              style="align-items:center; margin-bottom:8px">
+          <label style="flex:1">
+            Visibility
+            <select name="visibility" <%= isOwner ? '' : 'disabled' %>>
+              <option value="private"
+                      <%= repo.visibility !== 'public' ? 'selected' : '' %>>
+                Private (only collaborators)
+              </option>
+              <option value="public"
+                      <%= repo.visibility === 'public' ? 'selected' : '' %>>
+                Public (anyone with link)
+              </option>
+            </select>
+          </label>
+
+          <% if (isOwner) { %>
+            <div style="margin-top:22px; display:flex; align-items:center; gap:10px">
+              <button class="btn" type="submit">Update</button>
+              <% if (repo.visibility !== 'public') { %>
+                <span class="time">Currently private</span>
+              <% } else { %>
+                <span class="time">Currently public</span>
+              <% } %>
+            </div>
+          <% } else { %>
+            <span class="time" style="margin-top:22px">
+              Only the owner can change this.
+            </span>
+          <% } %>
+        </form>
+
+        <!-- Collaborator list -->
+        <h3 style="margin-top:4px">Collaborators</h3>
+        <% if (collaborators && collaborators.length) { %>
+          <ul class="list">
+            <% collaborators.forEach(c => { %>
+              <li style="display:flex;align-items:center;gap:8px">
+                <% if (c.profile_image_url) { %>
+                  <img src="<%= c.profile_image_url %>" class="collab-avatar" alt="">
+                <% } else { %>
+                  <span class="collab-avatar collab-avatar--initials"><%= (c.name || c.email)[0].toUpperCase() %></span>
+                <% } %>
+                <span>
+                  <strong><%= c.email %></strong>
+                  <span class="time">
+                    (<%= c.role %>
+                    <%= (repo.owner_user_id && c.user_id === repo.owner_user_id)
+                          ? ', owner' : '' %>)
+                  </span>
+                  <% if (c.name) { %>
+                    <span class="time"> — <%= c.name %></span>
+                  <% } %>
+                </span>
+              </li>
+            <% }); %>
+          </ul>
+        <% } else { %>
+          <p class="time">No collaborators yet.</p>
+        <% } %>
+
+        <!-- Invite form (owner only) -->
+        <% if (isOwner) { %>
+          <form method="post"
+                action="/ui/repos/<%= repo.id %>/collaborators"
+                class="row"
+                style="margin-top:8px">
+            <label style="flex:2">
+              Invite by email
+              <input type="email"
+                     name="email"
+                     placeholder="friend@example.com"
+                     required />
+            </label>
+
+            <label style="flex:1">
+              Role
+              <select name="role">
+                <option value="editor">Editor</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </label>
+
+            <button class="btn btn-primary"
+                    type="submit"
+                    style="margin-top:22px">
+              Invite
+            </button>
+          </form>
+
+        <% } else { %>
+          <p class="time">
+            Only the owner can add collaborators.
+          </p>
+        <% } %>
+      <% } %>
+    </div>
+
+    <% if (currentUser) { %>
+      <!-- Fork -->
+      <div class="card" style="margin-top:12px">
+        <h2>
+          <span class="mode-advanced">Fork</span>
+          <span class="mode-easy">Copy trip</span>
+        </h2>
+        <p class="time">
+          <span class="mode-advanced">Create your own copy of this trip to customise.</span>
+          <span class="mode-easy">Make your own copy of this trip to customise.</span>
+        </p>
+        <form method="post"
+              action="/ui/repos/<%= repo.id %>/fork"
+              class="row"
+              style="align-items:flex-end; margin:12px 0">
+          <label style="flex:1">
+            <span class="mode-advanced">Fork name</span>
+            <span class="mode-easy">Copy name</span>
+            <input name="title"
+                   placeholder="<%= repo.title %> (fork)"
+                   data-advanced-placeholder="<%= repo.title %> (fork)"
+                   data-easy-placeholder="<%= repo.title %> (copy)" />
+          </label>
+          <div style="align-self:flex-end">
+            <button class="btn btn-primary" type="submit">
+              <span class="mode-advanced">Fork this trip</span>
+              <span class="mode-easy">Copy this trip</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    <% } %>
+
+    <!-- Danger zone -->
+    <div class="card" style="margin-top:12px">
+      <h2 style="color:#b91c1c; margin-bottom:4px">Danger zone</h2>
+      <% if (!currentUser) { %>
+        <p class="time">Sign in as the owner to delete this trip.</p>
+      <% } else if (!isOwner) { %>
+        <p class="time">Only the owner can delete this trip.</p>
+      <% } else { %>
+        <p class="time">
+          Type "<strong><%= repo.title %></strong>" to permanently delete this trip and all its history.
+        </p>
+        <form method="post"
+              action="/ui/repos/<%= repo.id %>/delete"
+              onsubmit="return confirm('This will permanently delete this trip. Continue?')">
+          <label style="display:block; margin-bottom:6px">
+            Confirm name
+            <input type="text"
+                   name="confirmName"
+                   placeholder="<%= repo.title %>"
+                   required />
+          </label>
+          <button class="btn btn-danger" type="submit">
+            Delete trip
+          </button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  function switchBranch(e) {
+    e.preventDefault();
+    const b = document.getElementById('branchSelect').value;
+    location.href = `/ui/repos/<%= repo.id %>?branch=${encodeURIComponent(b)}`;
+    return false;
+  }
+
+  async function createBranch(e) {
+    e.preventDefault();
+    const name = document.getElementById('newBranchName').value.trim();
+    if (!name) return;
+
+    const res = await fetch('/api/repos/<%= repo.id %>/branches/<%= currentBranch %>');
+    const data = await res.json();
+    const headCommit = data.headCommit;
+
+    const r = await fetch('/api/repos/<%= repo.id %>/branches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, fromCommitId: headCommit ? headCommit.id : null })
+    });
+    const msg = document.getElementById('branchMsg');
+    if (r.ok) { msg.textContent = 'Created.'; location.reload(); }
+    else { msg.textContent = 'Failed.'; }
+  }
+
+  // Restore / rollback helper
+  function restoreCommit(commitId) {
+    if (!commitId) return;
+    const ok = confirm(
+      `Restore this version onto branch "${currentBranch}"?\n\n` +
+      'This will create a new commit that matches how the trip looked at that point.'
+    );
+    if (!ok) return;
+
+    // Submit a small POST form to the UI restore route
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/ui/repos/${encodeURIComponent(repoId)}/restore`;
+
+    const branchInput = document.createElement('input');
+    branchInput.type = 'hidden';
+    branchInput.name = 'targetBranch';
+    branchInput.value = currentBranch;
+
+    const commitInput = document.createElement('input');
+    commitInput.type = 'hidden';
+    commitInput.name = 'commitId';
+    commitInput.value = commitId;
+
+    form.appendChild(branchInput);
+    form.appendChild(commitInput);
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  function exportPlanPdf() {
+    window.print();
+  }
+
+  // ---------- shared data for timeline + map + graph ----------
+  const repoId = <%- JSON.stringify(repo.id) %>;
+  const snapshotPlan = <%- JSON.stringify(
+    (snapshot && snapshot.plan) ? snapshot.plan : { days: [] }
+  ) %>;
+  const days = Array.isArray(snapshotPlan.days) ? snapshotPlan.days : [];
+  const dayData = days.slice();
+  const currentBranch = <%- JSON.stringify(currentBranch) %>;
+  const commitsData = <%- JSON.stringify(commits) %>;
+  const branchesData = <%- JSON.stringify(branches) %>;
+  const collaboratorsData = <%- JSON.stringify(collaborators || []) %>;
+  const ACT_START = 8 * 60, ACT_END = 22 * 60, SPAN = ACT_END - ACT_START;
+
+  // ---------- Repo tabs (View / Edit / Settings) ----------
+  function getRepoTab() {
+    return String(document.documentElement.dataset.repoTab || 'view').toLowerCase();
+  }
+
+  (function initRepoTabs() {
+    const allowed = ['view', 'edit', 'settings'];
+    const KEY = `gitripRepoTab:${repoId}`;
+
+    const btns = Array.from(document.querySelectorAll('.repo-tab[data-tab]'));
+
+    const normalize = (x) => {
+      x = String(x || '').toLowerCase();
+      return allowed.includes(x) ? x : null;
+    };
+
+    function apply(tab) {
+      const t = normalize(tab) || 'view';
+      document.documentElement.dataset.repoTab = t;
+
+      // Toggle elements that declare tab visibility
+      document.querySelectorAll('[data-tab-only]').forEach((el) => {
+        el.hidden = String(el.getAttribute('data-tab-only')) !== t;
+      });
+      document.querySelectorAll('[data-tab-show]').forEach((el) => {
+        const raw = String(el.getAttribute('data-tab-show') || '');
+        const list = raw.split(',').map(s => s.trim()).filter(Boolean);
+        el.hidden = !list.includes(t);
+      });
+
+      // Update tab button state
+      btns.forEach((b) => {
+        const isActive = b.getAttribute('data-tab') === t;
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        b.tabIndex = isActive ? 0 : -1;
+        b.classList.toggle('repo-tab--active', isActive);
+      });
+
+      // Persist + URL
+      try { localStorage.setItem(KEY, t); } catch {}
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', t);
+      window.history.replaceState({}, '', url.toString());
+
+      // Notify listeners (map/timeline)
+      document.dispatchEvent(new CustomEvent('gitrip:tabchange', { detail: { tab: t } }));
+    }
+
+    // initial: URL > localStorage > first-visit default
+    const fromUrl = normalize(new URLSearchParams(location.search).get('tab'));
+    let initial = fromUrl;
+    if (!initial) {
+      try { initial = normalize(localStorage.getItem(KEY)); } catch {}
+    }
+    if (!initial) {
+      const VISITED_KEY = `${KEY}:visited`;
+      let visited = false;
+      try { visited = localStorage.getItem(VISITED_KEY) === '1'; } catch {}
+      initial = visited ? 'view' : 'edit';
+      try { localStorage.setItem(VISITED_KEY, '1'); } catch {}
+    }
+
+    apply(initial);
+
+    btns.forEach((b) => b.addEventListener('click', () => apply(b.getAttribute('data-tab'))));
+
+    const tablist = document.querySelector('.repo-tabs');
+    if (tablist) {
+      tablist.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+        const idx = btns.findIndex((x) => x.getAttribute('aria-selected') === 'true');
+        if (idx < 0) return;
+        ev.preventDefault();
+        const dir = ev.key === 'ArrowRight' ? 1 : -1;
+        const next = (idx + dir + btns.length) % btns.length;
+        btns[next].focus();
+        apply(btns[next].getAttribute('data-tab'));
+      });
+    }
+  })();
+
+  function shortPlaceName(name) {
+    const str = String(name || '');
+    const idx = str.indexOf(',');
+    return idx === -1 ? str : str.slice(0, idx);
+  }
+
+  // expose days for easy-save
+  window.days = days;
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function normalizeKey(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+  function authorHint(author) {
+    const key = normalizeKey(author);
+    if (key === 'system') return 'System-generated initial commit.';
+    if (key === 'planner') return 'Commit created by the auto-planner.';
+    if (key === 'web') return 'Commit created via the web UI.';
+    return '';
+  }
+  function toHHMM(min) {
+    const h = Math.floor(min / 60), m = min % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+  function parseHHMM(s) {
+    const parts = String(s || '00:00').split(':').map(Number);
+    const h = parts[0] || 0;
+    const m = parts[1] || 0;
+    return h * 60 + m;
+  }
+
+  // ---------- Inline timeline editor ----------
+  function wireTimeline(svg) {
+    const dayId = svg.dataset.day;
+    const d = dayData.find(x => x.id === dayId);
+    if (!d) return;
+
+    const scale = x => Math.max(0, Math.min(1000, (x - ACT_START) / SPAN * 1000));
+    let drag = null; // {type:'move'|'left'|'right', index, startX, a0, b0}
+
+    svg.addEventListener('pointerdown', (ev) => {
+      if (getRepoTab() !== 'edit') return;
+
+      const target = ev.target;
+      const g = target.closest('.tl-block');
+      if (!g) return;
+      const idx = Number(g.getAttribute('data-index'));
+      const stop = d.stops[idx];
+      const a0 = parseHHMM(stop.arrive), b0 = parseHHMM(stop.depart);
+
+      const pt = svg.createSVGPoint();
+      pt.x = ev.clientX; pt.y = ev.clientY;
+      const matrix = svg.getScreenCTM().inverse();
+      const loc = pt.matrixTransform(matrix);
+      const relX = loc.x;
+
+      if (target.classList.contains('tl-handle')) {
+        const side = target.getAttribute('data-side');
+        drag = { type: side === 'left' ? 'left' : 'right', index: idx, startX: relX, a0, b0 };
+      } else {
+        drag = { type: 'move', index: idx, startX: relX, a0, b0 };
+      }
+      svg.setPointerCapture(ev.pointerId);
+    });
+
+    svg.addEventListener('pointermove', (ev) => {
+      if (!drag) return;
+      const pt = svg.createSVGPoint();
+      pt.x = ev.clientX; pt.y = ev.clientY;
+      const matrix = svg.getScreenCTM().inverse();
+      const loc = pt.matrixTransform(matrix);
+      const dx = loc.x - drag.startX;
+      const dMin = Math.round((dx / 1000) * SPAN / 5) * 5; // snap to 5 min
+
+      const idx = drag.index;
+      const curStop = d.stops[idx];
+      const prev = d.stops[idx - 1];
+      const next = d.stops[idx + 1];
+
+      let a = drag.a0, b = drag.b0;
+
+      if (drag.type === 'move') { a = drag.a0 + dMin; b = drag.b0 + dMin; }
+      else if (drag.type === 'left') { a = drag.a0 + dMin; }
+      else if (drag.type === 'right') { b = drag.b0 + dMin; }
+
+      const travelFromPrev = Number(curStop.prevTravelMin || 5);
+      const prevEnd = prev ? parseHHMM(prev.depart) + travelFromPrev : ACT_START;
+      const nextStart = next ? parseHHMM(next.arrive) : ACT_END;
+
+      a = clamp(a, prevEnd, b - 10);
+      b = clamp(b, a + 10, nextStart);
+
+      curStop.arrive = toHHMM(a);
+      curStop.depart = toHHMM(b);
+
+      const blocks = svg.querySelectorAll('.tl-block');
+      blocks.forEach((bg, i) => {
+        const s = d.stops[i];
+        const ax = scale(parseHHMM(s.arrive));
+        const bx = scale(parseHHMM(s.depart));
+        const rect = bg.querySelector('.tl-block-rect');
+        rect.setAttribute('x', ax);
+        rect.setAttribute('width', Math.max(8, bx - ax));
+        const lh = bg.querySelectorAll('.tl-handle');
+        lh[0].setAttribute('cx', ax);
+        lh[1].setAttribute('cx', bx);
+        const label = bg.querySelector('.tl-label');
+        if (label) {
+          label.textContent = shortPlaceName(s.name);
+          label.setAttribute('x', ax + 6);
+        }
+        const leader = bg.querySelector('.tl-leader');
+        if (leader) {
+          leader.setAttribute('x1', ax + 6);
+          leader.setAttribute('x2', ax + 6);
+          const labelY = Number(label?.getAttribute('y') || 0);
+          leader.setAttribute('y2', Math.max(0, labelY - 10));
+        }
+      });
+
+      const travels = svg.querySelectorAll('.tl-travel');
+      const travelLabels = svg.querySelectorAll('text.timeline-leg-label');
+
+      travels.forEach((ln, i) => {
+        const px = scale(parseHHMM(d.stops[i].depart));
+        const nx = scale(parseHHMM(d.stops[i + 1].arrive));
+        ln.setAttribute('x1', px);
+        ln.setAttribute('x2', nx);
+        const mid = (px + nx) / 2;
+        const label = travelLabels[i];
+        if (label) { label.setAttribute('x', mid - 12); }
+      });
+    });
+
+    function clearDrag(ev) {
+      if (drag && ev.pointerId) {
+        try { svg.releasePointerCapture(ev.pointerId); } catch (e) { }
+      }
+      drag = null;
+    }
+
+    svg.addEventListener('pointerup', clearDrag);
+    svg.addEventListener('pointercancel', clearDrag);
+  }
+
+  function initTimelines() {
+    document.querySelectorAll('svg.timeline').forEach(wireTimeline);
+  }
+  initTimelines();
+
+  async function commitTimeline(dayId) {
+    const msgEl = document.getElementById(`tlmsg-${dayId}`);
+    msgEl.textContent = 'Committing…';
+
+    const r = await fetch(`/api/repos/<%= repo.id %>/branches/${encodeURIComponent(currentBranch)}`);
+    const data = await r.json();
+    const headCommit = data.headCommit;
+    if (!headCommit) {
+      msgEl.textContent = 'No head commit';
+      return;
+    }
+
+    const snap = headCommit.snapshot;
+
+    // Ensure plan structure exists
+    if (!snap.plan) snap.plan = { days: [] };
+    if (!Array.isArray(snap.plan.days)) snap.plan.days = [];
+
+    const srcDay = dayData.find(x => x.id === dayId);
+    const dstDay = snap.plan.days.find(x => x.id === dayId);
+
+    if (!srcDay) {
+      msgEl.textContent = 'Day not found in local data';
+      return;
+    }
+
+    if (!dstDay) {
+      msgEl.textContent = 'Day not found in snapshot';
+      return;
+    }
+
+    if (srcDay.stops.length !== dstDay.stops.length) {
+      msgEl.textContent = 'Day structure mismatch';
+      return;
+    }
+
+    // Copy timing data from local edited version to snapshot
+    srcDay.stops.forEach((s, i) => {
+      dstDay.stops[i].arrive = s.arrive;
+      dstDay.stops[i].depart = s.depart;
+    });
+
+    const body = {
+      branch: currentBranch,
+      baseCommitId: headCommit.id,
+      message: `Update ${dayId} times via timeline`,
+      author: 'web',
+      snapshot: snap
+    };
+
+    const rs = await fetch(`/api/repos/<%= repo.id %>/commits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (rs.ok) {
+      msgEl.textContent = 'Committed ✓';
+      setTimeout(() => { msgEl.textContent = ''; }, 1500);
+    } else {
+      const j = await rs.json().catch(() => ({}));
+      msgEl.textContent = 'Failed: ' + (j.error || rs.statusText);
+    }
+  }
+
+  // ---------- Map (Google-like routes per mode, with transit stations/details) ----------
+  (function initMap() {
+    const mapEl = document.getElementById('map');
+    if (!mapEl) return;
+
+    const map = L.map('map', { preferCanvas: true, zoomControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    // fix initial sizing
+    setTimeout(() => map.invalidateSize(), 0);
+
+    const daySelect = document.getElementById('daySelect');
+    const saveBtn = document.getElementById('saveMapEdits');
+    const msg = document.getElementById('saveMsg');
+    const modeSelect = document.getElementById('modeSelect');
+    const mapFrame = document.getElementById('mapFrame');
+    const fsBtn = document.getElementById('mapFsBtn');
+    let pseudoFull = false;
+    const planRouteMode = <%- JSON.stringify(planTransport || 'driving') %>;
+    let currentRouteMode = planRouteMode || 'driving';
+    let pendingRouteMode = currentRouteMode;
+
+    function setPseudoFullscreen(on) {
+      if (!mapFrame) return;
+      pseudoFull = on;
+      mapFrame.classList.toggle('map-frame--pseudo-full', on);
+      mapFrame.classList.toggle('fullscreen-active', on);
+      document.body.classList.toggle('map-fullscreen-active', on);
+      setTimeout(() => map.invalidateSize(), 200);
+      updateFullscreenButton();
+    }
+
+    function isFullscreenActive() {
+      return document.fullscreenElement === mapFrame || pseudoFull;
+    }
+
+    function updateFullscreenButton() {
+      if (!fsBtn) return;
+      const active = isFullscreenActive();
+      fsBtn.textContent = active ? 'Exit full screen' : 'Full screen';
+      if (mapFrame) {
+        mapFrame.classList.toggle('fullscreen-active', active);
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!mapFrame) return;
+      if (document.fullscreenElement === mapFrame) {
+        document.exitFullscreen?.();
+        return;
+      }
+      if (!document.fullscreenElement && mapFrame.requestFullscreen) {
+        mapFrame.requestFullscreen().catch(() => {
+          setPseudoFullscreen(true);
+        });
+      } else if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen();
+      } else {
+        setPseudoFullscreen(!pseudoFull);
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && pseudoFull) {
+        setPseudoFullscreen(false);
+      } else {
+        updateFullscreenButton();
+        setTimeout(() => map.invalidateSize(), 200);
+      }
+    });
+
+    document.addEventListener('keydown', (ev) => {
+      if (pseudoFull && ev.key === 'Escape') {
+        setPseudoFullscreen(false);
+      }
+    });
+
+    if (fsBtn) {
+      fsBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        toggleFullscreen();
+      });
+    }
+    updateFullscreenButton();
+
+    if (modeSelect) {
+      modeSelect.value = currentRouteMode;
+      modeSelect.addEventListener('change', () => {
+        pendingRouteMode = modeSelect.value || currentRouteMode;
+
+        if (getRepoTab() === 'view') {
+          // View tab: just preview the route geometry (no commit)
+          if (msg) msg.textContent = 'Previewing route…';
+          fetchAndRenderRoute(daySelect.value);
+          setTimeout(() => { if (msg && msg.textContent === 'Previewing route…') msg.textContent = ''; }, 1200);
+        } else {
+          // Edit tab: keep the existing “recompute to apply” behavior
+          if (msg) msg.textContent = 'Press "Recompute travel" to apply this mode.';
+        }
+      });
+    }
+
+    days.forEach((d) => {
+      const opt = new Option(`${d.date} (${d.stops.length} stops)`, d.id);
+      daySelect.appendChild(opt);
+    });
+    if (!days.length) {
+      daySelect.appendChild(new Option('No days', ''));
+    }
+
+    let markers = [];
+    let isEdit = false;
+    let dirty = false;
+    let routeLayers = [];
+    let transitStationMarkers = [];
+    const compareLayers = L.layerGroup().addTo(map);
+    const compareCache = new Map();
+
+    const ROUTE_COLORS = {
+      driving: '#ec5643',
+      transit: '#ec5643',
+      walking: '#8fa5a0',
+      cycling: '#5f7a74'
+    };
+    const colorForMode = (m) => ROUTE_COLORS[String(m || '').toLowerCase()] || '#233331';
+
+    function setDirty(v) {
+      dirty = v;
+      if (saveBtn) saveBtn.disabled = !dirty;
+    }
+
+    function clearMarkers() {
+      markers.forEach((m) => map.removeLayer(m));
+      markers = [];
+    }
+
+    function clearRoutes() {
+      routeLayers.forEach((l) => map.removeLayer(l));
+      routeLayers = [];
+      transitStationMarkers.forEach((m) => map.removeLayer(m));
+      transitStationMarkers = [];
+    }
+
+    function clearCompareRoutes() {
+      compareLayers.clearLayers();
+    }
+
+    function clearTransitDetails(dayId) {
+      if (!dayId) return;
+      const selector = `.transit-leg-details[data-day-id="${dayId}"]`;
+      document.querySelectorAll(selector).forEach((el) => {
+        el.innerHTML = '';
+      });
+    }
+
+    function iconHtmlForMode(mode) {
+      switch (String(mode || '').toLowerCase()) {
+        case 'walking':
+          return '<i class="fa-solid fa-person-walking" aria-hidden="true"></i>';
+        case 'cycling':
+          return '<i class="fa-solid fa-bicycle" aria-hidden="true"></i>';
+        case 'transit':
+          return '<i class="fa-solid fa-train" aria-hidden="true"></i>';
+        default:
+          return '<i class="fa-solid fa-car" aria-hidden="true"></i>';
+      }
+    }
+
+    function createIconSpan(mode) {
+      const span = document.createElement('span');
+      span.className = 'icon-inline';
+      span.innerHTML = iconHtmlForMode(mode);
+      return span;
+    }
+
+    function renderTransitDetails(dayId, transitLegs) {
+      clearTransitDetails(dayId);
+      if (!Array.isArray(transitLegs) || !transitLegs.length) return;
+
+      transitLegs.forEach((leg, idx) => {
+        const toIndex =
+          typeof leg.toIndex === 'number' ? leg.toIndex : idx + 1;
+        const selector =
+          `.transit-leg-details[data-day-id="${dayId}"][data-leg-index="${toIndex}"]`;
+        const ul = document.querySelector(selector);
+        if (!ul) return;
+
+        const steps = Array.isArray(leg.steps) ? leg.steps : [];
+        if (!steps.length) return;
+
+        const hasTransit = steps.some((st) => st && st.kind === 'transit');
+        if (!hasTransit) {
+          const walkOnlyMin = sumMinutes((st) => st && st.kind === 'walk');
+          if (walkOnlyMin > 0) {
+            const li = document.createElement('li');
+            li.className = 'time';
+            li.append(`Walk ~${walkOnlyMin} min `);
+            li.appendChild(createIconSpan('walking'));
+            li.append(' between these stops');
+            ul.appendChild(li);
+          }
+          return;
+        }
+
+        const firstTransitIdx = steps.findIndex(
+          (st) => st && st.kind === 'transit'
+        );
+        let lastTransitIdx = -1;
+        for (let i = steps.length - 1; i >= 0; i--) {
+          if (steps[i] && steps[i].kind === 'transit') {
+            lastTransitIdx = i;
+            break;
+          }
+        }
+
+        const sumMinutes = (predicate) => {
+          let total = 0;
+          steps.forEach((st, i) => {
+            if (predicate(st, i) && typeof st.minutes === 'number') {
+              total += st.minutes;
+            }
+          });
+          return Math.round(total);
+        };
+
+        const walkBeforeMin =
+          firstTransitIdx > 0
+            ? sumMinutes(
+                (st, i) => st && st.kind === 'walk' && i < firstTransitIdx
+              )
+            : 0;
+
+        const walkAfterMin =
+          lastTransitIdx >= 0 && lastTransitIdx < steps.length - 1
+            ? sumMinutes(
+                (st, i) => st && st.kind === 'walk' && i > lastTransitIdx
+              )
+            : 0;
+
+        const firstTransit =
+          firstTransitIdx >= 0 ? steps[firstTransitIdx] : null;
+        const lastTransit =
+          lastTransitIdx >= 0 ? steps[lastTransitIdx] : firstTransit;
+
+        if (walkBeforeMin > 0) {
+          const li = document.createElement('li');
+          li.className = 'time';
+          const stationName =
+            (firstTransit && firstTransit.departureStationName) ||
+            'station';
+          li.append(`Walk ~${walkBeforeMin} min `);
+          li.appendChild(createIconSpan('walking'));
+          li.append(` to ${stationName}`);
+          ul.appendChild(li);
+        }
+
+        if (firstTransit) {
+          const li = document.createElement('li');
+          li.className = 'time';
+          const lineName = firstTransit.lineName || 'Train';
+          const headsign = firstTransit.headsign
+            ? ` toward ${firstTransit.headsign}`
+            : '';
+          const duration =
+            typeof firstTransit.minutes === 'number'
+              ? ` (~${Math.round(firstTransit.minutes)} min)`
+              : '';
+          const depTime = firstTransit.departureTimeText
+            ? ` • next at ${firstTransit.departureTimeText}`
+            : '';
+          li.textContent = `${lineName}${headsign}${duration}${depTime}`;
+          ul.appendChild(li);
+        }
+
+        if (walkAfterMin > 0) {
+          const li = document.createElement('li');
+          li.className = 'time';
+          const stationName =
+            (lastTransit && lastTransit.arrivalStationName) ||
+            'station';
+          li.append(`Walk ~${walkAfterMin} min `);
+          li.appendChild(createIconSpan('walking'));
+          li.append(` from ${stationName} to destination`);
+          ul.appendChild(li);
+        }
+      });
+    }
+
+    function legIconForMode(mode) {
+      return iconHtmlForMode(mode);
+    }
+
+    function collectLegIndexes(dayId) {
+      const ids = new Set();
+      document
+        .querySelectorAll(`.leg-icon[data-day-id="${dayId}"]`)
+        .forEach((el) => {
+          if (el.dataset.legIndex) ids.add(el.dataset.legIndex);
+        });
+      document
+        .querySelectorAll(`.timeline-leg-label[data-day-id="${dayId}"]`)
+        .forEach((el) => {
+          if (el.dataset.legIndex) ids.add(el.dataset.legIndex);
+        });
+      return Array.from(ids);
+    }
+
+    function setLegIconForIndex(dayId, legIndex, iconHtml, legMode) {
+      const idx = String(legIndex);
+      const iconEl = document.querySelector(
+        `.leg-icon[data-day-id="${dayId}"][data-leg-index="${idx}"]`
+      );
+      if (iconEl) {
+        iconEl.innerHTML = iconHtml;
+        iconEl.dataset.legMode = legMode;
+      }
+      const timelineLabel = document.querySelector(
+        `.timeline-leg-label[data-day-id="${dayId}"][data-leg-index="${idx}"]`
+      );
+      if (timelineLabel) {
+        const minutesEl = timelineLabel.querySelector('.timeline-leg-minutes');
+        const iconSpan = timelineLabel.querySelector('.timeline-leg-icon');
+        const mins =
+          timelineLabel.dataset.legMinutes ||
+          (minutesEl ? (minutesEl.textContent || '').split(' ')[0] : '') ||
+          '';
+        if (minutesEl) minutesEl.textContent = `${mins} min`;
+        if (iconSpan) iconSpan.innerHTML = iconHtml;
+        timelineLabel.dataset.legMode = legMode;
+      }
+    }
+
+    function updateLegIconsForMode(dayId, mode, transitLegs, legModes) {
+      const indexes = collectLegIndexes(dayId);
+      if (!indexes.length) return;
+
+      const applyToAll = (iconHtml, legMode) => {
+        indexes.forEach((idx) =>
+          setLegIconForIndex(dayId, idx, iconHtml, legMode)
+        );
+      };
+
+      const perLegModes =
+        Array.isArray(legModes) && legModes.length ? legModes : null;
+
+      if (perLegModes) {
+        indexes.forEach((idx) => {
+          const numIdx = Number(idx);
+          const inferred =
+            Number.isFinite(numIdx) && perLegModes[numIdx - 1]
+              ? perLegModes[numIdx - 1]
+              : mode;
+          setLegIconForIndex(
+            dayId,
+            idx,
+            legIconForMode(inferred),
+            inferred
+          );
+        });
+        return;
+      }
+
+      if (mode !== 'transit') {
+        applyToAll(legIconForMode(mode), mode);
+        return;
+      }
+
+      if (!Array.isArray(transitLegs) || !transitLegs.length) {
+        applyToAll(legIconForMode('walking'), 'walking');
+        return;
+      }
+
+      applyToAll(legIconForMode('transit'), 'transit');
+
+      transitLegs.forEach((leg, idx) => {
+        const toIndex =
+          typeof leg.toIndex === 'number' ? leg.toIndex : idx + 1;
+        const steps = Array.isArray(leg.steps) ? leg.steps : [];
+        const hasTransit = steps.some(
+          (st) => st && st.kind === 'transit'
+        );
+        if (!hasTransit) {
+          setLegIconForIndex(dayId, toIndex, legIconForMode('walking'), 'walking');
+        } else {
+          setLegIconForIndex(dayId, toIndex, legIconForMode('transit'), 'transit');
+        }
+      });
+    }
+
+    function numIcon(n) {
+      return L.divIcon({
+        className: 'num-pin',
+        html: `<div class="pin"><span>${n}</span></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+    }
+
+    function syncMarkerDraggability() {
+      if (!markers.length) return;
+      markers.forEach((m) => {
+        if (!m.dragging) return;
+        if (isEdit) m.dragging.enable();
+        else m.dragging.disable();
+      });
+    }
+
+    function renderDayStops(dayId) {
+      clearMarkers();
+      const d = days.find((x) => x.id === dayId);
+      if (!d || !d.stops || !d.stops.length) {
+        map.setView([51.5074, -0.1278], 11);
+        return;
+      }
+
+      const pts = d.stops
+        .map((s, i) => ({
+          i,
+          s,
+          lat: Number(s.lat),
+          lng: Number(s.lng)
+        }))
+        .filter(
+          (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng)
+        );
+
+      if (!pts.length) {
+        map.setView([51.5074, -0.1278], 11);
+        return;
+      }
+
+      const latlngs = [];
+      pts.forEach((p) => {
+        const m = L.marker([p.lat, p.lng], {
+          draggable: false,
+          icon: numIcon(p.i + 1),
+          title: `${p.i + 1}. ${p.s.name}`
+        })
+          .addTo(map)
+          .bindPopup(`${p.i + 1}. ${p.s.name}`);
+
+        m.on('dragend', (ev) => {
+          const ll = ev.target.getLatLng();
+          p.s.lat = ll.lat;
+          p.s.lng = ll.lng;
+          latlngs[p.i] = [ll.lat, ll.lng];
+          setDirty(true);
+          // keeping route as-is until recompute / explicit redraw
+        });
+
+        markers.push(m);
+        latlngs[p.i] = [p.lat, p.lng];
+      });
+
+      map.fitBounds(latlngs.filter(Boolean), { padding: [20, 20] });
+      syncMarkerDraggability();
+    }
+
+    // Fetches route geometry + per-leg transit details, then renders the
+    // polyline segments and updates leg icons so UI stays in sync with routing.
+    async function fetchAndRenderRoute(dayId) {
+      clearRoutes();
+      clearTransitDetails(dayId);
+
+      const d = days.find((x) => x.id === dayId);
+      if (!d || !d.stops || d.stops.length < 2) return;
+
+      const mode = (modeSelect && modeSelect.value) || pendingRouteMode || currentRouteMode || 'driving';
+
+      let segs = [];
+      let transitStops = [];
+      let transitLegs = [];
+      let legModes = [];
+
+      try {
+        // send full day data so the backend doesn't need to look into the repo
+        const payload = {
+          branch: currentBranch,
+          dayId,
+          mode,
+          date: d.date || null,
+          stops: d.stops.map((s) => ({
+            lat: s.lat,
+            lng: s.lng,
+            arrive: s.arrive || null,
+            depart: s.depart || null
+          }))
+        };
+
+        const resp = await fetch(
+          '/api/repos/<%= repo.id %>/plan/route-geometry',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }
+        );
+        const json = await resp.json().catch(() => ({}));
+        if (resp.ok && json.ok) {
+          if (Array.isArray(json.segments)) {
+            segs = json.segments;
+          }
+          if (mode === 'transit' && Array.isArray(json.transitStops)) {
+            transitStops = json.transitStops;
+          }
+          if (mode === 'transit' && Array.isArray(json.transitLegs)) {
+            transitLegs = json.transitLegs;
+          }
+          if (Array.isArray(json.legModes)) {
+            legModes = json.legModes;
+          }
+        } else {
+          console.warn('route-geometry failed', json);
+        }
+      } catch (e) {
+        console.warn('route-geometry error', e);
+      }
+
+      const allLatLngs = [];
+
+      // Segments can be either:
+      //  - old: [ {lat,lng}, ... ]
+      //  - new: { points:[{lat,lng},...], subMode:'walking'|'cycling'|'driving'|'transit' }
+      segs.forEach((seg) => {
+        let pts = seg;
+        let segMode = mode;
+        if (seg && !Array.isArray(seg) && Array.isArray(seg.points)) {
+          pts = seg.points;
+          segMode = seg.subMode || mode;
+        }
+
+        if (!Array.isArray(pts) || !pts.length) return;
+        const latlngs = pts.map((p) => [p.lat, p.lng]);
+        allLatLngs.push(...latlngs);
+
+        const m = String(segMode || mode || '').toLowerCase();
+        const polyOpts = {
+          weight: m === 'walking' || m === 'cycling' ? 4 : 5,
+          color: colorForMode(m),
+          opacity: 0.95
+        };
+        if (m === 'walking') {
+          polyOpts.dashArray = '4 6'; // dotted walk
+        } else if (m === 'cycling') {
+          polyOpts.dashArray = '1 8'; // dashed cycling
+        }
+        // transit / driving -> solid
+
+        const poly = L.polyline(latlngs, polyOpts).addTo(map);
+        routeLayers.push(poly);
+      });
+
+      // Transit stations (from Google transit legs)
+      if (mode === 'transit' && Array.isArray(transitStops)) {
+        transitStops.forEach((s, idx) => {
+          if (!s || typeof s.lat !== 'number' || typeof s.lng !== 'number') return;
+
+          const stationIcon = iconHtmlForMode('transit');
+          const marker = L.circleMarker([s.lat, s.lng], {
+            radius: 6,
+            weight: 2,
+            color: colorForMode('transit'),
+            fillColor: colorForMode('transit'),
+            fillOpacity: 0.85
+          })
+            .addTo(map)
+            .bindPopup(
+              `${stationIcon} ${s.name || 'Station'}<br/><span class="time">Transit stop ${idx + 1}</span>`
+            );
+
+          transitStationMarkers.push(marker);
+          allLatLngs.push([s.lat, s.lng]);
+        });
+      }
+
+      if (mode === 'transit') {
+        renderTransitDetails(dayId, transitLegs);
+      } else {
+        clearTransitDetails(dayId);
+      }
+
+      // Keep the leg icons next to each leg in sync with the actual route.
+      updateLegIconsForMode(dayId, mode, transitLegs, legModes);
+
+      if (allLatLngs.length) {
+        map.fitBounds(allLatLngs, { padding: [20, 20] });
+      }
+    }
+
+    const firstId = days[0] ? days[0].id : '';
+    if (firstId) {
+      renderDayStops(firstId);
+      daySelect.value = firstId;
+      fetchAndRenderRoute(firstId);
+    } else {
+      map.setView([51.5074, -0.1278], 11);
+    }
+
+    const compareInputs = Array.from(document.querySelectorAll('[data-compare-branch]'));
+    const compareLegend = document.getElementById('compareLegend');
+    const compareCosts = document.getElementById('compareCosts');
+    const compareColors = ['#2563eb', '#f97316', '#16a34a', '#7c3aed', '#0f766e'];
+
+    function getSelectedBranches() {
+      return compareInputs.filter((el) => el.checked).map((el) => el.value);
+    }
+
+    // Rough cost proxy: minutes * per-mode rate (units are relative, not currency).
+    function estimateCost(plan) {
+      const rates = {
+        driving: 0.4,
+        transit: 0.25,
+        cycling: 0.1,
+        walking: 0,
+      };
+      let totalMin = 0;
+      let cost = 0;
+      const daysList = Array.isArray(plan?.days) ? plan.days : [];
+      daysList.forEach((day) => {
+        const stops = Array.isArray(day?.stops) ? day.stops : [];
+        stops.forEach((stop, idx) => {
+          if (idx === 0) return;
+          const minutes = Number(stop?.prevTravelMin || 0);
+          if (!Number.isFinite(minutes) || minutes <= 0) return;
+          const mode =
+            String(stop?.routeMode || plan?.transport || 'driving').toLowerCase();
+          const rate = rates[mode] != null ? rates[mode] : rates.driving;
+          totalMin += minutes;
+          cost += minutes * rate;
+        });
+      });
+      return { totalMin: Math.round(totalMin), cost: Math.round(cost * 100) / 100 };
+    }
+
+    async function getBranchSnapshotCached(branchName) {
+      if (compareCache.has(branchName)) return compareCache.get(branchName);
+      const resp = await fetch(`/api/repos/<%= repo.id %>/branches/${encodeURIComponent(branchName)}`);
+      const data = await resp.json().catch(() => ({}));
+      const snap = data && data.headCommit ? data.headCommit.snapshot : null;
+      compareCache.set(branchName, snap);
+      return snap;
+    }
+
+    async function renderCompareRoutes() {
+      if (!compareLegend || !compareCosts) return;
+      clearCompareRoutes();
+      compareLegend.innerHTML = '';
+      compareCosts.innerHTML = '';
+
+      const selected = getSelectedBranches();
+      if (!selected.length) {
+        const label = document.documentElement.classList.contains('advanced-mode')
+          ? 'Select branches to compare.'
+          : 'Select versions to compare.';
+        compareLegend.innerHTML = `<p class="time">${label}</p>`;
+        return;
+      }
+
+      const dayId = daySelect.value || (days[0] && days[0].id) || '';
+      const legendList = document.createElement('ul');
+      legendList.className = 'list';
+
+      const costTable = document.createElement('div');
+      costTable.className = 'compare-cost-table';
+
+      for (let i = 0; i < selected.length; i++) {
+        const name = selected[i];
+        const color = compareColors[i % compareColors.length];
+        const snap = await getBranchSnapshotCached(name);
+        const plan = snap?.plan || { days: [] };
+        const planDays = Array.isArray(plan.days) ? plan.days : [];
+        const day =
+          planDays.find((d) => d.id === dayId) ||
+          planDays.find((d) => d.date && d.date === (days.find((x) => x.id === dayId)?.date || '')) ||
+          null;
+
+        if (day && Array.isArray(day.stops) && day.stops.length > 1) {
+          const latlngs = day.stops
+            .map((s) => [Number(s.lat), Number(s.lng)])
+            .filter((ll) => Number.isFinite(ll[0]) && Number.isFinite(ll[1]));
+          if (latlngs.length > 1) {
+            L.polyline(latlngs, {
+              color,
+              weight: 4,
+              opacity: 0.7,
+              dashArray: '6 6'
+            }).addTo(compareLayers);
+          }
+        }
+
+        const legendItem = document.createElement('li');
+        legendItem.className = 'compare-legend-item';
+        legendItem.innerHTML = `<span class="compare-swatch" style="background:${color}"></span>${name}`;
+        legendList.appendChild(legendItem);
+
+        const cost = estimateCost(plan);
+        const row = document.createElement('div');
+        row.className = 'compare-cost-row';
+        row.innerHTML = `
+          <span class="compare-cost-branch">${name}</span>
+          <span class="compare-cost-min">${cost.totalMin} min</span>
+          <span class="compare-cost-value">~${cost.cost} units</span>
+        `;
+        costTable.appendChild(row);
+      }
+
+      compareLegend.appendChild(legendList);
+      compareCosts.appendChild(costTable);
+    }
+
+    const toggleEdit = document.getElementById('toggleEdit');
+    if (toggleEdit) {
+      toggleEdit.addEventListener('change', () => {
+        isEdit = toggleEdit.checked;
+        syncMarkerDraggability();
+      });
+    }
+
+    document.addEventListener('gitrip:tabchange', (ev) => {
+      const tab = (ev.detail && ev.detail.tab) ? String(ev.detail.tab) : getRepoTab();
+
+      // If we left Edit, force map edit mode off
+      if (tab !== 'edit') {
+        isEdit = false;
+        if (toggleEdit) toggleEdit.checked = false;
+        syncMarkerDraggability();
+        setDirty(false);
+      }
+
+      // If we came back from Settings, Leaflet needs a resize nudge
+      setTimeout(() => {
+        try { map.invalidateSize(); } catch {}
+        if (tab === 'view' || tab === 'edit') {
+          const currentDay = daySelect.value || (days[0] && days[0].id) || '';
+          if (currentDay) {
+            daySelect.value = currentDay;
+            renderDayStops(currentDay);
+            fetchAndRenderRoute(currentDay);
+          }
+        }
+      }, 50);
+    });
+
+    daySelect.addEventListener('change', (e) => {
+      const id = e.target.value;
+      if (!id) return;
+      renderDayStops(id);
+      setDirty(false);
+      if (msg) msg.textContent = '';
+      fetchAndRenderRoute(id);
+      renderCompareRoutes();
+    });
+
+    compareInputs.forEach((el) => {
+      el.addEventListener('change', () => {
+        renderCompareRoutes();
+      });
+    });
+
+    renderCompareRoutes();
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        msg.textContent = 'Saving...';
+        const dayId = daySelect.value;
+        const d = days.find((x) => x.id === dayId);
+        if (!d) {
+          msg.textContent = 'No day selected';
+          return;
+        }
+
+        const r = await fetch(
+          `/api/repos/<%= repo.id %>/branches/${encodeURIComponent(
+            currentBranch
+          )}`
+        );
+        const data = await r.json();
+        const headCommit = data.headCommit;
+        if (!headCommit) {
+          msg.textContent = 'No head';
+          return;
+        }
+
+        const snap = headCommit.snapshot;
+
+        // Ensure plan structure exists
+        if (!snap.plan) snap.plan = { days: [] };
+        if (!Array.isArray(snap.plan.days)) snap.plan.days = [];
+
+        const target = snap.plan.days.find(
+          (x) => x.id === dayId
+        );
+
+        if (!target) {
+          msg.textContent = 'Day not found in snapshot';
+          return;
+        }
+
+        if (d.stops.length !== target.stops.length) {
+          msg.textContent = 'Stop count mismatch';
+          return;
+        }
+
+        // Copy coordinate data from local edited version to snapshot
+        d.stops.forEach((s, i) => {
+          target.stops[i].lat = s.lat;
+          target.stops[i].lng = s.lng;
+        });
+
+        const body = {
+          branch: currentBranch,
+          baseCommitId: headCommit.id,
+          message: `Update ${dayId} coordinates via map`,
+          author: 'web',
+          snapshot: snap
+        };
+
+        const rs = await fetch(
+          `/api/repos/<%= repo.id %>/commits`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          }
+        );
+
+        if (rs.ok) {
+          msg.textContent = 'Committed ✓';
+          setDirty(false);
+          setTimeout(() => {
+            msg.textContent = '';
+          }, 1500);
+        } else {
+          const j = await rs.json().catch(() => ({}));
+          msg.textContent =
+            'Failed: ' + (j.error || rs.statusText);
+        }
+      });
+    }
+
+    const reBtn = document.getElementById('recomputeTravel');
+    if (reBtn) {
+      reBtn.addEventListener('click', async () => {
+        const dayId = daySelect.value;
+        const modeSel = document.getElementById('modeSelect');
+        const mode = modeSel ? modeSel.value : 'driving';
+        msg.textContent = 'Recomputing…';
+
+        const r = await fetch(
+          '/api/repos/<%= repo.id %>/plan/recompute-travel',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              branch: currentBranch,
+              dayId,
+              mode
+            })
+          }
+        );
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.ok) {
+          msg.textContent = 'Updated ✓';
+          setTimeout(() => location.reload(), 400);
+        } else {
+          msg.textContent =
+            'Failed: ' + (j.error || r.statusText);
+        }
+      });
+    }
+
+    const commitToggle = document.getElementById('toggleCommits');
+    if (commitToggle) {
+      commitToggle.addEventListener('click', () => {
+        const list = document.getElementById('commitList');
+        if (!list) return;
+        const hidden = list.classList.toggle('commit-expanded');
+        const items = list.querySelectorAll('.commit-item');
+        items.forEach((item, idx) => {
+          if (idx < 5) return;
+          item.classList.toggle('commit-hidden', !hidden);
+        });
+        commitToggle.textContent = hidden ? 'Show less' : 'Show more';
+      });
+    }
+
+    const keyButtons = Array.from(document.querySelectorAll('[data-commit-key-toggle]'));
+    keyButtons.forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const commitId = btn.getAttribute('data-commit-id');
+        if (!commitId) return;
+        const manual = btn.getAttribute('data-key-manual') === '1' ? 0 : 1;
+
+        btn.disabled = true;
+        try {
+          const resp = await fetch(`/api/commits/${encodeURIComponent(commitId)}/key-change`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manual })
+          });
+          if (!resp.ok) throw new Error('request_failed');
+
+          btn.setAttribute('data-key-manual', manual ? '1' : '0');
+          btn.textContent = manual ? 'Unmark key change' : 'Mark key change';
+
+          const li = btn.closest('.commit-item');
+          if (li) {
+            const auto = btn.getAttribute('data-key-auto') === '1';
+            const reason = li.getAttribute('data-key-reason') || 'Key change';
+            let badge = li.querySelector('.commit-badge');
+            if (manual || auto) {
+              if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'commit-badge';
+                badge.textContent = 'Key change';
+                const firstLine = li.querySelector('div');
+                if (firstLine) firstLine.appendChild(badge);
+              }
+              badge.classList.toggle('commit-badge--manual', !!manual);
+              badge.classList.toggle('commit-badge--auto', !manual);
+              badge.title = manual ? 'Marked as key change' : reason;
+            } else if (badge) {
+              badge.remove();
+            }
+          }
+        } catch (e) {
+          alert('Could not update key change. Please try again.');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+
+    async function loadTravelAlerts() {
+      const notesEl = document.getElementById('travelAlertsNotes');
+      const feedEl = document.getElementById('travelAlertsFeed');
+      const statusEl = document.getElementById('travelAlertsStatus');
+      if (!notesEl || !feedEl) return;
+
+      const dayBadges = Array.from(document.querySelectorAll('.day-alert-badge'));
+      dayBadges.forEach((badge) => {
+        badge.hidden = true;
+      });
+
+      const applyNotesMode = () => {
+        const tab = getRepoTab();
+        notesEl.readOnly = tab !== 'edit';
+        notesEl.setAttribute('aria-readonly', tab !== 'edit' ? 'true' : 'false');
+      };
+
+      applyNotesMode();
+
+      try {
+        const resp = await fetch(`/api/repos/${encodeURIComponent(repoId)}/travel-alerts?branch=${encodeURIComponent(currentBranch)}`);
+        const json = await resp.json().catch(() => ({}));
+        if (!resp.ok || !json.ok) throw new Error('alerts_failed');
+
+        notesEl.value = json.notes || '';
+        feedEl.innerHTML = '';
+
+        const eventsByDate = json.eventsByDate || {};
+        const dates = Object.keys(eventsByDate).sort();
+        if (!dates.length) {
+          const msg = document.createElement('p');
+          msg.className = 'time';
+          msg.textContent = json.hasApiKey ? 'No travel alerts detected yet.' : 'Connect a news API to see live alerts.';
+          feedEl.appendChild(msg);
+        } else {
+          dates.forEach((date) => {
+            const items = eventsByDate[date] || [];
+            if (!items.length) return;
+            const block = document.createElement('div');
+            block.className = 'travel-alerts-day';
+            const title = document.createElement('strong');
+            title.textContent = date;
+            block.appendChild(title);
+            const list = document.createElement('ul');
+            list.className = 'list';
+            items.forEach((item) => {
+              const li = document.createElement('li');
+              const link = document.createElement('a');
+              link.href = item.url || '#';
+              link.textContent = item.title || 'Travel advisory';
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              li.appendChild(link);
+              if (item.source) {
+                const src = document.createElement('span');
+                src.className = 'time';
+                src.textContent = ` (${item.source})`;
+                li.appendChild(src);
+              }
+              list.appendChild(li);
+            });
+            block.appendChild(list);
+            feedEl.appendChild(block);
+          });
+        }
+
+        dayBadges.forEach((badge) => {
+          const date = badge.getAttribute('data-day-date');
+          const items = date ? eventsByDate[date] : null;
+          if (items && items.length) {
+            badge.hidden = false;
+            badge.textContent = `Travel alert (${items.length})`;
+          } else {
+            badge.hidden = true;
+          }
+        });
+      } catch (e) {
+        if (statusEl) statusEl.textContent = 'Could not load travel alerts.';
+        dayBadges.forEach((badge) => {
+          badge.hidden = true;
+        });
+      }
+
+      document.addEventListener('gitrip:tabchange', applyNotesMode);
+    }
+
+    const saveAlertsBtn = document.getElementById('travelAlertsSave');
+    if (saveAlertsBtn) {
+      saveAlertsBtn.addEventListener('click', async () => {
+        const notesEl = document.getElementById('travelAlertsNotes');
+        const statusEl = document.getElementById('travelAlertsStatus');
+        if (!notesEl) return;
+        saveAlertsBtn.disabled = true;
+        if (statusEl) statusEl.textContent = 'Saving...';
+        try {
+          const resp = await fetch(`/api/repos/${encodeURIComponent(repoId)}/travel-alerts/manual`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes: notesEl.value || '' })
+          });
+          if (!resp.ok) throw new Error('save_failed');
+          if (statusEl) statusEl.textContent = 'Saved.';
+          setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 1500);
+        } catch (e) {
+          if (statusEl) statusEl.textContent = 'Save failed.';
+        } finally {
+          saveAlertsBtn.disabled = false;
+        }
+      });
+    }
+
+    loadTravelAlerts();
+
+    function renderWeatherPanel() {
+      const weatherSlots = Array.from(document.querySelectorAll('.day-weather'));
+      if (!weatherSlots.length) return;
+      weatherSlots.forEach((slot) => {
+        slot.textContent = '';
+      });
+
+      const iconForLabel = (label) => {
+        const key = String(label || '').toLowerCase();
+        if (key.includes('thunder')) return 'fa-bolt';
+        if (key.includes('snow')) return 'fa-snowflake';
+        if (key.includes('rain')) return 'fa-cloud-showers-heavy';
+        if (key.includes('drizzle')) return 'fa-cloud-rain';
+        if (key.includes('fog')) return 'fa-smog';
+        if (key.includes('overcast')) return 'fa-cloud';
+        if (key.includes('partly')) return 'fa-cloud-sun';
+        if (key.includes('clear')) return 'fa-sun';
+        return 'fa-cloud-sun';
+      };
+
+      const cacheKey = `gitripWeather:${repoId}:${currentBranch}`;
+      const cachedRaw = sessionStorage.getItem(cacheKey);
+      if (cachedRaw) {
+        try {
+          const cached = JSON.parse(cachedRaw);
+          if (cached && Array.isArray(cached.forecasts)) {
+            cached.forecasts.forEach((item) => {
+              const date = item.date || 'Day';
+              const high = Number.isFinite(item.tmax) ? `${item.tmax}°C` : '—';
+              const low = Number.isFinite(item.tmin) ? `${item.tmin}°C` : '—';
+              const precip = Number.isFinite(item.precip) ? `${item.precip}%` : '—';
+              const label = item.label || 'Forecast';
+              const icon = iconForLabel(label);
+              const slot = document.querySelector(`.day-weather[data-day-date="${date}"]`);
+              if (!slot) return;
+              const rain = Number.isFinite(item.precip) ? ` • rain ${precip}` : '';
+              slot.innerHTML = ` <span class="time weather-line"><i class="fa-solid ${icon}" aria-hidden="true"></i> ${label} • ${low}–${high}${rain}</span>`;
+            });
+            return;
+          }
+        } catch {}
+      }
+
+      fetch(`/api/repos/${encodeURIComponent(repoId)}/weather?branch=${encodeURIComponent(currentBranch)}`)
+        .then((resp) => resp.json().catch(() => ({})))
+        .then((data) => {
+          if (!data || !data.ok) throw new Error('weather_failed');
+          const forecasts = Array.isArray(data.forecasts) ? data.forecasts : [];
+          if (!forecasts.length) {
+            return;
+          }
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify({ forecasts }));
+          } catch {}
+          forecasts.forEach((item) => {
+            const date = item.date || 'Day';
+            const high = Number.isFinite(item.tmax) ? `${item.tmax}°C` : '—';
+            const low = Number.isFinite(item.tmin) ? `${item.tmin}°C` : '—';
+            const precip = Number.isFinite(item.precip) ? `${item.precip}%` : '—';
+            const label = item.label || 'Forecast';
+            const icon = iconForLabel(label);
+            const slot = document.querySelector(`.day-weather[data-day-date="${date}"]`);
+            if (!slot) return;
+            const rain = Number.isFinite(item.precip) ? ` • rain ${precip}` : '';
+            slot.innerHTML = ` <span class="time weather-line"><i class="fa-solid ${icon}" aria-hidden="true"></i> ${label} • ${low}–${high}${rain}</span>`;
+          });
+        })
+        .catch(() => {
+          weatherSlots.forEach((slot) => {
+            slot.textContent = '';
+          });
+        });
+    }
+
+    let checklistItems = [];
+
+    async function loadChecklist() {
+      const listEl = document.getElementById('checklistList');
+      if (!listEl) return;
+      try {
+        const resp = await fetch(`/api/repos/${encodeURIComponent(repoId)}/checklist`);
+        const json = await resp.json().catch(() => ({}));
+        if (resp.ok && json.ok) {
+          checklistItems = Array.isArray(json.items) ? json.items : [];
+        }
+      } catch {}
+      renderChecklist();
+    }
+
+    async function saveChecklist() {
+      const statusEl = document.getElementById('checklistStatus');
+      if (statusEl) statusEl.textContent = 'Saving...';
+      try {
+        const resp = await fetch(`/api/repos/${encodeURIComponent(repoId)}/checklist`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: checklistItems })
+        });
+        if (!resp.ok) throw new Error('save_failed');
+        const json = await resp.json().catch(() => ({}));
+        if (json.items) checklistItems = json.items;
+        if (statusEl) statusEl.textContent = 'Saved.';
+        setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 1200);
+      } catch (e) {
+        if (statusEl) statusEl.textContent = 'Save failed.';
+      }
+    }
+
+    function renderChecklist() {
+      const listEl = document.getElementById('checklistList');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      const isEdit = getRepoTab() === 'edit';
+
+      if (!checklistItems.length) {
+        const empty = document.createElement('li');
+        empty.className = 'time';
+        empty.textContent = 'No items yet.';
+        listEl.appendChild(empty);
+        return;
+      }
+
+      checklistItems.forEach((item, idx) => {
+        const li = document.createElement('li');
+        li.className = 'checklist-item';
+
+        const label = document.createElement('label');
+        label.className = 'checklist-label';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = !!item.done;
+        checkbox.disabled = !isEdit;
+        checkbox.addEventListener('change', () => {
+          checklistItems[idx].done = checkbox.checked;
+          saveChecklist();
+        });
+        const text = document.createElement('span');
+        text.textContent = item.text;
+        if (item.done) text.classList.add('checklist-done');
+        label.append(checkbox, text);
+
+        li.appendChild(label);
+
+        if (isEdit) {
+          const rm = document.createElement('button');
+          rm.type = 'button';
+          rm.className = 'btn btn-sm checklist-remove';
+          rm.textContent = 'Remove';
+          rm.addEventListener('click', () => {
+            checklistItems.splice(idx, 1);
+            renderChecklist();
+            saveChecklist();
+          });
+          li.appendChild(rm);
+        }
+
+        listEl.appendChild(li);
+      });
+    }
+
+    const addBtn = document.getElementById('checklistAddBtn');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        const input = document.getElementById('checklistInput');
+        if (!input) return;
+        const text = String(input.value || '').trim();
+        if (!text) return;
+        checklistItems.push({ text, done: false });
+        input.value = '';
+        renderChecklist();
+        saveChecklist();
+      });
+    }
+
+    document.addEventListener('gitrip:tabchange', () => {
+      renderChecklist();
+      const input = document.getElementById('checklistInput');
+      const addButton = document.getElementById('checklistAddBtn');
+      const isEdit = getRepoTab() === 'edit';
+      if (input) input.disabled = !isEdit;
+      if (addButton) addButton.disabled = !isEdit;
+    });
+
+    renderWeatherPanel();
+    loadChecklist();
+  })();
+
+  // ---------- Easy / Advanced mode + Easy Save ----------
+  (function initModeAndEasySave() {
+    const savedMode = localStorage.getItem('gitripMode');
+    const initialMode = (savedMode === 'advanced') ? 'advanced' : 'easy';
+
+    const root = document.documentElement;
+    const body = document.body;
+
+    function applyMode(mode) {
+      const isAdvanced = mode === 'advanced';
+      const isEasy = !isAdvanced;
+
+      if (root) {
+        root.classList.toggle('advanced-mode', isAdvanced);
+        root.classList.toggle('easy-mode', isEasy);
+      }
+      if (body) {
+        body.classList.toggle('advanced-mode', isAdvanced);
+        body.classList.toggle('easy-mode', isEasy);
+      }
+
+      document
+        .querySelectorAll('[data-advanced-placeholder][data-easy-placeholder]')
+        .forEach((el) => {
+          const adv = el.getAttribute('data-advanced-placeholder') || '';
+          const easy = el.getAttribute('data-easy-placeholder') || '';
+          el.setAttribute('placeholder', isAdvanced ? adv : easy);
+        });
+    }
+
+    // Initial mode from localStorage (defaults to easy)
+    applyMode(initialMode);
+
+    const toggleEl = document.getElementById('advancedToggle');
+    if (toggleEl) {
+      toggleEl.checked = (initialMode === 'advanced');
+      toggleEl.addEventListener('change', () => {
+        const mode = toggleEl.checked ? 'advanced' : 'easy';
+        applyMode(mode);
+        localStorage.setItem('gitripMode', mode);
+      });
+    }
+
+    const saveBtn = document.getElementById('easySaveBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        easySaveTrip();
+      });
+    }
+
+    const easyPlaceInput = document.querySelector('textarea[name="placeNames"]');
+    const easyPlacePreview = document.getElementById('easyPlacePreview');
+    const easyAddForm = document.getElementById('easyAddForm');
+
+    const BULLET = '• ';
+
+    function addBullets(raw) {
+      return String(raw || '')
+        .split(/\r?\n/)
+        .map((line) => {
+          const cleaned = String(line || '').replace(/^\s*•\s*/, '').trim();
+          return cleaned ? `${BULLET}${cleaned}` : '';
+        })
+        .join('\n');
+    }
+
+    function stripBullets(raw) {
+      return String(raw || '')
+        .split(/\r?\n/)
+        .map((line) => String(line || '').replace(/^\s*•\s*/, ''))
+        .join('\n');
+    }
+
+    function syncEasyPlacePreview() {
+      if (!easyPlaceInput || !easyPlacePreview) return;
+      const raw = String(easyPlaceInput.value || '');
+      const items = raw
+        .split(/\r?\n/)
+        .map((s) => s.replace(/^\s*•\s*/, '').trim())
+        .filter(Boolean);
+      easyPlacePreview.innerHTML = '';
+      items.forEach((name) => {
+        const li = document.createElement('li');
+        li.textContent = name;
+        easyPlacePreview.appendChild(li);
+      });
+    }
+
+    if (easyPlaceInput) {
+      easyPlaceInput.value = addBullets(easyPlaceInput.value);
+      easyPlaceInput.addEventListener('input', syncEasyPlacePreview);
+      easyPlaceInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const start = easyPlaceInput.selectionStart || 0;
+        const end = easyPlaceInput.selectionEnd || 0;
+        const before = easyPlaceInput.value.slice(0, start);
+        const after = easyPlaceInput.value.slice(end);
+        easyPlaceInput.value = `${before}\n${BULLET}${after}`;
+        const cursor = start + 1 + BULLET.length;
+        easyPlaceInput.selectionStart = cursor;
+        easyPlaceInput.selectionEnd = cursor;
+        syncEasyPlacePreview();
+      });
+      easyPlaceInput.addEventListener('blur', () => {
+        easyPlaceInput.value = addBullets(easyPlaceInput.value);
+        syncEasyPlacePreview();
+      });
+    }
+    syncEasyPlacePreview();
+
+    if (easyAddForm && easyPlaceInput) {
+      easyAddForm.addEventListener('submit', () => {
+        easyPlaceInput.value = stripBullets(easyPlaceInput.value);
+      });
+    }
+
+    async function easySaveTrip() {
+      if (!Array.isArray(window.days)) {
+        alert('Nothing to save yet – please run the planner or add places first.');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        // Fetch current head commit id for non-fast-forward safety
+        const headResp = await fetch(`/api/repos/${encodeURIComponent(repoId)}/branches/${encodeURIComponent(currentBranch)}`);
+        const headJson = await headResp.json().catch(() => ({}));
+        const parentId = headJson && headJson.headCommit ? headJson.headCommit.id : null;
+
+        const resp = await fetch(`/api/repos/${encodeURIComponent(repoId)}/easy-save`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            branch: currentBranch,
+            parentId,
+            plan: {
+              transport: snapshotPlan.transport || null,
+              activeHours: snapshotPlan.activeHours || null,
+              days: window.days
+            }
+          })
+        });
+
+        const json = await resp.json().catch(() => ({}));
+
+        if (resp.status === 409 && json.error === 'non_fast_forward') {
+          alert(json.message || 'Your trip changed in another tab or device. Please refresh and try again.');
+          return;
+        }
+
+        if (!resp.ok || !json.ok) {
+          console.error('easy-save error', json);
+          alert(json.error || 'Save failed. Please try again.');
+          return;
+        }
+
+        // On success, reload to show updated history / branch head
+        location.reload();
+      } catch (e) {
+        console.error('easySaveTrip error', e);
+        alert('Save failed. Please check your connection and try again.');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+      }
+    }
+  })();
+
+  // ---------- Contribution summary ----------
+  (function initContributionSummary() {
+    const graph = document.getElementById('contribGraph');
+    const list = document.getElementById('contribList');
+    if (!graph || !list) return;
+
+    const commits = Array.isArray(commitsData) ? commitsData : [];
+    if (!commits.length) {
+      graph.innerHTML = '<p class="time">No commits yet.</p>';
+      list.innerHTML = '<li class="time">No contributors yet.</li>';
+      return;
+    }
+
+    const collaboratorIndex = new Map();
+    (Array.isArray(collaboratorsData) ? collaboratorsData : []).forEach((c) => {
+      if (!c) return;
+      if (c.email) collaboratorIndex.set(normalizeKey(c.email), c);
+      if (c.name) collaboratorIndex.set(normalizeKey(c.name), c);
+    });
+
+    const SYSTEM_AUTHORS = new Set(['system', 'web', 'planner', 'cli', 'unknown']);
+
+    function makeAvatar(collaborator, displayName) {
+      const key = (displayName || '').trim().toLowerCase();
+      if (!collaborator && SYSTEM_AUTHORS.has(key)) {
+        // Empty spacer so names stay aligned with real-user rows
+        const spacer = document.createElement('span');
+        spacer.className = 'collab-avatar';
+        return spacer;
+      }
+      if (collaborator && collaborator.profile_image_url) {
+        const img = document.createElement('img');
+        img.src = collaborator.profile_image_url;
+        img.className = 'collab-avatar';
+        img.alt = '';
+        return img;
+      }
+      const span = document.createElement('span');
+      span.className = 'collab-avatar collab-avatar--initials';
+      span.textContent = (displayName || '?')[0].toUpperCase();
+      return span;
+    }
+
+    const counts = new Map();
+    commits.forEach((c) => {
+      const authorRaw = String(c.author || 'unknown');
+      const key = normalizeKey(authorRaw) || 'unknown';
+      const current = counts.get(key);
+      if (current) {
+        current.count += 1;
+      } else {
+        counts.set(key, { key, author: authorRaw, count: 1 });
+      }
+    });
+
+    const entries = Array.from(counts.values()).sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.author.localeCompare(b.author);
+    });
+
+    const maxCount = Math.max(...entries.map((e) => e.count), 1);
+    graph.innerHTML = '';
+    entries.forEach((entry) => {
+      const collaborator = collaboratorIndex.get(entry.key);
+      const displayName = collaborator && collaborator.name ? collaborator.name : entry.author;
+      const row = document.createElement('div');
+      row.className = 'contrib-row';
+
+      const avatar = makeAvatar(collaborator, displayName);
+      const name = document.createElement('span');
+      name.className = 'contrib-name';
+      name.textContent = displayName;
+
+      const barWrap = document.createElement('div');
+      barWrap.className = 'contrib-bar-wrap';
+      const bar = document.createElement('div');
+      bar.className = 'contrib-bar';
+      bar.style.width = `${Math.round((entry.count / maxCount) * 100)}%`;
+      bar.title = `${entry.count} commit${entry.count === 1 ? '' : 's'}`;
+      barWrap.appendChild(bar);
+
+      const count = document.createElement('span');
+      count.className = 'contrib-count';
+      count.textContent = `${entry.count} commit${entry.count === 1 ? '' : 's'}`;
+
+      row.append(avatar, name, barWrap, count);
+      graph.appendChild(row);
+    });
+
+    list.innerHTML = '';
+    entries.forEach((entry) => {
+      const li = document.createElement('li');
+      li.style.display = 'flex';
+      li.style.alignItems = 'center';
+      li.style.gap = '8px';
+      const hint = authorHint(entry.author);
+      if (hint) li.title = hint;
+      const collaborator = collaboratorIndex.get(entry.key);
+      const displayName = collaborator && collaborator.name ? collaborator.name : entry.author;
+
+      const avatar = makeAvatar(collaborator, displayName);
+
+      const strong = document.createElement('strong');
+      strong.textContent = displayName;
+
+      const role = collaborator ? String(collaborator.role || 'contributor') : 'contributor';
+
+      const roleSpan = document.createElement('span');
+      roleSpan.className = 'time';
+      roleSpan.textContent = ` (${role})`;
+
+      li.append(avatar, strong, roleSpan);
+
+      if (collaborator && collaborator.name && normalizeKey(collaborator.name) !== normalizeKey(entry.author)) {
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'time';
+        nameSpan.textContent = ` • ${entry.author}`;
+        li.appendChild(nameSpan);
+      }
+
+      list.appendChild(li);
+    });
+  })();
+
+  // ---------- Visual workflow / branch graph (advanced-only) ----------
+  (function initBranchGraph() {
+    const holder = document.getElementById('branchGraph');
+    if (!holder) return;
+
+    const commits = Array.isArray(commitsData) ? commitsData : [];
+    if (!commits.length) {
+      holder.innerHTML = '<p class="time">No commits yet.</p>';
+      return;
+    }
+
+    // Map commitId -> [branchName, ...] for branch HEADs
+    const branchHeadsByCommit = new Map();
+    if (Array.isArray(branchesData)) {
+      branchesData.forEach(b => {
+        if (!b || !b.head_commit_id) return;
+        const id = b.head_commit_id;
+        const list = branchHeadsByCommit.get(id) || [];
+        list.push(b.name);
+        branchHeadsByCommit.set(id, list);
+      });
+    }
+
+    // Assign lanes (columns) newest → oldest by tracking active parent chains.
+    // This keeps visually related commits aligned without a full graph layout.
+    const nodeInfo = new Map(); // id -> { index, lane }
+    const lanes = []; // laneIndex -> id or placeholder
+
+    for (let i = 0; i < commits.length; i++) {
+      const c = commits[i];
+      let lane = -1;
+
+      for (let li = 0; li < lanes.length; li++) {
+        if (lanes[li] === c.id) {
+          lane = li;
+          break;
+        }
+      }
+
+      if (lane === -1) {
+        let free = lanes.indexOf(null);
+        if (free === -1) {
+          free = lanes.length;
+          lanes.push(null);
+        }
+        lane = free;
+      }
+
+      lanes[lane] = c.id;
+      const existing = nodeInfo.get(c.id);
+      if (existing) {
+        existing.index = i;
+        existing.lane = lane;
+      } else {
+        nodeInfo.set(c.id, { index: i, lane });
+      }
+
+      const parents = Array.isArray(c.parents) ? c.parents : [];
+      for (const pid of parents) {
+        if (!pid) continue;
+        let hasLane = false;
+        for (let li = 0; li < lanes.length; li++) {
+          if (lanes[li] === pid) {
+            hasLane = true;
+            break;
+          }
+        }
+        if (!hasLane) {
+          let free = lanes.indexOf(null);
+          if (free === -1) {
+            free = lanes.length;
+            lanes.push(null);
+          }
+          lanes[free] = pid;
+          if (!nodeInfo.has(pid)) {
+            nodeInfo.set(pid, { index: null, lane: free });
+          }
+        }
+      }
+    }
+
+    // Make sure every commit has an index
+    for (let i = 0; i < commits.length; i++) {
+      const c = commits[i];
+      const info = nodeInfo.get(c.id);
+      if (info) info.index = i;
+      else nodeInfo.set(c.id, { index: i, lane: 0 });
+    }
+
+    const laneCount = lanes.length || 1;
+    const rowCount = commits.length;
+    const laneGap = 26;
+    const rowGap = 28;
+    const radius = 4;
+    const margin = 10;
+    const labelSpace = 160;
+    const width = margin * 2 + laneGap * (laneCount - 1) + radius * 2 + labelSpace;
+    const height = margin * 2 + rowGap * (rowCount - 1) + radius * 2;
+
+    function posForId(id) {
+      const info = nodeInfo.get(id);
+      if (!info) return { x: 0, y: 0 };
+      const x = margin + (info.lane || 0) * laneGap;
+      const y = margin + (info.index || 0) * rowGap;
+      return { x, y };
+    }
+
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+    // Edges from commit → parents
+    commits.forEach(c => {
+      const parents = Array.isArray(c.parents) ? c.parents : [];
+      parents.forEach(pid => {
+        if (!nodeInfo.has(pid)) return;
+        const childPos = posForId(c.id);
+        const parentPos = posForId(pid);
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('x1', childPos.x);
+        line.setAttribute('y1', childPos.y + radius);
+        line.setAttribute('x2', parentPos.x);
+        line.setAttribute('y2', parentPos.y - radius);
+        line.setAttribute('class', 'branch-edge');
+        svg.appendChild(line);
+      });
+    });
+
+    // Nodes + branch labels
+    commits.forEach(c => {
+      const pos = posForId(c.id);
+      const headNames = branchHeadsByCommit.get(c.id) || null;
+      const isHead = !!headNames && headNames.length > 0;
+      const isCurrent = isHead && headNames.includes(currentBranch);
+
+      const circle = document.createElementNS(ns, 'circle');
+      circle.setAttribute('cx', pos.x);
+      circle.setAttribute('cy', pos.y);
+      circle.setAttribute('r', isHead ? radius + 1 : radius);
+
+      let cls = 'branch-node';
+      if (isHead) cls += ' branch-node-head';
+      if (isCurrent) cls += ' branch-node-current';
+      circle.setAttribute('class', cls);
+      circle.setAttribute('data-id', c.id);
+
+      const title = document.createElementNS(ns, 'title');
+      title.textContent = `${c.id.slice(0, 8)} — ${c.message}`;
+      circle.appendChild(title);
+
+      svg.appendChild(circle);
+
+      if (headNames && headNames.length) {
+        const label = document.createElementNS(ns, 'text');
+        label.setAttribute('x', pos.x + radius + 6);
+        label.setAttribute('y', pos.y + 4);
+        let lcls = 'branch-label';
+        if (isCurrent) lcls += ' branch-label-current';
+        label.setAttribute('class', lcls);
+        label.textContent = headNames.join(', ');
+        svg.appendChild(label);
+      }
+    });
+
+    holder.innerHTML = '';
+    holder.appendChild(svg);
+  })();
+</script>

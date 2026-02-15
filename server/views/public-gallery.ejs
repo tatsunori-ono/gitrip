@@ -1,0 +1,40 @@
+<!-- server/views/public-gallery.ejs -->
+<section class="container">
+  <h1>Public trips</h1>
+  <p class="time">
+    Trips that owners have marked as public. Anyone with the link can open them.
+  </p>
+  <div class="row" style="margin:8px 0 16px">
+    <a class="btn <%= sort === 'recent' ? 'btn-primary' : '' %>"
+       href="/ui/public?sort=recent">Recent</a>
+    <a class="btn <%= sort === 'stars' ? 'btn-primary' : '' %>"
+       href="/ui/public?sort=stars">Most stars</a>
+  </div>
+
+  <% if (!repos || !repos.length) { %>
+    <div class="card">
+      <p class="time">No public trips yet.</p>
+    </div>
+  <% } else { %>
+    <div class="gallery-grid">
+      <% repos.forEach(r => { %>
+        <div class="card">
+          <h2 style="margin:0 0 4px"><%= r.title %></h2>
+          <p class="time">
+            Owner:
+            <%= r.owner_name || r.owner_email || 'anonymous' %>
+            • created <%= r.created_at %>
+          </p>
+          <p class="time">
+            <i class="fa-solid fa-star" aria-hidden="true" style="color:#f59e0b"></i>
+            <%= Number(r.star_count || 0) %> stars
+          </p>
+          <a class="btn btn-primary"
+             href="/ui/repos/<%= r.id %>">
+            Open trip
+          </a>
+        </div>
+      <% }); %>
+    </div>
+  <% } %>
+</section>

@@ -1,0 +1,32 @@
+<section class="container">
+  <h1>Repositories</h1>
+
+  <div class="card">
+    <form class="row" method="post" action="/ui/repos">
+      <label style="flex:1">
+        Trip title
+        <input name="title" placeholder="e.g., London Weekend" />
+      </label>
+      <div style="align-self:flex-end">
+        <button class="btn btn-primary" type="submit">Create repo</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <ul class="list">
+      <% repos.forEach(r=>{ %>
+        <li class="kv">
+          <a href="/ui/repos/<%= r.id %>"><strong>
+              <%= r.title %>
+            </strong></a>
+          <span class="repo-id-label">ID</span>
+          <code><%= r.id %></code>
+        </li>
+        <% }) %>
+          <% if (!repos.length) { %>
+            <li style="color:var(--muted)">No repositories yet. Create one above.</li>
+            <% } %>
+    </ul>
+  </div>
+</section>

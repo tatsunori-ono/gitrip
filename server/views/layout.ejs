@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>GiTrip</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="/public/style.css" />
+    <link rel="manifest" href="/public/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/public/favicon.svg" />
+    <meta name="theme-color" content="#ec5643" />
+  </head>
+  <body>
+    <header>
+      <div class="nav-bar">
+        <div class="nav-left">
+          <a href="/" class="logo-link">
+            <img src="/public/logo.svg" alt="GiTrip logo" />
+          </a>
+          <nav class="nav-links">
+            <a href="/ui/about">About</a>
+            <a href="/ui/public">Public trips</a>
+            <a href="/ui/explore">Quick route</a>
+          </nav>
+        </div>
+        <div class="nav-right">
+          <% if (currentUser) { %>
+            <a class="nav-user nav-user-link" href="/ui/users/<%= currentUser.id %>">
+              <% if (currentUser.profileImageUrl) { %>
+                <img class="nav-avatar"
+                     src="<%= currentUser.profileImageUrl %>"
+                     alt="Profile image" />
+              <% } else { %>
+                <div class="nav-avatar nav-avatar--placeholder">
+                  <%= (currentUser.name || currentUser.email || 'U').slice(0,1).toUpperCase() %>
+                </div>
+              <% } %>
+              <span class="user-chip">
+                <%= currentUser.name || currentUser.email %>
+              </span>
+            </a>
+            <a href="/ui/account" class="nav-link">Settings</a>
+            <form method="post"
+                  action="/ui/logout"
+                  style="margin:0">
+              <button class="btn btn-ghost" type="submit">Log out</button>
+            </form>
+          <% } else { %>
+            <a href="/ui/login" class="nav-link">Log in</a>
+            <a href="/ui/signup" class="nav-link">Sign up</a>
+          <% } %>
+        </div>
+      </div>
+    </header>
+    <main id="mainContent" tabindex="-1">
+      <%- body %>
+    </main>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/public/sw.js').catch(() => {});
+        });
+      }
+    </script>
+    <script>
+      (function setupAccessibility() {
+        const PREF_KEY = 'gitripAccessibility';
+        const allowedFonts = ['small', 'medium', 'large'];
+        const root = document.documentElement;
+        const body = document.body;
+        const defaults = { fontSize: 'medium', highContrast: false, readAloud: false };
+        let state = { ...defaults };
+        let readHandler = null;
+
+        function speak(text) {
+          if (!window.speechSynthesis) return;
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.rate = 1;
+          window.speechSynthesis.speak(utter);
+        }
+
+        function applyFont(value) {
+          const size = allowedFonts.includes(value) ? value : defaults.fontSize;
+          root.classList.remove('font-size-small', 'font-size-medium', 'font-size-large');
+          root.classList.add(`font-size-${size}`);
+          return size;
+        }
+
+        function applyContrast(on) {
+          body.classList.toggle('high-contrast', !!on);
+        }
+
+        function findReadable(node) {
+          return node ? node.closest('[data-readable], .card') : null;
+        }
+
+        function applyReadAloud(on) {
+          const enable = !!on;
+          body.classList.toggle('read-aloud-active', enable);
+          if (enable && !readHandler) {
+            speak('Read-aloud mode is on. Tap any card to hear it.');
+            readHandler = (ev) => {
+              const readable = findReadable(ev.target);
+              if (!readable) return;
+              const override = readable.getAttribute('data-read-text');
+              const text = (override || readable.innerText || '').trim();
+              if (!text) return;
+              speak(text.slice(0, 1200));
+            };
+            document.addEventListener('click', readHandler, true);
+          } else if (!enable && readHandler) {
+            document.removeEventListener('click', readHandler, true);
+            readHandler = null;
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+          }
+        }
+
+        function loadPrefs() {
+          try {
+            const raw = localStorage.getItem(PREF_KEY);
+            if (!raw) return { ...defaults };
+            const parsed = JSON.parse(raw);
+            return {
+              fontSize: allowedFonts.includes(parsed.fontSize) ? parsed.fontSize : defaults.fontSize,
+              highContrast: !!parsed.highContrast,
+              readAloud: !!parsed.readAloud
+            };
+          } catch (err) {
+            return { ...defaults };
+          }
+        }
+
+        function savePrefs() {
+          try {
+            localStorage.setItem(PREF_KEY, JSON.stringify(state));
+          } catch (err) {
+            // ignore storage issues
+          }
+        }
+
+        function announce(msgEl, text) {
+          if (!msgEl) return;
+          msgEl.textContent = text;
+          setTimeout(() => {
+            if (msgEl.textContent === text) msgEl.textContent = '';
+          }, 4000);
+        }
+
+        function wireControls() {
+          const form = document.getElementById('accessibilitySettings');
+          if (!form) return;
+          const fontSelect = document.getElementById('fontSizeSelect');
+          const contrastToggle = document.getElementById('highContrastToggle');
+          const readToggle = document.getElementById('readAloudToggle');
+          const msg = document.getElementById('accessibilityMsg');
+
+          if (fontSelect) fontSelect.value = state.fontSize;
+          if (contrastToggle) contrastToggle.checked = !!state.highContrast;
+          if (readToggle) readToggle.checked = !!state.readAloud;
+
+          if (fontSelect) {
+            fontSelect.addEventListener('change', () => {
+              state.fontSize = applyFont(fontSelect.value);
+              savePrefs();
+              announce(msg, `Font size set to ${state.fontSize}.`);
+            });
+          }
+
+          if (contrastToggle) {
+            contrastToggle.addEventListener('change', () => {
+              state.highContrast = !!contrastToggle.checked;
+              applyContrast(state.highContrast);
+              savePrefs();
+              announce(msg, state.highContrast ? 'High contrast enabled.' : 'High contrast disabled.');
+            });
+          }
+
+          if (readToggle) {
+            readToggle.addEventListener('change', () => {
+              state.readAloud = !!readToggle.checked;
+              applyReadAloud(state.readAloud);
+              savePrefs();
+              announce(msg, state.readAloud ? 'Read-aloud mode enabled.' : 'Read-aloud mode disabled.');
+            });
+          }
+        }
+
+        function applyAll() {
+          state.fontSize = applyFont(state.fontSize);
+          applyContrast(state.highContrast);
+          applyReadAloud(state.readAloud);
+        }
+
+        function init() {
+          state = loadPrefs();
+          applyAll();
+          wireControls();
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', init);
+        } else {
+          init();
+        }
+      })();
+    </script>
+  </body>
+</html>

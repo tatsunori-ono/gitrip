@@ -1,0 +1,88 @@
+<!-- server/views/explore.ejs -->
+<section class="explore-page">
+  <div id="exploreMap" class="explore-map" aria-label="Map"></div>
+
+  <div class="explore-panel card">
+    <div class="explore-panel__header">
+      <h1 style="margin:0">Quick route</h1>
+      <p class="time" style="margin:6px 0 0">
+        Add destinations, compute the shortest travel order, and preview it on the map.
+      </p>
+    </div>
+
+    <div class="row" style="align-items:flex-end; gap:10px; margin-top:10px">
+      <label style="flex:1; min-width:180px">
+        Trip title (optional)
+        <input id="tripTitle" placeholder="Untitled Trip" />
+      </label>
+
+      <label style="width:160px">
+        Mode
+        <select id="modeSelect">
+          <option value="walking">Walking</option>
+          <option value="driving">Driving</option>
+          <option value="transit">Transit</option>
+          <option value="cycling">Cycling</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="placesList" class="explore-places" style="margin-top:10px"></div>
+
+    <div class="row" style="gap:8px; margin-top:10px; flex-wrap:wrap">
+      <button id="addPlaceBtn" class="btn" type="button">+ Add destination</button>
+      <button id="computeBtn" class="btn btn-primary" type="button">Compute shortest route</button>
+      <button id="clearBtn" class="btn" type="button">Clear</button>
+    </div>
+
+    <div class="explore-summary" style="margin-top:10px">
+      <div id="summaryLine" class="time"></div>
+      <ol id="legsList" class="explore-legs"></ol>
+    </div>
+
+    <div class="row" style="justify-content:space-between; align-items:center; margin-top:10px; gap:10px">
+      <button id="startRepoBtn" class="btn btn-primary" type="button" disabled>
+        Start repo with this trip
+      </button>
+      <span id="statusMsg" class="time" role="status" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <aside class="explore-sidebar card" data-collapsed="false">
+    <button class="explore-sidebar__toggle" id="bookmarkSidebarToggle" type="button" aria-label="Collapse bookmarks">
+      <span aria-hidden="true">›</span>
+    </button>
+    <div class="explore-sidebar__content">
+      <div class="explore-sidebar__header">
+        <strong>Bookmarks</strong>
+      </div>
+      <div class="explore-bookmarks">
+        <div class="row bookmark-row bookmark-row--create">
+          <input id="bookmarkListName" placeholder="New list name" />
+          <details class="icon-picker" id="bookmarkIconPicker">
+            <summary class="icon-picker__summary">
+              <span id="bookmarkIconButton" class="icon-picker__icon">
+                <i class="fa-solid fa-star" aria-hidden="true"></i>
+              </span>
+              <span class="icon-picker__label">Icon</span>
+            </summary>
+            <div class="icon-picker__menu" id="bookmarkIconMenu">
+              <button type="button" data-icon="star"><i class="fa-solid fa-star" aria-hidden="true"></i></button>
+              <button type="button" data-icon="heart"><i class="fa-solid fa-heart" aria-hidden="true"></i></button>
+              <button type="button" data-icon="bookmark"><i class="fa-solid fa-bookmark" aria-hidden="true"></i></button>
+              <button type="button" data-icon="flag"><i class="fa-solid fa-flag" aria-hidden="true"></i></button>
+              <button type="button" data-icon="location-dot"><i class="fa-solid fa-location-dot" aria-hidden="true"></i></button>
+            </div>
+          </details>
+          <button id="bookmarkCreateBtn" class="btn" type="button">Create</button>
+        </div>
+        <div id="bookmarkLists"></div>
+      </div>
+    </div>
+  </aside>
+</section>
+
+<link rel="stylesheet" href="/public/explore.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/public/explore.js" defer></script>

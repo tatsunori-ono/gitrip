@@ -1,0 +1,44 @@
+<section class="container">
+  <div class="card" style="max-width:420px; margin:24px auto">
+    <h1>Create an account</h1>
+    <p class="time">
+      You can plan and optimise trips without an account.
+      Sign up only if you want to share or collaborate on trips.
+    </p>
+
+    <% if (error) { %>
+      <p style="color:#b91c1c; font-size:13px; margin-top:8px"><%= error %></p>
+    <% } %>
+
+    <form method="post" action="/ui/signup" style="margin-top:12px">
+      <input type="hidden" name="next" value="<%= next %>" />
+
+      <label>
+        Email
+        <input type="email" name="email" required value="<%= values.email || '' %>">
+      </label>
+
+      <label>
+        Name (optional)
+        <input type="text" name="name" value="<%= values.name || '' %>">
+      </label>
+
+      <label>
+        Password
+        <input type="password" name="password" required minlength="6">
+      </label>
+
+      <label>
+        Confirm password
+        <input type="password" name="confirm" required minlength="6">
+      </label>
+
+      <div class="section-actions">
+        <button class="btn btn-primary" type="submit">Sign up</button>
+        <a class="time" href="/ui/login?next=<%= encodeURIComponent(next) %>">
+          Already have an account? Sign in
+        </a>
+      </div>
+    </form>
+  </div>
+</section>

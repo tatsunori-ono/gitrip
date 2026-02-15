@@ -1,0 +1,805 @@
+<section class="container">
+  <h1>Merge</h1>
+
+  <style>
+    .plan-preview-grid {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .plan-preview-col {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      background: #f9fafb;
+      max-height: 260px;
+      overflow: auto;
+      font-size: 13px;
+    }
+
+    .plan-preview-col-heading {
+      margin: 0 0 4px;
+      font-size: 13px;
+    }
+
+    .plan-preview-day {
+      margin-top: 6px;
+    }
+
+    .plan-preview-day-title {
+      font-weight: 600;
+      font-size: 12px;
+      color: #111827;
+    }
+
+    .plan-preview-stop {
+      margin-left: 10px;
+      margin-top: 2px;
+    }
+
+    .plan-preview-stop .time {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .plan-preview-empty {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .merge-timeline-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .merge-timeline-col {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+    }
+
+    .merge-timeline-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 6px;
+    }
+
+    .merge-day {
+      margin-top: 6px;
+    }
+
+    .merge-day-title {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .merge-timeline {
+      margin-top: 6px;
+    }
+
+    .merge-timeline svg {
+      width: 100%;
+      height: 120px;
+      display: block;
+    }
+
+    .merge-conflict rect.tl-block-rect {
+      stroke: #ef4444;
+      stroke-width: 1.5px;
+      fill: #fde2e2;
+    }
+
+    .merge-merged {
+      margin-top: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .merge-timeline {
+        height: 50px;
+      }
+    }
+  </style>
+
+  <div class="card">
+    <form class="row" method="get" action="">
+      <label>Source
+        <select name="source">
+          <% branches.forEach(b=>{ %>
+            <option value="<%= b.name %>" <%= b.name===source?'selected':'' %>><%= b.name %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>Target
+        <select name="target">
+          <% branches.forEach(b=>{ %>
+            <option value="<%= b.name %>" <%= b.name===target?'selected':'' %>><%= b.name %></option>
+          <% }) %>
+        </select>
+      </label>
+      <button class="btn">Check</button>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h2>Status</h2>
+
+    <% if (!baseId) { %>
+      <p class="time">
+        Couldn’t compute a common base commit for these branches, so a proper 3‑way merge isn’t available.
+        You can still compare the two plans below.
+      </p>
+    <% } else if (!conflicts.length) { %>
+      <p>
+        <span class="icon-inline" aria-hidden="true">
+          <i class="fa-solid fa-circle-check"></i>
+        </span>
+        No merge conflicts detected. Review the plan comparison below, then merge into
+        <strong><%= target %></strong>.
+      </p>
+      <form method="post"
+            action="/api/repos/<%= repo.id %>/merge"
+            onsubmit="return mergeDirect(event)">
+        <input type="hidden" id="base" value="<%= baseId %>"/>
+        <input type="hidden" id="ours" value="<%= oursId %>"/>
+        <input type="hidden" id="theirs" value="<%= theirsId %>"/>
+        <input type="hidden" id="targetBranch" value="<%= target %>"/>
+        <button class="btn btn-primary">Merge now</button>
+      </form>
+    <% } else { %>
+      <p>There are <strong><%= conflicts.length %></strong> conflicts. Resolve them below.</p>
+
+      <form method="post"
+            action="/ui/repos/<%= repo.id %>/merge-resolve"
+            onsubmit="return submitResolutions()">
+        <input type="hidden" name="baseId" value="<%= baseId %>"/>
+        <input type="hidden" name="oursId" value="<%= oursId %>"/>
+        <input type="hidden" name="theirsId" value="<%= theirsId %>"/>
+        <input type="hidden" name="targetBranch" value="<%= target %>"/>
+        <input type="hidden" id="resolutions" name="resolutions" />
+
+        <ul class="list">
+          <% conflicts.forEach((c,idx)=>{ %>
+            <li>
+              <% if (c.type==='file') { %>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div><strong>File conflict:</strong> <code><%= c.path %></code></div>
+                  <div class="row" style="margin:0">
+                    <label><input type="radio" name="c<%= idx %>" value="base" checked /> Keep base</label>
+                    <label><input type="radio" name="c<%= idx %>" value="ours" /> Use source</label>
+                    <label><input type="radio" name="c<%= idx %>" value="theirs" /> Use target</label>
+                  </div>
+                </div>
+
+                <details style="margin-top:6px">
+                  <summary class="time">Preview diff</summary>
+                  <div class="row" style="margin-top:8px">
+                    <div style="flex:1">
+                      <div class="time">Source (ours)</div>
+                      <pre class="code"><%- (c.ours||'').slice(0,20000) %></pre>
+                    </div>
+                    <div style="flex:1">
+                      <div class="time">Target (theirs)</div>
+                      <pre class="code"><%- (c.theirs||'').slice(0,20000) %></pre>
+                    </div>
+                  </div>
+                </details>
+              <% } else if (c.type==='plan-stop-time') { %>
+                <div>
+                  <strong>Stop time conflict:</strong>
+                  day <code><%= c.dayId %></code>,
+                  stop <code><%= c.stopId %></code>
+                </div>
+                <div class="row">
+                  <label>
+                    <input type="radio" name="c<%= idx %>" value="base" checked />
+                    Keep base times
+                    <span class="time">
+                      (<%= c.base?.arrive || '??:??' %> → <%= c.base?.depart || '??:??' %>)
+                    </span>
+                  </label>
+                  <label>
+                    <input type="radio" name="c<%= idx %>" value="ours" />
+                    Use source times
+                    <span class="time">
+                      (<%= c.ours?.arrive || '??:??' %> → <%= c.ours?.depart || '??:??' %>)
+                    </span>
+                  </label>
+                  <label>
+                    <input type="radio" name="c<%= idx %>" value="theirs" />
+                    Use target times
+                    <span class="time">
+                      (<%= c.theirs?.arrive || '??:??' %> → <%= c.theirs?.depart || '??:??' %>)
+                    </span>
+                  </label>
+                </div>
+                <details style="margin-top:6px">
+                  <summary class="time">Preview times</summary>
+                  <ul class="list" style="margin-top:4px">
+                    <li class="time">
+                      <strong>Base:</strong>
+                      <%= c.base?.arrive || '??:??' %> → <%= c.base?.depart || '??:??' %>
+                    </li>
+                    <li class="time">
+                      <strong>Source:</strong>
+                      <%= c.ours?.arrive || '??:??' %> → <%= c.ours?.depart || '??:??' %>
+                    </li>
+                    <li class="time">
+                      <strong>Target:</strong>
+                      <%= c.theirs?.arrive || '??:??' %> → <%= c.theirs?.depart || '??:??' %>
+                    </li>
+                  </ul>
+                </details>
+              <% } else if (c.type==='plan-stop-delete') { %>
+                <div>
+                  <strong>Stop deleted vs edited:</strong>
+                  day <code><%= c.dayId %></code>,
+                  stop <code><%= c.stopId %></code>
+                </div>
+                <p class="time">
+                  One branch deleted this stop while the other edited it. Choose what to keep.
+                </p>
+
+                <div class="row">
+                  <label>
+                    <input type="radio" name="c<%= idx %>" value="base" checked />
+                    Keep base stop
+                    <span class="time">
+                      (<%= c.base?.name || 'Untitled' %>
+                      <% if (c.base?.arrive || c.base?.depart) { %>
+                        • <%= c.base?.arrive || '??:??' %> → <%= c.base?.depart || '??:??' %>
+                      <% } %>)
+                    </span>
+                  </label>
+
+                  <label>
+                    <input type="radio" name="c<%= idx %>" value="ours" />
+                    <%= c.ours ? 'Use source version' : 'Delete (source removed it)' %>
+                    <span class="time">
+                      <% if (c.ours) { %>
+                        (<%= c.ours?.name || 'Untitled' %>
+                        <% if (c.ours?.arrive || c.ours?.depart) { %>
+                          • <%= c.ours?.arrive || '??:??' %> → <%= c.ours?.depart || '??:??' %>
+                        <% } %>)
+                      <% } %>
+                    </span>
+                  </label>
+
+                  <label>
+                    <input type="radio" name="c<%= idx %>" value="theirs" />
+                    <%= c.theirs ? 'Use target version' : 'Delete (target removed it)' %>
+                    <span class="time">
+                      <% if (c.theirs) { %>
+                        (<%= c.theirs?.name || 'Untitled' %>
+                        <% if (c.theirs?.arrive || c.theirs?.depart) { %>
+                          • <%= c.theirs?.arrive || '??:??' %> → <%= c.theirs?.depart || '??:??' %>
+                        <% } %>)
+                      <% } %>
+                    </span>
+                  </label>
+                </div>
+
+                <details style="margin-top:6px">
+                  <summary class="time">Preview</summary>
+                  <ul class="list" style="margin-top:4px">
+                    <li class="time">
+                      <strong>Base:</strong>
+                      <%= c.base?.name || '—' %>
+                      (<%= c.base?.arrive || '??:??' %> → <%= c.base?.depart || '??:??' %>)
+                    </li>
+                    <li class="time">
+                      <strong>Source:</strong>
+                      <% if (!c.ours) { %>deleted<% } else { %>
+                        <%= c.ours?.name || '—' %>
+                        (<%= c.ours?.arrive || '??:??' %> → <%= c.ours?.depart || '??:??' %>)
+                      <% } %>
+                    </li>
+                    <li class="time">
+                      <strong>Target:</strong>
+                      <% if (!c.theirs) { %>deleted<% } else { %>
+                        <%= c.theirs?.name || '—' %>
+                        (<%= c.theirs?.arrive || '??:??' %> → <%= c.theirs?.depart || '??:??' %>)
+                      <% } %>
+                    </li>
+                  </ul>
+                </details>
+              <% } else if (c.type==='plan-whole') { %>
+                <div>
+                  <strong>Itinerary conflict:</strong>
+                  both source and target changed the overall trip layout.
+                </div>
+                <p class="time">
+                  Choose which full plan to keep on the target branch. This will replace days and stops.
+                </p>
+                <div class="row">
+                  <label><input type="radio" name="c<%= idx %>" value="base" checked /> Keep base plan</label>
+                  <label><input type="radio" name="c<%= idx %>" value="ours" /> Use source plan</label>
+                  <label><input type="radio" name="c<%= idx %>" value="theirs" /> Use target plan</label>
+                </div>
+
+                <details style="margin-top:6px">
+                  <summary class="time">Preview plans</summary>
+                  <div class="plan-preview-grid" style="margin-top:8px">
+                    <div class="plan-preview-col">
+                      <div class="time"><strong>Base</strong></div>
+                      <% const pB = c.base; %>
+                      <% if (!pB || !Array.isArray(pB.days) || !pB.days.length) { %>
+                        <div class="plan-preview-empty">No plan</div>
+                      <% } else { %>
+                        <% pB.days.forEach(function(d){ %>
+                          <div class="plan-preview-day">
+                            <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                            <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                              <div class="plan-preview-empty">No stops</div>
+                            <% } else { %>
+                              <% d.stops.forEach(function(s){ %>
+                                <% if (s) { %>
+                                  <div class="plan-preview-stop">
+                                    <strong><%= s.name || 'Untitled stop' %></strong>
+                                    <% if (s.arrive || s.depart) { %>
+                                      <span class="time">
+                                        <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
+                                      </span>
+                                    <% } %>
+                                  </div>
+                                <% } %>
+                              <% }); %>
+                            <% } %>
+                          </div>
+                        <% }); %>
+                      <% } %>
+                    </div>
+
+                    <div class="plan-preview-col">
+                      <div class="time"><strong>Source</strong></div>
+                      <% const pO = c.ours; %>
+                      <% if (!pO || !Array.isArray(pO.days) || !pO.days.length) { %>
+                        <div class="plan-preview-empty">No plan</div>
+                      <% } else { %>
+                        <% pO.days.forEach(function(d){ %>
+                          <div class="plan-preview-day">
+                            <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                            <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                              <div class="plan-preview-empty">No stops</div>
+                            <% } else { %>
+                              <% d.stops.forEach(function(s){ %>
+                                <% if (s) { %>
+                                  <div class="plan-preview-stop">
+                                    <strong><%= s.name || 'Untitled stop' %></strong>
+                                    <% if (s.arrive || s.depart) { %>
+                                      <span class="time">
+                                        <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
+                                      </span>
+                                    <% } %>
+                                  </div>
+                                <% } %>
+                              <% }); %>
+                            <% } %>
+                          </div>
+                        <% }); %>
+                      <% } %>
+                    </div>
+
+                    <div class="plan-preview-col">
+                      <div class="time"><strong>Target</strong></div>
+                      <% const pT = c.theirs; %>
+                      <% if (!pT || !Array.isArray(pT.days) || !pT.days.length) { %>
+                        <div class="plan-preview-empty">No plan</div>
+                      <% } else { %>
+                        <% pT.days.forEach(function(d){ %>
+                          <div class="plan-preview-day">
+                            <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                            <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                              <div class="plan-preview-empty">No stops</div>
+                            <% } else { %>
+                              <% d.stops.forEach(function(s){ %>
+                                <% if (s) { %>
+                                  <div class="plan-preview-stop">
+                                    <strong><%= s.name || 'Untitled stop' %></strong>
+                                    <% if (s.arrive || s.depart) { %>
+                                      <span class="time">
+                                        <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
+                                      </span>
+                                    <% } %>
+                                  </div>
+                                <% } %>
+                              <% }); %>
+                            <% } %>
+                          </div>
+                        <% }); %>
+                      <% } %>
+                    </div>
+                  </div>
+                </details>
+              <% } %>
+              <input type="hidden" id="meta<%= idx %>" value='<%- JSON.stringify(c) %>' />
+            </li>
+          <% }) %>
+        </ul>
+
+        <div class="section-actions">
+          <button class="btn btn-primary" type="submit">
+            Apply resolutions &amp; Merge
+          </button>
+        </div>
+      </form>
+    <% } %>
+
+    <% if (basePlan || ourPlan || theirPlan) { %>
+      <h3 style="margin-top:16px">Plan comparison</h3>
+      <p class="time">
+        Base is the common ancestor; Source is <strong><%= source %></strong>; Target is
+        <strong><%= target %></strong>.
+      </p>
+      <div class="plan-preview-grid">
+        <div class="plan-preview-col">
+          <div class="time">
+            <strong>Base</strong>
+            <% if (baseId) { %> (common ancestor)<% } else { %> (n/a)<% } %>
+          </div>
+          <% if (!basePlan || !Array.isArray(basePlan.days) || !basePlan.days.length) { %>
+            <div class="plan-preview-empty">No plan</div>
+          <% } else { %>
+            <% basePlan.days.forEach(function(d){ %>
+              <div class="plan-preview-day">
+                <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                  <div class="plan-preview-empty">No stops</div>
+                <% } else { %>
+                  <% d.stops.forEach(function(s){ %>
+                    <% if (s) { %>
+                      <div class="plan-preview-stop">
+                        <strong><%= s.name || 'Untitled stop' %></strong>
+                        <% if (s.arrive || s.depart) { %>
+                          <span class="time">
+                            <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
+                          </span>
+                        <% } %>
+                      </div>
+                    <% } %>
+                  <% }); %>
+                <% } %>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+
+        <div class="plan-preview-col">
+          <div class="time"><strong>Source</strong> (<%= source %>)</div>
+          <% if (!ourPlan || !Array.isArray(ourPlan.days) || !ourPlan.days.length) { %>
+            <div class="plan-preview-empty">No plan</div>
+          <% } else { %>
+            <% ourPlan.days.forEach(function(d){ %>
+              <div class="plan-preview-day">
+                <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                  <div class="plan-preview-empty">No stops</div>
+                <% } else { %>
+                  <% d.stops.forEach(function(s){ %>
+                    <% if (s) { %>
+                      <div class="plan-preview-stop">
+                        <strong><%= s.name || 'Untitled stop' %></strong>
+                        <% if (s.arrive || s.depart) { %>
+                          <span class="time">
+                            <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
+                          </span>
+                        <% } %>
+                      </div>
+                    <% } %>
+                  <% }); %>
+                <% } %>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+
+        <div class="plan-preview-col">
+          <div class="time"><strong>Target</strong> (<%= target %>)</div>
+          <% if (!theirPlan || !Array.isArray(theirPlan.days) || !theirPlan.days.length) { %>
+            <div class="plan-preview-empty">No plan</div>
+          <% } else { %>
+            <% theirPlan.days.forEach(function(d){ %>
+              <div class="plan-preview-day">
+                <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                  <div class="plan-preview-empty">No stops</div>
+                <% } else { %>
+                  <% d.stops.forEach(function(s){ %>
+                    <% if (s) { %>
+                      <div class="plan-preview-stop">
+                        <strong><%= s.name || 'Untitled stop' %></strong>
+                        <% if (s.arrive || s.depart) { %>
+                          <span class="time">
+                            <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
+                          </span>
+                        <% } %>
+                      </div>
+                    <% } %>
+                  <% }); %>
+                <% } %>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h2>Timeline compare</h2>
+    <div class="merge-timeline-grid">
+      <div class="merge-timeline-col">
+        <div class="merge-timeline-title">Base</div>
+        <div id="timelineBase"></div>
+      </div>
+      <div class="merge-timeline-col">
+        <div class="merge-timeline-title">Source (<%= source %>)</div>
+        <div id="timelineOurs"></div>
+      </div>
+      <div class="merge-timeline-col">
+        <div class="merge-timeline-title">Target (<%= target %>)</div>
+        <div id="timelineTheirs"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card merge-merged">
+    <h2>Merged timeline preview</h2>
+    <div id="timelineMerged"></div>
+  </div>
+</section>
+
+<script>
+const basePlan = <%- JSON.stringify(basePlan || null) %>;
+const ourPlan = <%- JSON.stringify(ourPlan || null) %>;
+const theirPlan = <%- JSON.stringify(theirPlan || null) %>;
+const mergedPlanBase = <%- JSON.stringify(mergedPlan || null) %>;
+const conflictMeta = <%- JSON.stringify(conflicts || []) %>;
+
+async function mergeDirect(e){
+  e.preventDefault();
+  const body = {
+    base: document.getElementById('base').value,
+    ours: document.getElementById('ours').value,
+    theirs: document.getElementById('theirs').value,
+    targetBranch: document.getElementById('targetBranch').value,
+    expectedTargetHead: document.getElementById('theirs').value,
+    author: 'web'
+  };
+  const r = await fetch('/api/repos/<%= repo.id %>/merge', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if (r.ok) {
+    window.location.href = '/ui/repos/<%= repo.id %>';
+  } else {
+    const j = await r.json().catch(()=>({}));
+    alert('Merge failed: ' + (j.error || 'conflicts occurred'));
+    window.location.reload();
+  }
+}
+
+function submitResolutions(){
+  const metas = document.querySelectorAll('input[id^="meta"]');
+  const res = [];
+  metas.forEach((m, i)=>{
+    const chosen = document.querySelector(`input[name="c${i}"]:checked`);
+    const meta = JSON.parse(m.value);
+    res.push({ ...meta, choice: chosen ? chosen.value : 'base' });
+  });
+  document.getElementById('resolutions').value = JSON.stringify(res);
+  return true;
+}
+
+function shortName(name) {
+  const label = String(name || '').trim();
+  if (!label) return '';
+  const commaIdx = label.indexOf(',');
+  return commaIdx === -1 ? label : label.slice(0, commaIdx);
+}
+
+function toMin(t) {
+  const parts = String(t || '').split(':').map(Number);
+  if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) return null;
+  return (parts[0] || 0) * 60 + (parts[1] || 0);
+}
+
+function renderTimeline(container, plan, conflictSet) {
+  if (!container) return;
+  container.innerHTML = '';
+  if (!plan || !Array.isArray(plan.days) || !plan.days.length) {
+    container.innerHTML = '<div class="plan-preview-empty">No plan</div>';
+    return;
+  }
+
+  const actStart = 8 * 60;
+  const actEnd = 22 * 60;
+  const span = actEnd - actStart;
+
+  plan.days.forEach((d) => {
+    const dayWrap = document.createElement('div');
+    dayWrap.className = 'merge-day';
+    const title = document.createElement('div');
+    title.className = 'merge-day-title';
+    title.textContent = d.date || d.id || 'Day';
+    dayWrap.appendChild(title);
+
+    const tl = document.createElement('div');
+    tl.className = 'merge-timeline';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 1000 120');
+    svg.setAttribute('aria-label', 'timeline');
+
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('x', '0');
+    bg.setAttribute('y', '26');
+    bg.setAttribute('width', '1000');
+    bg.setAttribute('height', '28');
+    bg.setAttribute('fill', '#ffffff');
+    bg.setAttribute('stroke', '#e0e0e6');
+    svg.appendChild(bg);
+
+    for (let h = 8; h <= 22; h++) {
+      const x = ((h * 60 - actStart) / span) * 1000;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', String(x));
+      line.setAttribute('y1', '26');
+      line.setAttribute('x2', String(x));
+      line.setAttribute('y2', '54');
+      line.setAttribute('stroke', '#e5e7eb');
+      svg.appendChild(line);
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', String(x + 4));
+      text.setAttribute('y', '20');
+      text.setAttribute('font-size', '10');
+      text.setAttribute('fill', '#6b7280');
+      text.textContent = `${h}:00`;
+      svg.appendChild(text);
+    }
+
+    const stops = Array.isArray(d.stops) ? d.stops : [];
+    stops.forEach((s) => {
+      const a = toMin(s.arrive);
+      const b = toMin(s.depart);
+      if (a == null || b == null) return;
+      const left = ((a - actStart) / span) * 1000;
+      const width = Math.max(8, ((b - a) / span) * 1000);
+      const labelYOffset = (Math.floor(left / 50) % 2) ? 22 : 38;
+      const labelY = 68 + labelYOffset;
+
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', 'tl-block' + (conflictSet && conflictSet.has(`${d.id}::${s.id}`) ? ' merge-conflict' : ''));
+
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('class', 'tl-block-rect');
+      rect.setAttribute('x', String(left));
+      rect.setAttribute('y', '30');
+      rect.setAttribute('width', String(width));
+      rect.setAttribute('height', '20');
+      rect.setAttribute('rx', '6');
+      g.appendChild(rect);
+
+      const leader = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      leader.setAttribute('class', 'tl-leader');
+      leader.setAttribute('x1', String(left + 6));
+      leader.setAttribute('y1', '52');
+      leader.setAttribute('x2', String(left + 6));
+      leader.setAttribute('y2', String(labelY - 10));
+      leader.setAttribute('stroke', '#9ca3af');
+      leader.setAttribute('stroke-width', '1');
+      leader.setAttribute('stroke-dasharray', '2,2');
+      g.appendChild(leader);
+
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('class', 'tl-label');
+      label.setAttribute('x', String(left + 6));
+      label.setAttribute('y', String(labelY));
+      label.setAttribute('font-size', '10');
+      label.setAttribute('fill', '#111');
+      label.textContent = shortName(s.name);
+      g.appendChild(label);
+
+      svg.appendChild(g);
+    });
+
+    tl.appendChild(svg);
+    dayWrap.appendChild(tl);
+    container.appendChild(dayWrap);
+  });
+}
+
+function clonePlan(plan) {
+  return plan ? JSON.parse(JSON.stringify(plan)) : null;
+}
+
+function applyResolutions() {
+  const metas = document.querySelectorAll('input[id^="meta"]');
+  const res = [];
+  metas.forEach((m, i) => {
+    const chosen = document.querySelector(`input[name="c${i}"]:checked`);
+    const meta = JSON.parse(m.value);
+    res.push({ ...meta, choice: chosen ? chosen.value : 'base' });
+  });
+
+  let merged = clonePlan(mergedPlanBase);
+  if (!merged) return null;
+
+  const whole = res.find((r) => r.type === 'plan-whole' && r.choice && r.choice !== 'base');
+  if (whole) {
+    if (whole.choice === 'ours') return clonePlan(ourPlan);
+    if (whole.choice === 'theirs') return clonePlan(theirPlan);
+    return clonePlan(basePlan);
+  }
+
+  res.forEach((r) => {
+    if (r.type !== 'plan-stop-time') return;
+    const pick =
+      r.choice === 'ours' ? ourPlan :
+      r.choice === 'theirs' ? theirPlan :
+      basePlan;
+    if (!pick || !pick.days) return;
+    const pd = pick.days.find((d) => d.id === r.dayId);
+    const ps = pd ? (pd.stops || []).find((s) => s.id === r.stopId) : null;
+    if (!ps) return;
+    const md = merged.days?.find((d) => d.id === r.dayId);
+    const ms = md ? (md.stops || []).find((s) => s.id === r.stopId) : null;
+    if (ms) {
+      ms.arrive = ps.arrive;
+      ms.depart = ps.depart;
+    }
+  });
+
+  res.forEach((r) => {
+    if (r.type !== 'plan-stop-delete') return;
+
+    const pick =
+      r.choice === 'ours' ? ourPlan :
+      r.choice === 'theirs' ? theirPlan :
+      basePlan;
+
+    const pd = pick?.days?.find((d) => d.id === r.dayId);
+    const ps = pd ? (pd.stops || []).find((s) => s && s.id === r.stopId) : null;
+
+    const md = merged?.days?.find((d) => d.id === r.dayId);
+    if (!md) return;
+
+    const idx = (md.stops || []).findIndex((s) => s && s.id === r.stopId);
+    if (idx < 0) return;
+
+    if (ps) {
+      md.stops[idx] = JSON.parse(JSON.stringify(ps));
+    } else {
+      // chosen version deleted it
+      md.stops.splice(idx, 1);
+    }
+  });
+
+  return merged;
+}
+
+const conflictSet = new Set(
+  conflictMeta
+    .filter((c) => c.type === 'plan-stop-time' || c.type === 'plan-stop-delete')
+    .map((c) => `${c.dayId}::${c.stopId}`)
+);
+
+renderTimeline(document.getElementById('timelineBase'), basePlan, conflictSet);
+renderTimeline(document.getElementById('timelineOurs'), ourPlan, conflictSet);
+renderTimeline(document.getElementById('timelineTheirs'), theirPlan, conflictSet);
+renderTimeline(document.getElementById('timelineMerged'), mergedPlanBase, conflictSet);
+
+document.querySelectorAll('input[type="radio"][name^="c"]').forEach((el) => {
+  el.addEventListener('change', () => {
+    const merged = applyResolutions();
+    renderTimeline(document.getElementById('timelineMerged'), merged, conflictSet);
+  });
+});
+</script>

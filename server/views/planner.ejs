@@ -1,0 +1,1186 @@
+<section class="container">
+  <h1>Auto-Schedule for <%= repo.title %>
+  </h1>
+
+  <!-- Light local styles for this page -->
+  <style>
+    .quiet input,
+    .quiet select {
+      background: #f5f6f8;
+      color: #667085;
+    }
+
+    .quiet input::placeholder {
+      color: #98a2b3;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .row>label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .row+.row {
+      margin-top: 8px;
+    }
+
+    .thin {
+      margin-top: 12px;
+    }
+
+    .more {
+      margin-top: 6px;
+    }
+
+    .pop {
+      position: relative;
+      width: 100%;
+    }
+
+    .results {
+      position: absolute;
+      z-index: 20;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(16, 24, 40, .12);
+      max-height: 260px;
+      overflow: auto;
+    }
+
+    .hit {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-top: 1px solid #f1f3f5;
+    }
+
+    .hit:first-child {
+      border-top: 0;
+    }
+
+    .row-map {
+      width: 140px;
+      height: 100px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .hit:hover {
+      background: #f6f7f9;
+    }
+
+    .hint {
+      color: #667085;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .btn.sm {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .pop input{
+      flex:1;
+      min-width:240px;
+    }
+
+    .row{
+      align-items:flex-start;
+    }
+
+    .row > label{
+      align-self:flex-start;
+      text-align:left;
+      align-items:flex-start;
+    }
+
+    .planner-inline-toggle{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      flex-direction:row;
+      justify-content:flex-start;
+    }
+
+    .planner-actions{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex-wrap:wrap;
+      flex:1;
+      justify-content:flex-end;
+    }
+
+    .planner-actions .btn.sm{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .adv-label{
+      font-size:12px;
+      color:#667085;
+      text-transform:uppercase;
+      letter-spacing:0.04em;
+      margin:6px 0;
+    }
+
+    .planner-optional{
+      margin-top:8px;
+    }
+
+    .planner-optional > summary{
+      list-style:none;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .planner-optional > summary::-webkit-details-marker{
+      display:none;
+    }
+
+    .planner-optional .opt-caret .fa-angles-up{
+      display:none;
+    }
+
+    .planner-optional[open] .opt-caret .fa-angles-down{
+      display:none;
+    }
+
+    .planner-optional[open] .opt-caret .fa-angles-up{
+      display:inline-block;
+    }
+  </style>
+
+  <form method="post" action="/ui/planner/<%= repo.id %>/run" onsubmit="serialize()">
+    <!-- Dates -->
+    <div class="card">
+      <h2 title="Leave blank to use today.">Dates</h2>
+      <div class="row quiet">
+        <label style="flex:1">Start date
+          <input type="date" name="startDate" id="startDate" />
+        </label>
+        <label style="flex:1">End date
+          <input type="date" name="endDate" id="endDate" />
+        </label>
+      </div>
+    </div>
+
+    <!-- Active hours & prefs (still visible, but quiet) -->
+    <div class="card thin">
+      <h2>Active hours & preferences</h2>
+      <div class="row quiet">
+        <label>Active start
+          <input type="time" name="activeStart" placeholder="08:00" />
+        </label>
+        <label>Active end
+          <input type="time" name="activeEnd" placeholder="21:00" />
+        </label>
+        <label>Break (minutes) between stops
+          <input type="number" name="breakMin" min="0" placeholder="10" />
+        </label>
+        <label>Compactness
+          <select name="compactness">
+            <option value="compact" selected>Focused</option>
+            <option value="sparse">Sparse</option>
+          </select>
+        </label>
+        <label id="focusField">Focus
+          <select name="focus">
+            <option value="morning">Morning</option>
+            <option value="midday" selected>Midday</option>
+            <option value="night">Night</option>
+          </select>
+        </label>
+        <label>Mode of transport
+          <select name="transport">
+            <option value="driving" selected>Driving</option>
+            <option value="walking">Walking</option>
+            <option value="cycling">Cycling</option>
+            <option value="transit">Transit (train/bus/walk)</option>
+          </select>
+        </label>
+      </div>
+      <details class="planner-optional">
+        <summary class="adv-label">
+          Optional settings
+          <span class="opt-caret" aria-hidden="true">
+            <i class="fa-solid fa-angles-down"></i>
+            <i class="fa-solid fa-angles-up"></i>
+          </span>
+        </summary>
+        <div class="row quiet" style="margin-top:8px">
+          <label>Target days
+            <input type="number" name="targetDays" min="1" />
+          </label>
+          <label title="Strict: numbers are fixed positions. Relative: numbers only set order among numbered places.">
+            Ordering mode
+            <select name="orderingMode">
+              <option value="relative" selected>Relative</option>
+              <option value="strict">Strict</option>
+            </select>
+          </label>
+          <label style="flex:1">Commit to branch
+            <input id="branchName" placeholder="planner/YYYY-MM-DD" />
+          </label>
+        </div>
+      </details>
+    </div>
+
+    <!-- Places -->
+    <div class="card thin">
+      <h2>Places</h2>
+      <p class="time">
+        Only a name is required. Use
+        <span class="icon-inline" aria-hidden="true">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </span>
+        to search for the place and to auto-fill coordinates & opening hours.
+      </p>
+      <div class="row">
+        <div id="places" style="flex: 1 1 560px"></div>
+        <div style="flex: 1 1 260px">
+          <div id="searchMap" style="height:280px; border-radius:10px; border:1px solid var(--border)"></div>
+          <div id="lookupMsg" class="time" style="margin-top:6px"></div>
+          <label class="time" style="display:flex; align-items:center; gap:6px; margin-top:8px">
+            <input type="checkbox" id="gpsToggle" onchange="toggleUserLocation(this)"/>
+            Show my location on the map
+          </label>
+          <div id="gpsStatus" class="time"></div>
+        </div>
+      </div>
+
+      <div class="more">
+        <button class="btn" type="button" onclick="addRow()">+ Add place</button>
+        <button class="btn" type="button" onclick="addSample()">Add sample (demo)</button>
+      </div>
+    </div>
+
+    <!-- hidden payload field that server.js reads -->
+    <input type="hidden" name="payload" id="payload" />
+
+    <div class="section-actions">
+      <button class="btn btn-primary" type="submit">Run Auto Plan & Commit</button>
+    </div>
+  </form>
+</section>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  const PLANNER_DEFAULTS = <%- JSON.stringify(plannerDefaults || null) %>;
+</script>
+
+<script>
+  let i = 0;
+
+  function syncFocusVisibility() {
+    const compactSelect = document.querySelector('select[name="compactness"]');
+    const focusField = document.getElementById('focusField');
+    if (!compactSelect || !focusField) return;
+    const isSparse = compactSelect.value === 'sparse';
+    focusField.style.display = isSparse ? 'none' : '';
+  }
+
+  function syncOrderingLabels() {
+    const orderingSelect =
+      document.querySelector('select[name="orderingMode"]');
+    const mode = orderingSelect ? orderingSelect.value : 'relative';
+    const text = mode === 'strict' ? 'Strict order' : 'Relative order';
+    document.querySelectorAll('.orderLabel').forEach((el) => {
+      el.textContent = text;
+    });
+  }
+
+  // --- Map preview ---
+  const previewMap = L.map('searchMap');
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19
+  }).addTo(previewMap);
+  previewMap.setView([51.5074, -0.1278], 11);
+  let previewMarker;
+  const placeMarkers = new Map();
+  const rowMaps = new Map();
+  const rowMarkers = new Map();
+  let userLocationMarker = null;
+  let gpsWatchId = null;
+
+  function todayISO() {
+    const d = new Date();
+    const o = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return o.toISOString().slice(0, 10);
+  }
+
+  function computeDayCount() {
+    const startVal = document.getElementById('startDate')?.value || todayISO();
+    const endVal = document.getElementById('endDate')?.value || startVal;
+    const targetDaysVal =
+      Number(document.querySelector('input[name="targetDays"]')?.value || 0);
+
+    const start = new Date(startVal);
+    const end = new Date(endVal);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return targetDaysVal > 0 ? targetDaysVal : 1;
+    }
+    const diff = Math.floor((end - start) / (24 * 3600 * 1000)) + 1;
+    return diff > 0 ? diff : (targetDaysVal > 0 ? targetDaysVal : 1);
+  }
+
+  function updateDayOptions() {
+    const count = computeDayCount();
+    const selects = document.querySelectorAll('select[id^="dayPref_"]');
+    selects.forEach((sel) => {
+      const current = sel.value || '';
+      sel.innerHTML = '';
+      sel.appendChild(new Option('Any day', ''));
+      for (let d = 1; d <= count; d++) {
+        sel.appendChild(new Option(`Day ${d}`, String(d)));
+      }
+      if (current && Number(current) <= count) {
+        sel.value = current;
+      }
+    });
+  }
+
+  function setDefaultBranch(defaults) {
+    const el = document.getElementById('branchName');
+    if (!el) return;
+
+    if (defaults && defaults.branchName) {
+      el.value = defaults.branchName;
+      return;
+    }
+
+    if (!el.value) {
+      el.value = `planner/${todayISO()}`;
+    }
+  }
+
+  // ---- UI helpers: row template ----
+  function rowTemplate(idx) {
+    return `
+      <div class="row" style="border-top:1px solid var(--border);padding-top:8px">
+        <label class="planner-inline-toggle" style="min-width:110px">Enabled
+          <input type="checkbox" id="en_${idx}" checked onchange="handleEnabledChange(${idx})" />
+        </label>
+
+        <label style="min-width:400px;flex:1">Name
+          <div class="pop" style="display:flex; gap:6px; align-items:center">
+            <input id="name_${idx}" placeholder="e.g. British Museum"/>
+            <button class="btn sm"
+                    type="button"
+                    onclick="lookup(${idx})"
+                    aria-label="Search"
+                    title="Search">
+              <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            </button>
+            <div id="results_${idx}" class="results" style="display:none"></div>
+          </div>
+        </label>
+
+        <div class="row-map" id="rowMap_${idx}" aria-label="map preview"></div>
+
+        <div class="planner-actions">
+          <button class="btn sm" type="button" onclick="focusOnPlace(${idx})">
+            <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+            Preview on map
+          </button>
+          <button class="btn sm" type="button" onclick="duplicateRow(${idx})">
+            <i class="fa-solid fa-clone" aria-hidden="true"></i>
+            Duplicate visit
+          </button>
+          <button class="btn sm" type="button" onclick="removeRow(${idx})">
+            <i class="fa-solid fa-trash" aria-hidden="true"></i>
+            Remove
+          </button>
+        </div>
+      </div>
+
+      <details id="adv_${idx}" class="planner-optional">
+        <summary class="adv-label">
+          Optional settings
+          <span class="opt-caret" aria-hidden="true">
+            <i class="fa-solid fa-angles-down"></i>
+            <i class="fa-solid fa-angles-up"></i>
+          </span>
+        </summary>
+        <div class="row quiet">
+          <label>Stay (minutes)
+            <input id="stay_${idx}" type="number" placeholder="60"/>
+          </label>
+          <label>Desired start
+            <input id="wantStart_${idx}" type="time"/>
+          </label>
+          <label>Desired end
+            <input id="wantEnd_${idx}" type="time"/>
+          </label>
+
+          <label title="If checked, the planner will NOT move this stop outside the desired window. If it can't fit, it will spill to another day or overflow.">
+            Fixed time (hard)
+            <input id="fixedTime_${idx}" type="checkbox"/>
+          </label>
+
+          <label title="Strict mode: number is the exact visit position. Relative mode: only numbered places are ordered.">
+            <span class="orderLabel">Strict order</span>
+            <input id="order_${idx}" type="number"/>
+          </label>
+          <label>Day
+            <select id="dayPref_${idx}"></select>
+          </label>
+          <label>Start here
+            <input id="startFirst_${idx}" type="checkbox" onchange="handleStartFirstChange(this)"/>
+          </label>
+        </div>
+        <div class="hint" style="margin-top:4px">
+          Tip: To lock a stop to a specific time, set “Desired start” and enable “Fixed time (hard)”. Ordering modes: “Strict” makes 1/2/3 exact positions; “Relative” only orders numbered places while unnumbered keep their row order.
+        </div>
+      </details>
+
+      <!-- Hidden data (not visible to user) -->
+      <input type="hidden" id="lat_${idx}" />
+      <input type="hidden" id="lng_${idx}" />
+      <input type="hidden" id="osmType_${idx}" />
+      <input type="hidden" id="osmId_${idx}" />
+      <input type="hidden" id="openingHours_${idx}" />
+    `;
+  }
+
+  function addRow() {
+    const root = document.getElementById('places');
+    const block = document.createElement('div');
+    const idx = i;
+    block.id = 'rowBlock_' + idx;
+    block.innerHTML = rowTemplate(idx);
+    root.appendChild(block);
+    wireNameInput(idx);
+    initRowMap(idx);
+    updateDayOptions();
+    i++;
+    return idx;
+  }
+
+  function removeRow(idx) {
+    clearAutoLookup(idx);
+    const marker = placeMarkers.get(idx);
+    if (marker) {
+      previewMap.removeLayer(marker);
+      placeMarkers.delete(idx);
+    }
+    const rowMap = rowMaps.get(idx);
+    if (rowMap) {
+      rowMap.remove();
+      rowMaps.delete(idx);
+      rowMarkers.delete(idx);
+    }
+    const block = document.getElementById('rowBlock_' + idx);
+    if (block && block.parentNode) {
+      block.parentNode.removeChild(block);
+    }
+  }
+
+  function duplicateRow(idx) {
+    const el = (id) => document.getElementById(id + '_' + idx);
+    const nameEl = el('name');
+    if (!nameEl) return;
+
+    addRow();
+    const newIdx = i - 1;
+    const setEl = (id) => document.getElementById(id + '_' + newIdx);
+
+    setEl('name').value = nameEl.value || '';
+    setEl('en').checked = !!el('en')?.checked;
+    setEl('stay').value = el('stay')?.value || '';
+    setEl('wantStart').value = el('wantStart')?.value || '';
+    setEl('wantEnd').value = el('wantEnd')?.value || '';
+    setEl('fixedTime').checked = !!el('fixedTime')?.checked;
+    setEl('order').value = el('order')?.value || '';
+    setEl('dayPref').value = el('dayPref')?.value || '';
+    setEl('startFirst').checked = !!el('startFirst')?.checked;
+
+    const latVal = el('lat')?.value || '';
+    const lngVal = el('lng')?.value || '';
+    const osmTypeVal = el('osmType')?.value || '';
+    const osmIdVal = el('osmId')?.value || '';
+    const openingVal = el('openingHours')?.value || '';
+    setEl('lat').value = latVal;
+    setEl('lng').value = lngVal;
+    setEl('osmType').value = osmTypeVal;
+    setEl('osmId').value = osmIdVal;
+    setEl('openingHours').value = openingVal;
+
+    const hasAdv =
+      (el('stay')?.value || '') !== '' ||
+      (el('wantStart')?.value || '') !== '' ||
+      (el('wantEnd')?.value || '') !== '' ||
+      (el('order')?.value || '') !== '' ||
+      !!el('startFirst')?.checked ||
+      !!el('fixedTime')?.checked;
+    if (hasAdv) {
+      const advEl = document.getElementById('adv_' + newIdx);
+      if (advEl) advEl.open = true;
+    }
+
+    const startFirstEl = setEl('startFirst');
+    if (startFirstEl && startFirstEl.checked) {
+      handleStartFirstChange(startFirstEl);
+    }
+
+    syncOrderingLabels();
+  }
+
+  function addSample() {
+    const samples = ['British Museum', 'Covent Garden', 'Tower Bridge'];
+    samples.forEach((s) => {
+      addRow();
+      document.getElementById(`name_${i - 1}`).value = s;
+    });
+  }
+
+  function updateGpsStatus(msg) {
+    const statusEl = document.getElementById('gpsStatus');
+    if (statusEl) statusEl.textContent = msg || '';
+  }
+
+  function clearGpsTracking() {
+    if (gpsWatchId != null && navigator.geolocation && navigator.geolocation.clearWatch) {
+      navigator.geolocation.clearWatch(gpsWatchId);
+    }
+    gpsWatchId = null;
+    if (userLocationMarker) {
+      previewMap.removeLayer(userLocationMarker);
+      userLocationMarker = null;
+    }
+  }
+
+  function toggleUserLocation(box) {
+    if (!box || !box.checked) {
+      clearGpsTracking();
+      updateGpsStatus('');
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      updateGpsStatus('Geolocation is not supported in this browser.');
+      box.checked = false;
+      return;
+    }
+
+    updateGpsStatus('Locating…');
+    clearGpsTracking();
+
+    gpsWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const lat = pos?.coords?.latitude;
+        const lng = pos?.coords?.longitude;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+        if (!userLocationMarker) {
+          userLocationMarker = L.circleMarker([lat, lng], {
+            radius: 8,
+            color: '#1d4ed8',
+            weight: 2,
+            fillColor: '#60a5fa',
+            fillOpacity: 0.8
+          }).addTo(previewMap);
+        } else {
+          userLocationMarker.setLatLng([lat, lng]);
+        }
+
+        const zoom = previewMap.getZoom();
+        if (zoom < 13) {
+          previewMap.setView([lat, lng], 13);
+        } else {
+          previewMap.panTo([lat, lng], { animate: true });
+        }
+        updateGpsStatus('Showing your live location.');
+      },
+      (err) => {
+        clearGpsTracking();
+        if (err && err.code === 1) {
+          updateGpsStatus('Location permission denied.');
+        } else {
+          updateGpsStatus('Unable to access your location.');
+        }
+        if (box) box.checked = false;
+      },
+      { enableHighAccuracy: true, maximumAge: 5000 }
+    );
+  }
+
+  function handleStartFirstChange(el) {
+    if (!el || !el.checked) return;
+    const boxes = document.querySelectorAll('input[id^="startFirst_"]');
+    boxes.forEach((box) => {
+      if (box !== el) box.checked = false;
+    });
+  }
+
+  function addRowWithData(place) {
+    addRow();
+    const idx = i - 1;
+    if (!place) return;
+
+    const nameEl = document.getElementById('name_' + idx);
+    if (nameEl && place.name) nameEl.value = place.name;
+
+    const enEl = document.getElementById('en_' + idx);
+    if (enEl) enEl.checked = place.enabled !== false;
+
+    const stayEl = document.getElementById('stay_' + idx);
+    if (stayEl && place.stayMin != null) stayEl.value = place.stayMin;
+
+    const wsEl = document.getElementById('wantStart_' + idx);
+    if (wsEl && place.desiredStart) wsEl.value = place.desiredStart;
+
+    const weEl = document.getElementById('wantEnd_' + idx);
+    if (weEl && place.desiredEnd) weEl.value = place.desiredEnd;
+
+    const fxEl = document.getElementById('fixedTime_' + idx);
+    if (fxEl) fxEl.checked = !!place.fixedTime;
+
+    const orderEl = document.getElementById('order_' + idx);
+    if (orderEl && place.strictOrder != null) orderEl.value = place.strictOrder;
+
+    const dayEl = document.getElementById('dayPref_' + idx);
+    if (dayEl && place.preferredDay != null) {
+      dayEl.value = String(place.preferredDay);
+    }
+
+    const sfEl = document.getElementById('startFirst_' + idx);
+    if (sfEl) {
+      sfEl.checked = !!place.startFirst;
+      if (sfEl.checked) handleStartFirstChange(sfEl);
+    }
+
+    const latEl = document.getElementById('lat_' + idx);
+    if (latEl && Number.isFinite(Number(place.lat))) {
+      latEl.value = Number(place.lat).toFixed(6);
+    }
+
+    const lngEl = document.getElementById('lng_' + idx);
+    if (lngEl && Number.isFinite(Number(place.lng))) {
+      lngEl.value = Number(place.lng).toFixed(6);
+    }
+
+    const ohEl = document.getElementById('openingHours_' + idx);
+    if (ohEl && place.openingHours) {
+      ohEl.value = place.openingHours;
+    }
+
+    const hasCoords =
+      Number.isFinite(Number(place.lat)) && Number.isFinite(Number(place.lng));
+    if (hasCoords) {
+      updatePlaceMarker(idx, Number(place.lat), Number(place.lng), place.name);
+    }
+
+    const hasAdv =
+      place.stayMin != null ||
+      place.desiredStart ||
+      place.desiredEnd ||
+      place.strictOrder != null ||
+      place.preferredDay != null ||
+      place.startFirst ||
+      place.fixedTime;
+    if (hasAdv) {
+      const advEl = document.getElementById('adv_' + idx);
+      if (advEl) advEl.open = true;
+    }
+  }
+
+  function updatePlaceMarker(idx, lat, lng, label) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const enabledEl = document.getElementById('en_' + idx);
+    if (enabledEl && !enabledEl.checked) {
+      const existing = placeMarkers.get(idx);
+      if (existing) {
+        previewMap.removeLayer(existing);
+        placeMarkers.delete(idx);
+      }
+      fitAllPlaces();
+      return;
+    }
+    const name = (label || '').trim();
+    const existing = placeMarkers.get(idx);
+    if (existing) {
+      existing.setLatLng([lat, lng]);
+      if (name) existing.bindTooltip(name);
+      fitAllPlaces();
+      return;
+    }
+    const marker = L.marker([lat, lng]);
+    if (name) marker.bindTooltip(name);
+    marker.addTo(previewMap);
+    placeMarkers.set(idx, marker);
+    updateRowMap(idx, lat, lng, name);
+    fitAllPlaces();
+  }
+
+  function fitAllPlaces() {
+    const markers = Array.from(placeMarkers.values());
+    if (!markers.length) return;
+    const group = L.featureGroup(markers);
+    const bounds = group.getBounds();
+    if (!bounds || !bounds.isValid()) return;
+    previewMap.flyToBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+  }
+
+  function handleEnabledChange(idx) {
+    const enabledEl = document.getElementById('en_' + idx);
+    if (!enabledEl) return;
+    if (!enabledEl.checked) {
+      const existing = placeMarkers.get(idx);
+      if (existing) {
+        previewMap.removeLayer(existing);
+        placeMarkers.delete(idx);
+      }
+      fitAllPlaces();
+      return;
+    }
+    const lat = Number(document.getElementById('lat_' + idx)?.value);
+    const lng = Number(document.getElementById('lng_' + idx)?.value);
+    const name = (document.getElementById('name_' + idx)?.value || '').trim();
+    updatePlaceMarker(idx, lat, lng, name);
+  }
+
+  function initRowMap(idx) {
+    const el = document.getElementById('rowMap_' + idx);
+    if (!el || rowMaps.has(idx)) return;
+    const map = L.map(el, {
+      zoomControl: false,
+      attributionControl: false
+    });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+    map.setView([51.5074, -0.1278], 11);
+    rowMaps.set(idx, map);
+  }
+
+  function updateRowMap(idx, lat, lng, label) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (!rowMaps.has(idx)) initRowMap(idx);
+    const map = rowMaps.get(idx);
+    if (!map) return;
+    map.setView([lat, lng], 15);
+    let marker = rowMarkers.get(idx);
+    if (!marker) {
+      marker = L.circleMarker([lat, lng], {
+        radius: 6,
+        color: '#f97316',
+        weight: 2,
+        fillColor: '#fdba74',
+        fillOpacity: 0.9
+      }).addTo(map);
+      rowMarkers.set(idx, marker);
+    } else {
+      marker.setLatLng([lat, lng]);
+    }
+    if (label) marker.bindTooltip(label);
+  }
+
+  function focusOnPlace(idx) {
+    const lat = Number(document.getElementById('lat_' + idx)?.value);
+    const lng = Number(document.getElementById('lng_' + idx)?.value);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const name = (document.getElementById('name_' + idx)?.value || '').trim();
+    updatePlaceMarker(idx, lat, lng, name);
+    previewMap.setView([lat, lng], 15);
+    const marker = placeMarkers.get(idx);
+    if (marker && name) marker.openTooltip();
+  }
+
+  function initFromDefaults() {
+    const defaults = PLANNER_DEFAULTS || null;
+
+    if (defaults) {
+      if (defaults.startDate) {
+        const sd = document.getElementById('startDate');
+        if (sd) sd.value = defaults.startDate;
+      }
+      if (defaults.endDate) {
+        const ed = document.getElementById('endDate');
+        if (ed) ed.value = defaults.endDate;
+      }
+
+      if (defaults.activeHours) {
+        const as = document.querySelector('input[name="activeStart"]');
+        const ae = document.querySelector('input[name="activeEnd"]');
+        if (as && defaults.activeHours.start)
+          as.value = defaults.activeHours.start;
+        if (ae && defaults.activeHours.end)
+          ae.value = defaults.activeHours.end;
+      }
+
+      if (typeof defaults.breakMinBetweenStops === 'number') {
+        const bm = document.querySelector('input[name="breakMin"]');
+        if (bm) bm.value = String(defaults.breakMinBetweenStops);
+      }
+
+      if (
+        typeof defaults.targetDays === 'number' &&
+        defaults.targetDays > 0
+      ) {
+        const td = document.querySelector('input[name="targetDays"]');
+        if (td) td.value = String(defaults.targetDays);
+      }
+
+      if (defaults.compactness) {
+        const cmp = document.querySelector('select[name="compactness"]');
+        if (cmp) cmp.value = defaults.compactness;
+      }
+
+      if (defaults.focus) {
+        const foc = document.querySelector('select[name="focus"]');
+        if (foc) foc.value = defaults.focus;
+      }
+
+      if (defaults.orderingMode) {
+        const om = document.querySelector('select[name="orderingMode"]');
+        if (om) om.value = defaults.orderingMode;
+      }
+
+      if (defaults.transport) {
+        const tr = document.querySelector('select[name="transport"]');
+        if (tr) tr.value = defaults.transport;
+      }
+
+      setDefaultBranch(defaults);
+
+      const places = Array.isArray(defaults.places) ? defaults.places : [];
+      if (places.length) {
+        places.forEach((p) => addRowWithData(p));
+      } else {
+        addRow();
+      }
+    } else {
+      setDefaultBranch(null);
+      addRow();
+    }
+
+    updateDayOptions();
+    syncFocusVisibility();
+    syncOrderingLabels();
+  }
+
+  // Initialize once the DOM is ready (script is at the bottom)
+  initFromDefaults();
+
+  const compactSelectEl = document.querySelector('select[name="compactness"]');
+  if (compactSelectEl) {
+    compactSelectEl.addEventListener('change', syncFocusVisibility);
+  }
+  syncFocusVisibility();
+
+  const startEl = document.getElementById('startDate');
+  const endEl = document.getElementById('endDate');
+  const targetDaysEl = document.querySelector('input[name="targetDays"]');
+  if (startEl) startEl.addEventListener('change', updateDayOptions);
+  if (endEl) endEl.addEventListener('change', updateDayOptions);
+  if (targetDaysEl) targetDaysEl.addEventListener('input', updateDayOptions);
+
+  const orderingSelectEl =
+    document.querySelector('select[name="orderingMode"]');
+  if (orderingSelectEl) {
+    orderingSelectEl.addEventListener('change', syncOrderingLabels);
+  }
+  syncOrderingLabels();
+
+  // ---- Search integration ----
+  const autoLookupTimers = new Map();
+  let lookupInFlight = null;
+
+  function hideResults(idx) {
+    const mount = document.getElementById('results_' + idx);
+    if (mount) {
+      mount.innerHTML = '';
+      mount.style.display = 'none';
+    }
+  }
+
+  function abortLookup(idx) {
+    if (
+      lookupInFlight &&
+      lookupInFlight.ctrl &&
+      (idx == null || lookupInFlight.idx === idx)
+    ) {
+      lookupInFlight.ctrl.abort();
+      lookupInFlight = null;
+    }
+  }
+
+  function clearAutoLookup(idx) {
+    const timer = autoLookupTimers.get(idx);
+    if (timer) {
+      clearTimeout(timer);
+      autoLookupTimers.delete(idx);
+    }
+    abortLookup(idx);
+    hideResults(idx);
+  }
+
+  function scheduleAutoLookup(idx) {
+    const prev = autoLookupTimers.get(idx);
+    if (prev) clearTimeout(prev);
+    const timer = setTimeout(() => {
+      autoLookupTimers.delete(idx);
+      lookup(idx);
+    }, 400);
+    autoLookupTimers.set(idx, timer);
+  }
+
+  function wireNameInput(idx) {
+    const input = document.getElementById('name_' + idx);
+    if (!input) return;
+    input.addEventListener('input', () => {
+      const q = (input.value || '').trim();
+      if (q.length < 2) {
+        clearAutoLookup(idx);
+        return;
+      }
+      scheduleAutoLookup(idx);
+    });
+  }
+
+  async function lookup(idx) {
+    const msg = document.getElementById('lookupMsg');
+    const nameInput = document.getElementById('name_' + idx);
+    const q = (nameInput && nameInput.value || '').trim();
+    if (!q || q.length < 2) {
+      clearAutoLookup(idx);
+      return;
+    }
+
+    let activeCtrl = null;
+    try {
+      abortLookup();
+      const ctrl = new AbortController();
+      activeCtrl = ctrl;
+      lookupInFlight = { ctrl, idx };
+
+      msg.textContent = 'Searching…';
+
+      const res = await fetch(
+        `/api/geo/search?q=${encodeURIComponent(q)}&limit=6`,
+        { signal: ctrl.signal }
+      );
+
+      let payload;
+      try {
+        payload = await res.json();
+      } catch {
+        payload = { ok: false, error: 'bad_json' };
+      }
+
+      const ok = payload && payload.ok;
+      const list = ok ? (payload.results || []) : [];
+
+      const mount = document.getElementById('results_' + idx);
+        if (!mount) return;
+        mount.innerHTML = '';
+
+      if (!ok) {
+        msg.textContent =
+          'Search error. You can still type the place name manually.';
+        mount.style.display = 'none';
+        return;
+      }
+
+      if (!list.length) {
+        msg.textContent = 'No results. Try a more specific name.';
+        mount.style.display = 'none';
+        return;
+      }
+
+      if (payload.from === 'stub') {
+        msg.textContent = 'Demo data shown (provider may be blocked).';
+      } else {
+        msg.textContent = '';
+      }
+
+      // show dropdown
+      mount.style.display = 'block';
+
+      list.forEach((item) => {
+        const label =
+          item.display_name || item.name || item.label || 'Unnamed place';
+
+        const lat = Number(
+          item.lat ??
+          item.latitude ??
+          (Array.isArray(item.latlng) ? item.latlng[0] : NaN)
+        );
+        const lon = Number(
+          item.lon ??
+          item.lng ??
+          item.longitude ??
+          (Array.isArray(item.latlng) ? item.latlng[1] : NaN)
+        );
+
+        const hours =
+          (item.extratags && item.extratags.opening_hours) ||
+          item.opening_hours ||
+          '—';
+
+        const div = document.createElement('div');
+        div.className = 'hit';
+        div.innerHTML = `
+          <div><strong>${label}</strong></div>
+          <div class="time">
+            [${isNaN(lat) ? '—' : lat.toFixed(5)},
+             ${isNaN(lon) ? '—' : lon.toFixed(5)}]
+          </div>
+          <div class="time">hours: ${hours}</div>
+        `;
+
+        div.addEventListener('mouseenter', () => {
+          if (isNaN(lat) || isNaN(lon)) return;
+          if (!previewMarker) {
+            previewMarker = L.marker([lat, lon]).addTo(previewMap);
+          } else {
+            previewMarker.setLatLng([lat, lon]);
+          }
+          previewMap.setView([lat, lon], 15);
+        });
+
+        div.addEventListener('click', () => {
+          if (nameInput) nameInput.value = label;
+          const latEl = document.getElementById('lat_' + idx);
+          const lngEl = document.getElementById('lng_' + idx);
+          const ohEl = document.getElementById('openingHours_' + idx);
+
+          if (!isNaN(lat) && latEl) latEl.value = lat.toFixed(6);
+          if (!isNaN(lon) && lngEl) lngEl.value = lon.toFixed(6);
+          if (ohEl) {
+            ohEl.value =
+              (item.extratags && item.extratags.opening_hours) ||
+              item.opening_hours ||
+              '';
+          }
+          if (!isNaN(lat) && !isNaN(lon)) {
+            updatePlaceMarker(idx, lat, lon, label);
+          }
+
+          mount.innerHTML = '';
+          mount.style.display = 'none';
+        });
+
+        mount.appendChild(div);
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      msg.textContent =
+        'Search error or provider blocked. You can still type the place name manually.';
+      hideResults(idx);
+    } finally {
+      if (activeCtrl && lookupInFlight && lookupInFlight.ctrl === activeCtrl) {
+        lookupInFlight = null;
+      }
+    }
+  }
+
+  // ---- Serialize the form into hidden payload ----
+  function serialize() {
+    // Dates with sensible defaults
+    const startBox = document.getElementById('startDate');
+    const endBox = document.getElementById('endDate');
+    const start = (startBox && startBox.value) || todayISO();
+    const end = (endBox && endBox.value) || start;
+
+    const activeStart =
+      document.querySelector('input[name="activeStart"]').value || '08:00';
+    const activeEnd =
+      document.querySelector('input[name="activeEnd"]').value || '21:00';
+    const breakMin =
+      Number(document.querySelector('input[name="breakMin"]').value || 0) || 0;
+    const targetDaysVal =
+      Number(document.querySelector('input[name="targetDays"]').value || 0);
+    const targetDays = targetDaysVal > 0 ? targetDaysVal : undefined;
+    const compactness =
+      document.querySelector('select[name="compactness"]').value || 'compact';
+    const orderingMode =
+      document.querySelector('select[name="orderingMode"]').value || 'relative';
+    const focusSelect = document.querySelector('select[name="focus"]');
+    const focusValue =
+      compactness === 'sparse'
+        ? 'midday' // ignored by backend in sparse mode, but keep something sane
+        : (focusSelect && focusSelect.value) || 'midday';
+    const transport =
+      document.querySelector('select[name="transport"]').value || 'driving';
+    const branchName =
+      (document.getElementById('branchName').value || '').trim() ||
+      `planner/${todayISO()}`;
+
+    const places = [];
+    for (let k = 0; k < i; k++) {
+      const el = (id) => document.getElementById(id + '_' + k);
+      const nameEl = el('name');
+      if (!nameEl) continue;
+
+      const name = (nameEl.value || '').trim();
+      if (!name) continue;
+
+      const enabledEl = el('en');
+      const enabled = enabledEl ? !!enabledEl.checked : true;
+
+      const latRaw = el('lat')?.value;
+      const lngRaw = el('lng')?.value;
+
+      places.push({
+        id: 'p' + k,
+        name,
+        lat: latRaw === '' || latRaw == null ? undefined : Number(latRaw),
+        lng: lngRaw === '' || lngRaw == null ? undefined : Number(lngRaw),
+        stayMin: Number(el('stay')?.value || 60) || 60,
+        desiredStart: el('wantStart')?.value || undefined,
+        desiredEnd: el('wantEnd')?.value || undefined,
+
+        // NEW: hard fixed-time constraint
+        fixedTime: !!el('fixedTime')?.checked,
+
+        strictOrder: el('order')?.value
+          ? Number(el('order').value)
+          : undefined,
+        preferredDay: el('dayPref')?.value
+          ? Number(el('dayPref').value)
+          : undefined,
+        startFirst: !!el('startFirst')?.checked,
+        enabled,
+        openingHours: el('openingHours')?.value || undefined
+      });
+    }
+
+    const payloadObj = {
+      startDate: start,
+      endDate: end,
+      activeHours: { start: activeStart, end: activeEnd },
+      breakMinBetweenStops: breakMin,
+      targetDays,
+      compactness,
+      orderingMode,
+      focus: focusValue,
+      transport,
+      places,
+      branchName
+    };
+
+    console.log('planner serialize payload', payloadObj);
+    document.getElementById('payload').value = JSON.stringify(payloadObj);
+    // let the form submit
+    return true;
+  }
+</script>

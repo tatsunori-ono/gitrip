@@ -1,0 +1,8 @@
+node_modules/
+.env
+gitrip.db
+gitrip.db-journal
+gitrip.db-wal
+.gitrip/
+*.zip
+.DS_Store

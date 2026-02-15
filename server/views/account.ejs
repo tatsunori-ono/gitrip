@@ -1,0 +1,69 @@
+<!-- server/views/account.ejs -->
+<section class="container">
+  <h1>Account</h1>
+  <div class="card account-card">
+    <div class="account-header">
+      <div class="account-avatar-preview">
+        <% if (currentUser.profileImageUrl) { %>
+          <img src="<%= currentUser.profileImageUrl %>" alt="Profile preview" />
+        <% } else { %>
+          <span><%= (currentUser.name || currentUser.email || 'U').slice(0,1).toUpperCase() %></span>
+        <% } %>
+      </div>
+      <div>
+        <p><strong>Email:</strong> <%= currentUser.email %></p>
+        <% if (currentUser.name) { %>
+          <p><strong>Name:</strong> <%= currentUser.name %></p>
+        <% } %>
+      </div>
+    </div>
+
+    <% if (success) { %>
+      <p class="flash flash-success"><%= success %></p>
+    <% } %>
+    <% if (error) { %>
+      <p class="flash flash-error"><%= error %></p>
+    <% } %>
+
+    <form class="account-form" method="post" action="/ui/account/profile-image">
+      <label>Profile image URL
+        <input type="url"
+               name="profileImageUrl"
+               placeholder="https://example.com/photo.jpg"
+               value="<%= currentUser.profileImageUrl || '' %>" />
+      </label>
+      <p class="time">Use a publicly accessible HTTPS image. Square images work best.</p>
+      <div>
+        <button class="btn btn-primary" type="submit">Save image</button>
+        <a class="btn btn-ghost" href="/ui/account">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Accessibility Settings</h2>
+    <p class="time">
+      Adjust how GiTrip looks and sounds to match your needs. These settings
+      are stored in your browser.
+    </p>
+    <form id="accessibilitySettings" class="row" style="align-items:flex-end; gap:12px">
+      <label style="flex:1">
+        Font size
+        <select id="fontSizeSelect">
+          <option value="small">Small</option>
+          <option value="medium" selected>Medium</option>
+          <option value="large">Large</option>
+        </select>
+      </label>
+      <label class="switch" style="flex:1">
+        High contrast mode
+        <input type="checkbox" id="highContrastToggle" />
+      </label>
+      <label class="switch" style="flex:1">
+        Read-aloud mode
+        <input type="checkbox" id="readAloudToggle" />
+      </label>
+    </form>
+    <p class="time" id="accessibilityMsg" role="status" aria-live="polite"></p>
+  </div>
+</section>

@@ -6,3 +6,4 @@ gitrip.db-wal
 .gitrip/
 *.zip
 .DS_Store
+requirements.md

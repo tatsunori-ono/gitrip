@@ -34,6 +34,12 @@
         <input type="password" name="confirm" required minlength="10">
       </label>
 
+      <p class="time" style="margin-top:8px">
+        By signing up, you agree to our
+        <a href="/ui/terms">Terms of Use</a> and
+        <a href="/ui/privacy">Privacy Policy</a>.
+      </p>
+
       <div class="section-actions">
         <button class="btn btn-primary" type="submit">Sign up</button>
         <a class="time" href="/ui/login?next=<%= encodeURIComponent(next) %>">

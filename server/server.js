@@ -1094,6 +1094,8 @@ app.get('/sitemap.xml', (req, res) => {
     { loc: '/ui/explore', priority: '0.7', changefreq: 'monthly' },
     { loc: '/ui/login', priority: '0.3', changefreq: 'yearly' },
     { loc: '/ui/signup', priority: '0.3', changefreq: 'yearly' },
+    { loc: '/ui/privacy', priority: '0.2', changefreq: 'yearly' },
+    { loc: '/ui/terms', priority: '0.2', changefreq: 'yearly' },
   ];
   const urls = staticPages.map(p =>
     `  <url><loc>${base}${p.loc}</loc><changefreq>${p.changefreq}</changefreq><priority>${p.priority}</priority></url>`
@@ -1136,6 +1138,22 @@ app.get('/ui/about', (req, res) => {
       operatingSystem: 'Web',
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'GBP' },
     },
+  });
+});
+
+app.get('/ui/privacy', (req, res) => {
+  res.render('privacy', {
+    pageTitle: 'Privacy Policy',
+    pageDescription: 'Learn how GiTrip collects, uses, and protects your personal data in compliance with UK GDPR.',
+    canonicalUrl: canonical(req, '/ui/privacy'),
+  });
+});
+
+app.get('/ui/terms', (req, res) => {
+  res.render('terms', {
+    pageTitle: 'Terms of Use',
+    pageDescription: 'Read the terms and conditions for using GiTrip, the version-controlled trip planning platform.',
+    canonicalUrl: canonical(req, '/ui/terms'),
   });
 });
 

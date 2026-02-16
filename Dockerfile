@@ -8,15 +8,15 @@ RUN npm ci --omit=dev
 COPY . .
 
 # Create non-root user for running the application
-RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser \
+RUN groupadd -r -g 999 appuser && useradd -r -u 999 -g appuser -d /app appuser \
     && mkdir -p /data \
-    && chown -R appuser:appuser /app /data
-
-USER appuser
+    && chown -R appuser:appuser /app /data \
+    && chmod +x /app/docker-entrypoint.sh
 
 # Persistent volume is mounted at /data by fly.toml
 ENV DATABASE_PATH=/data/gitrip.db
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["node", "server/server.js"]
+# Start as root to fix volume permissions, then drop to appuser
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

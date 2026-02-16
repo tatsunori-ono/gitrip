@@ -77,6 +77,16 @@ app.set('layout', 'layout');
 
 const nowISO = () => new Date().toISOString();
 
+// ---------- SEO helpers ----------
+function baseUrl(req) {
+  const proto = req.get('x-forwarded-proto') || req.protocol || 'http';
+  const host = req.get('x-forwarded-host') || req.get('host');
+  return `${proto}://${host}`;
+}
+function canonical(req, pathOverride) {
+  return baseUrl(req) + (pathOverride || req.originalUrl.split('?')[0]);
+}
+
 // ---------- DB helpers ----------
 const getRepo = db.prepare('SELECT * FROM repos WHERE id=?');
 const listRepos = db.prepare('SELECT * FROM repos ORDER BY created_at DESC');
@@ -1061,6 +1071,44 @@ async function fuzzySearchPlaces(q, limit) {
   return ranked.slice(0, safeLimit);
 }
 
+// ---------- SEO: robots.txt and sitemap ----------
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send([
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /api/',
+    'Disallow: /ui/account',
+    'Disallow: /ui/users/',
+    '',
+    `Sitemap: ${baseUrl(req)}/sitemap.xml`,
+  ].join('\n'));
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  const base = baseUrl(req);
+  const publicRepos = listPublicReposRecent.all();
+  const staticPages = [
+    { loc: '/', priority: '1.0', changefreq: 'daily' },
+    { loc: '/ui/about', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/ui/public', priority: '0.9', changefreq: 'daily' },
+    { loc: '/ui/explore', priority: '0.7', changefreq: 'monthly' },
+    { loc: '/ui/login', priority: '0.3', changefreq: 'yearly' },
+    { loc: '/ui/signup', priority: '0.3', changefreq: 'yearly' },
+  ];
+  const urls = staticPages.map(p =>
+    `  <url><loc>${base}${p.loc}</loc><changefreq>${p.changefreq}</changefreq><priority>${p.priority}</priority></url>`
+  );
+  publicRepos.forEach(r => {
+    urls.push(`  <url><loc>${base}/ui/repos/${r.id}</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>`);
+  });
+  res.type('application/xml').send([
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ...urls,
+    '</urlset>',
+  ].join('\n'));
+});
+
 // ---------- AUTH UI (optional; only used when user chooses) ----------
 app.get('/ui/signup', authLimiter, (req, res) => {
   const next = typeof req.query.next === 'string' ? req.query.next : '/';
@@ -1068,11 +1116,27 @@ app.get('/ui/signup', authLimiter, (req, res) => {
     error: null,
     values: { email: '', name: '' },
     next,
+    pageTitle: 'Sign Up',
+    pageDescription: 'Create a free GiTrip account to collaborate on trip plans, share itineraries, and version-control your travel schedules.',
+    canonicalUrl: canonical(req, '/ui/signup'),
   });
 });
 
 app.get('/ui/about', (req, res) => {
-  res.render('about');
+  res.render('about', {
+    pageTitle: 'About',
+    pageDescription: 'Learn how GiTrip brings Git-style version control to trip planning. Branch, merge, and collaborate on travel itineraries with ease.',
+    canonicalUrl: canonical(req, '/ui/about'),
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'GiTrip',
+      description: 'A web-based trip-planning platform that integrates Git-style version control to travel scheduling.',
+      applicationCategory: 'TravelApplication',
+      operatingSystem: 'Web',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'GBP' },
+    },
+  });
 });
 
 app.post('/ui/signup', authLimiter, (req, res) => {
@@ -1140,6 +1204,9 @@ app.get('/ui/login', authLimiter, (req, res) => {
     error: null,
     values: { email: '' },
     next,
+    pageTitle: 'Sign In',
+    pageDescription: 'Sign in to your GiTrip account to manage, share, and collaborate on trip itineraries.',
+    canonicalUrl: canonical(req, '/ui/login'),
   });
 });
 
@@ -1224,6 +1291,9 @@ app.get('/ui/account', (req, res) => {
     currentUser: res.locals.currentUser || null,
     success,
     error,
+    pageTitle: 'Account Settings',
+    pageDescription: 'Manage your GiTrip profile, accessibility preferences, and account settings.',
+    canonicalUrl: canonical(req, '/ui/account'),
   });
 });
 
@@ -1241,6 +1311,8 @@ app.get('/ui/users/:userId', (req, res) => {
   res.render('user', {
     currentUser: res.locals.currentUser || null,
     starredRepos: starred,
+    pageTitle: 'Your Profile',
+    pageDescription: 'View your starred trips and profile on GiTrip.',
   });
 });
 
@@ -1286,13 +1358,22 @@ app.get('/', (req, res) => {
     addRepos(listPublicReposRecent.all());
     repos = Array.from(seen.values());
   }
-  res.render('index', { repos, currentUser: res.locals.currentUser || null });
+  res.render('index', {
+    repos,
+    currentUser: res.locals.currentUser || null,
+    pageTitle: 'Your Trips',
+    pageDescription: 'View and manage your trip repositories on GiTrip. Create new trips, collaborate with others, and version-control your itineraries.',
+    canonicalUrl: canonical(req, '/'),
+  });
 });
 
 // ---------- QUICK MAP (Google-like route optimizer page) ----------
 app.get('/ui/explore', (req, res) => {
   res.render('explore', {
     currentUser: res.locals.currentUser || null,
+    pageTitle: 'Quick Route',
+    pageDescription: 'Plan a quick route by adding destinations and computing the shortest travel order. Preview your trip on an interactive map.',
+    canonicalUrl: canonical(req, '/ui/explore'),
   });
 });
 
@@ -1469,6 +1550,9 @@ app.get('/ui/public', (req, res) => {
     repos,
     currentUser: res.locals.currentUser || null,
     sort,
+    pageTitle: 'Public Trips',
+    pageDescription: 'Browse publicly shared trip itineraries on GiTrip. Discover travel plans, fork them, and customise them for your own adventures.',
+    canonicalUrl: canonical(req, '/ui/public'),
   });
 });
 
@@ -1582,6 +1666,10 @@ app.get('/ui/repos/:repoId', (req, res) => {
     forkedFromRestricted,
     starCount,
     isStarred,
+    pageTitle: repo.title,
+    pageDescription: `View and edit the "${repo.title}" trip itinerary on GiTrip. Branch, merge, and collaborate on this travel plan.`,
+    canonicalUrl: canonical(req, `/ui/repos/${repo.id}`),
+    ogType: 'article',
   });
 });
 
@@ -1846,6 +1934,8 @@ app.get('/ui/planner/:repoId', (req, res) => {
   res.render('planner', {
     repo,
     plannerDefaults,
+    pageTitle: `Auto-Schedule – ${repo.title}`,
+    pageDescription: `Auto-schedule and optimise the "${repo.title}" trip with GiTrip's planner. Set dates, active hours, and let the algorithm plan your itinerary.`,
   });
 });
 
@@ -2862,6 +2952,8 @@ app.get('/ui/repos/:repoId/merge', (req, res) => {
     basePlan: baseC?.snapshot?.plan || null,
     ourPlan: ourC?.snapshot?.plan || null,
     theirPlan: theirC?.snapshot?.plan || null,
+    pageTitle: `Merge – ${repo.title}`,
+    pageDescription: `Merge branches for the "${repo.title}" trip on GiTrip. Compare plans, resolve conflicts, and unify your itinerary.`,
     mergedPlan,
   });
 });

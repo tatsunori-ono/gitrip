@@ -2,8 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>GiTrip</title>
+    <title><%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle + ' | GiTrip' : 'GiTrip – Version-Controlled Trip Planning' %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="description" content="<%= typeof pageDescription !== 'undefined' && pageDescription ? pageDescription : 'Plan, collaborate, and version-control your travel itineraries with GiTrip. Branch, merge, and rollback trip plans like code.' %>" />
+    <% if (typeof canonicalUrl !== 'undefined' && canonicalUrl) { %>
+      <link rel="canonical" href="<%= canonicalUrl %>" />
+    <% } %>
+    <meta property="og:type" content="<%= typeof ogType !== 'undefined' && ogType ? ogType : 'website' %>" />
+    <meta property="og:title" content="<%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle + ' | GiTrip' : 'GiTrip – Version-Controlled Trip Planning' %>" />
+    <meta property="og:description" content="<%= typeof pageDescription !== 'undefined' && pageDescription ? pageDescription : 'Plan, collaborate, and version-control your travel itineraries with GiTrip.' %>" />
+    <% if (typeof canonicalUrl !== 'undefined' && canonicalUrl) { %>
+      <meta property="og:url" content="<%= canonicalUrl %>" />
+    <% } %>
+    <meta property="og:site_name" content="GiTrip" />
+    <meta property="og:image" content="<%= typeof ogImage !== 'undefined' && ogImage ? ogImage : '/public/gitrip-logo-transparent.svg' %>" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="<%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle + ' | GiTrip' : 'GiTrip – Version-Controlled Trip Planning' %>" />
+    <meta name="twitter:description" content="<%= typeof pageDescription !== 'undefined' && pageDescription ? pageDescription : 'Plan, collaborate, and version-control your travel itineraries with GiTrip.' %>" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
@@ -14,15 +29,18 @@
     <link rel="icon" type="image/svg+xml" href="/public/favicon.svg" />
     <meta name="theme-color" content="#ec5643" />
     <meta name="csrf-token" content="<%= csrfToken %>">
+    <% if (typeof jsonLd !== 'undefined' && jsonLd) { %>
+      <script type="application/ld+json"><%- JSON.stringify(jsonLd) %></script>
+    <% } %>
   </head>
   <body>
-    <header>
+    <header role="banner">
       <div class="nav-bar">
         <div class="nav-left">
           <a href="/" class="logo-link">
             <img src="/public/logo.svg" alt="GiTrip logo" />
           </a>
-          <nav class="nav-links">
+          <nav class="nav-links" aria-label="Main navigation">
             <a href="/ui/about">About</a>
             <a href="/ui/public">Public trips</a>
             <a href="/ui/explore">Quick route</a>
@@ -58,9 +76,17 @@
         </div>
       </div>
     </header>
-    <main id="mainContent" tabindex="-1">
+    <main id="mainContent" tabindex="-1" role="main">
       <%- body %>
     </main>
+    <footer role="contentinfo" style="text-align:center;padding:24px 16px;color:var(--muted);font-size:13px">
+      <nav aria-label="Footer navigation">
+        <a href="/ui/about">About</a> &middot;
+        <a href="/ui/public">Public trips</a> &middot;
+        <a href="/ui/explore">Quick route</a>
+      </nav>
+      <p style="margin-top:8px">&copy; <%= new Date().getFullYear() %> GiTrip. Version-controlled trip planning.</p>
+    </footer>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

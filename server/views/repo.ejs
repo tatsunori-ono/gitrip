@@ -33,6 +33,7 @@
           action="/ui/repos/<%= repo.id %>/star"
           class="repo-star"
           data-tab-only="view">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="next" value="/ui/repos/<%= repo.id %>?tab=view" />
       <button class="btn star-btn <%= isStarred ? 'star-btn--active' : '' %>"
               type="submit"
@@ -174,6 +175,7 @@
                 class="row"
                 style="margin-top:8px; align-items:flex-end"
                 id="easyAddForm">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <label style="flex:2">
               Places (one per line)
               <textarea name="placeNames"
@@ -675,6 +677,7 @@
               action="/ui/repos/<%= repo.id %>/rename"
               class="row"
               style="align-items:flex-end; gap:12px; margin:0">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <label style="flex:2">
             Trip name
             <input type="text" name="title" value="<%= repo.title %>" required />
@@ -736,6 +739,7 @@
               action="/ui/repos/<%= repo.id %>/visibility"
               class="row"
               style="align-items:center; margin-bottom:8px">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <label style="flex:1">
             Visibility
             <select name="visibility" <%= isOwner ? '' : 'disabled' %>>
@@ -801,6 +805,7 @@
                 action="/ui/repos/<%= repo.id %>/collaborators"
                 class="row"
                 style="margin-top:8px">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <label style="flex:2">
               Invite by email
               <input type="email"
@@ -847,6 +852,7 @@
               action="/ui/repos/<%= repo.id %>/fork"
               class="row"
               style="align-items:flex-end; margin:12px 0">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <label style="flex:1">
             <span class="mode-advanced">Fork name</span>
             <span class="mode-easy">Copy name</span>
@@ -879,6 +885,7 @@
         <form method="post"
               action="/ui/repos/<%= repo.id %>/delete"
               onsubmit="return confirm('This will permanently delete this trip. Continue?')">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <label style="display:block; margin-bottom:6px">
             Confirm name
             <input type="text"
@@ -949,6 +956,13 @@
     commitInput.name = 'commitId';
     commitInput.value = commitId;
 
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_csrf';
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    csrfInput.value = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+    form.appendChild(csrfInput);
     form.appendChild(branchInput);
     form.appendChild(commitInput);
     document.body.appendChild(form);

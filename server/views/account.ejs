@@ -26,6 +26,7 @@
     <% } %>
 
     <form class="account-form" method="post" action="/ui/account/profile-image">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <label>Profile image URL
         <input type="url"
                name="profileImageUrl"

@@ -11,6 +11,7 @@
     <% } %>
 
     <form method="post" action="/ui/signup" style="margin-top:12px">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="next" value="<%= next %>" />
 
       <label>
@@ -25,12 +26,12 @@
 
       <label>
         Password
-        <input type="password" name="password" required minlength="6">
+        <input type="password" name="password" required minlength="10">
       </label>
 
       <label>
         Confirm password
-        <input type="password" name="confirm" required minlength="6">
+        <input type="password" name="confirm" required minlength="10">
       </label>
 
       <div class="section-actions">

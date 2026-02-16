@@ -167,6 +167,7 @@
   </style>
 
   <form method="post" action="/ui/planner/<%= repo.id %>/run" onsubmit="serialize()">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <!-- Dates -->
     <div class="card">
       <h2 title="Leave blank to use today.">Dates</h2>

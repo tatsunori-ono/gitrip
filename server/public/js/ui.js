@@ -115,14 +115,16 @@ function attachSearch(button, row) {
       const lng = Number(d.lng);
       const hours = d.opening_hours || '—';
 
-      el.innerHTML = `
-        <strong>${d.name}</strong><br>
-        <span style="color:#667085;font-size:12px">
-          lat ${Number.isFinite(lat) ? lat.toFixed(5) : '—'},
-          lng ${Number.isFinite(lng) ? lng.toFixed(5) : '—'}
-          ${hours && hours !== '—' ? ` &middot; hours: ${hours}` : ''}
-        </span>
-      `;
+      const nameEl = document.createElement('strong');
+      nameEl.textContent = d.name;
+      el.appendChild(nameEl);
+      el.appendChild(document.createElement('br'));
+      const detailEl = document.createElement('span');
+      detailEl.style.cssText = 'color:#667085;font-size:12px';
+      let detail = `lat ${Number.isFinite(lat) ? lat.toFixed(5) : '—'}, lng ${Number.isFinite(lng) ? lng.toFixed(5) : '—'}`;
+      if (hours && hours !== '—') detail += ` \u00B7 hours: ${hours}`;
+      detailEl.textContent = detail;
+      el.appendChild(detailEl);
 
       el.onclick = () => {
         // ensure hidden fields exist

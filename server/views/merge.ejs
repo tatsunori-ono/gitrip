@@ -146,6 +146,7 @@
       <form method="post"
             action="/api/repos/<%= repo.id %>/merge"
             onsubmit="return mergeDirect(event)">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <input type="hidden" id="base" value="<%= baseId %>"/>
         <input type="hidden" id="ours" value="<%= oursId %>"/>
         <input type="hidden" id="theirs" value="<%= theirsId %>"/>
@@ -158,6 +159,7 @@
       <form method="post"
             action="/ui/repos/<%= repo.id %>/merge-resolve"
             onsubmit="return submitResolutions()">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <input type="hidden" name="baseId" value="<%= baseId %>"/>
         <input type="hidden" name="oursId" value="<%= oursId %>"/>
         <input type="hidden" name="theirsId" value="<%= theirsId %>"/>

@@ -11,6 +11,7 @@
     <% } %>
 
     <form method="post" action="/ui/login" style="margin-top:12px">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="next" value="<%= next %>">
 
       <label>

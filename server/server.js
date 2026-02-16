@@ -18,6 +18,7 @@ import { fileURLToPath } from 'url';
 import { v4 as uuid } from 'uuid';
 import crypto from 'node:crypto';
 import expressLayouts from 'express-ejs-layouts';
+import rateLimit from 'express-rate-limit';
 
 import { db, migrate, rowToCommit } from './db.js';
 import { mergeSnapshots } from './merge.js';
@@ -30,6 +31,41 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 migrate();
+
+// ---------- Security headers ----------
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(self), camera=(), microphone=()');
+  if (process.env.NODE_ENV === 'production' || process.env.FLY_APP_NAME) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net unpkg.com",
+      "style-src 'self' 'unsafe-inline' cdnjs.cloudflare.com unpkg.com",
+      "font-src 'self' cdnjs.cloudflare.com",
+      "img-src 'self' data: https: blob:",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+    ].join('; ')
+  );
+  next();
+});
+
+// ---------- Rate limiters ----------
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many attempts, please try again later.',
+});
+
 app.use(morgan('dev'));
 app.use(bodyParser.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -270,18 +306,99 @@ function parseCookies(header) {
   return out;
 }
 
+/** Validate redirect targets to prevent open redirects. */
+function isSafeRedirect(url) {
+  if (typeof url !== 'string') return false;
+  // Must start with single slash, not double slash (protocol-relative)
+  if (!url.startsWith('/') || url.startsWith('//')) return false;
+  // Block backslash tricks
+  if (url.includes('\\')) return false;
+  return true;
+}
+
+function safeRedirectUrl(raw) {
+  return isSafeRedirect(raw) ? raw : '/';
+}
+
 function setSessionCookie(res, sessionId) {
+  const isProduction = !!(process.env.NODE_ENV === 'production' || process.env.FLY_APP_NAME);
   const cookie =
     `gitrip_sid=${encodeURIComponent(sessionId)}; ` +
-    'Path=/; HttpOnly; SameSite=Lax';
+    `Path=/; HttpOnly; SameSite=Lax; Max-Age=86400${isProduction ? '; Secure' : ''}`;
   res.setHeader('Set-Cookie', cookie);
 }
 
 function clearSessionCookie(res) {
+  const isProduction = !!(process.env.NODE_ENV === 'production' || process.env.FLY_APP_NAME);
   const cookie =
-    'gitrip_sid=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax';
+    `gitrip_sid=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${isProduction ? '; Secure' : ''}`;
   res.setHeader('Set-Cookie', cookie);
 }
+
+/** Require that the user is logged in and is the owner or a collaborator with write access. */
+function requireWriteAccess(repo, user) {
+  if (!repo) return 'Repo not found';
+  if (!user) return 'You must be logged in to modify this trip.';
+  if (repo.owner_user_id === user.id) return null; // owner
+  const collab = getCollaborator.get(repo.id, user.id);
+  if (collab && (collab.role === 'owner' || collab.role === 'editor')) return null;
+  return 'You do not have permission to modify this trip.';
+}
+
+// ---------- CSRF protection (double-submit cookie pattern) ----------
+function generateCsrfToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function setCsrfCookie(res, token) {
+  const isProduction = !!(process.env.NODE_ENV === 'production' || process.env.FLY_APP_NAME);
+  const cookie =
+    `gitrip_csrf=${encodeURIComponent(token)}; ` +
+    `Path=/; SameSite=Lax; Max-Age=86400${isProduction ? '; Secure' : ''}`;
+  // Note: NOT HttpOnly — JavaScript needs to read it for AJAX requests
+  res.setHeader('Set-Cookie', [
+    res.getHeader('Set-Cookie') || [],
+    cookie,
+  ].flat().filter(Boolean));
+}
+
+// Middleware: set CSRF token and make it available to templates
+app.use((req, res, next) => {
+  const cookies = parseCookies(req.headers.cookie || '');
+  let csrfToken = cookies.gitrip_csrf;
+  if (!csrfToken) {
+    csrfToken = generateCsrfToken();
+    setCsrfCookie(res, csrfToken);
+  }
+  req.csrfToken = csrfToken;
+  res.locals.csrfToken = csrfToken;
+  next();
+});
+
+// Verify CSRF token on state-changing requests
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return next();
+  }
+
+  const cookies = parseCookies(req.headers.cookie || '');
+  const cookieToken = cookies.gitrip_csrf;
+
+  // Accept token from form body or from X-CSRF-Token header (for AJAX)
+  const bodyToken = req.body?._csrf;
+  const headerToken = req.headers['x-csrf-token'];
+  const submittedToken = bodyToken || headerToken;
+
+  if (!cookieToken || !submittedToken || cookieToken !== submittedToken) {
+    // For API JSON requests, return JSON error
+    const isApi = req.path.startsWith('/api/');
+    if (isApi) {
+      return res.status(403).json({ error: 'csrf_invalid', message: 'Invalid or missing CSRF token.' });
+    }
+    return res.status(403).send('Invalid or missing CSRF token. Please refresh the page and try again.');
+  }
+  next();
+});
 
 // attach req.user if logged in (but never required)
 app.use((req, res, next) => {
@@ -945,7 +1062,7 @@ async function fuzzySearchPlaces(q, limit) {
 }
 
 // ---------- AUTH UI (optional; only used when user chooses) ----------
-app.get('/ui/signup', (req, res) => {
+app.get('/ui/signup', authLimiter, (req, res) => {
   const next = typeof req.query.next === 'string' ? req.query.next : '/';
   res.render('signup', {
     error: null,
@@ -958,7 +1075,7 @@ app.get('/ui/about', (req, res) => {
   res.render('about');
 });
 
-app.post('/ui/signup', (req, res) => {
+app.post('/ui/signup', authLimiter, (req, res) => {
   try {
     const emailRaw = String(req.body.email || '').trim();
     const name = String(req.body.name || '').trim() || null;
@@ -976,8 +1093,17 @@ app.post('/ui/signup', (req, res) => {
     if (!emailRaw || !password) {
       return errorRender('Email and password are required.');
     }
-    if (password.length < 6) {
-      return errorRender('Password must be at least 6 characters.');
+    if (password.length < 10) {
+      return errorRender('Password must be at least 10 characters.');
+    }
+    if (!/[A-Z]/.test(password)) {
+      return errorRender('Password must include at least one uppercase letter.');
+    }
+    if (!/[a-z]/.test(password)) {
+      return errorRender('Password must include at least one lowercase letter.');
+    }
+    if (!/[0-9]/.test(password)) {
+      return errorRender('Password must include at least one number.');
     }
     if (password !== confirm) {
       return errorRender('Passwords do not match.');
@@ -997,10 +1123,7 @@ app.post('/ui/signup', (req, res) => {
     insertSession.run(sid, id, nowISO());
     setSessionCookie(res, sid);
 
-    const safeNext = typeof next === 'string' && next.startsWith('/')
-      ? next
-      : '/';
-    res.redirect(safeNext);
+    res.redirect(safeRedirectUrl(next));
   } catch (e) {
     console.error('signup error', e);
     res.status(500).render('signup', {
@@ -1011,7 +1134,7 @@ app.post('/ui/signup', (req, res) => {
   }
 });
 
-app.get('/ui/login', (req, res) => {
+app.get('/ui/login', authLimiter, (req, res) => {
   const next = typeof req.query.next === 'string' ? req.query.next : '/';
   res.render('login', {
     error: null,
@@ -1020,7 +1143,7 @@ app.get('/ui/login', (req, res) => {
   });
 });
 
-app.post('/ui/login', (req, res) => {
+app.post('/ui/login', authLimiter, (req, res) => {
   try {
     const emailRaw = String(req.body.email || '').trim();
     const password = String(req.body.password || '');
@@ -1039,22 +1162,24 @@ app.post('/ui/login', (req, res) => {
 
     const email = emailRaw.toLowerCase();
     const user = getUserByEmail.get(email);
+
+    // Prevent user enumeration: always hash even if user doesn't exist,
+    // and use a generic error message for both cases.
     if (!user) {
-      return errorRender('No account with that email. Try signing up.');
+      // Hash a dummy password to equalise timing
+      hashPassword(password);
+      return errorRender('Invalid email or password.');
     }
 
     if (!verifyPassword(password, user.password_hash)) {
-      return errorRender('Incorrect password.');
+      return errorRender('Invalid email or password.');
     }
 
     const sid = uuid();
     insertSession.run(sid, user.id, nowISO());
     setSessionCookie(res, sid);
 
-    const safeNext = typeof next === 'string' && next.startsWith('/')
-      ? next
-      : '/';
-    res.redirect(safeNext);
+    res.redirect(safeRedirectUrl(next));
   } catch (e) {
     console.error('login error', e);
     res.status(500).render('login', {
@@ -1086,9 +1211,14 @@ app.get('/ui/account', (req, res) => {
   }
   const success =
     typeof req.query.saved === 'string' ? 'Profile updated.' : null;
+  // Use only server-generated error messages (not raw query params) to prevent XSS
+  const ERROR_CODES = {
+    invalid_url: 'Enter a valid https:// URL.',
+    update_failed: 'Could not update image.',
+  };
   const error =
     typeof req.query.error === 'string'
-      ? decodeURIComponent(req.query.error)
+      ? (ERROR_CODES[req.query.error] || 'An error occurred.')
       : null;
   res.render('account', {
     currentUser: res.locals.currentUser || null,
@@ -1120,10 +1250,8 @@ app.post('/ui/account/profile-image', (req, res) => {
   }
   const raw = String(req.body.profileImageUrl || '').trim();
   let value = raw;
-  if (value && !/^https?:\/\//i.test(value)) {
-    return res.redirect(
-      '/ui/account?error=' + encodeURIComponent('Enter a valid https:// URL.')
-    );
+  if (value && !/^https:\/\//i.test(value)) {
+    return res.redirect('/ui/account?error=invalid_url');
   }
   if (!value) value = null;
   try {
@@ -1135,9 +1263,7 @@ app.post('/ui/account/profile-image', (req, res) => {
     return res.redirect('/ui/account?saved=1');
   } catch (e) {
     console.error('profile image update failed', e);
-    return res.redirect(
-      '/ui/account?error=' + encodeURIComponent('Could not update image.')
-    );
+    return res.redirect('/ui/account?error=update_failed');
   }
 });
 
@@ -1501,10 +1627,9 @@ app.post('/ui/repos/:repoId/star', (req, res) => {
   }
 
   const nextRaw = req.body?.next || req.query?.next;
-  const safeNext =
-    typeof nextRaw === 'string' && nextRaw.startsWith('/')
-      ? nextRaw
-      : `/ui/repos/${repo.id}?tab=view`;
+  const safeNext = isSafeRedirect(nextRaw)
+    ? nextRaw
+    : `/ui/repos/${repo.id}?tab=view`;
   res.redirect(safeNext);
 });
 
@@ -1597,6 +1722,8 @@ app.post('/ui/repos/:repoId/restore', (req, res) => {
   try {
     const repo = getRepo.get(req.params.repoId);
     if (!repo) return res.status(404).send('Repo not found');
+    const writeErr = requireWriteAccess(repo, req.user);
+    if (writeErr) return res.status(403).send(writeErr);
 
     const targetBranchName = String(req.body.targetBranch || '').trim() || 'main';
     const commitId = String(req.body.commitId || '').trim();
@@ -1728,6 +1855,8 @@ app.post('/ui/planner/:repoId/run', async (req, res) => {
   try {
     const repo = getRepo.get(req.params.repoId);
     if (!repo) return res.status(404).send('Repo not found');
+    const writeErr = requireWriteAccess(repo, req.user);
+    if (writeErr) return res.status(403).send(writeErr);
 
     // ---- robust JSON parse of payload ----
     let payloadRaw = req.body?.payload;
@@ -1817,6 +1946,8 @@ app.post('/ui/repos/:repoId/easy-add', async (req, res) => {
   try {
     const repo = getRepo.get(req.params.repoId);
     if (!repo) return res.status(404).send('Repo not found');
+    const writeErr = requireWriteAccess(repo, req.user);
+    if (writeErr) return res.status(403).send(writeErr);
 
     const branch = String(req.body.branch || repo.current_branch || 'main');
 
@@ -2122,6 +2253,8 @@ app.post('/api/repos/:repoId/branches', (req, res) => {
   const { name, fromCommitId } = req.body;
   const repo = getRepo.get(req.params.repoId);
   if (!repo) return res.status(404).json({ error: 'not_found' });
+  const writeErr = requireWriteAccess(repo, req.user);
+  if (writeErr) return res.status(403).json({ error: 'forbidden', message: writeErr });
   const id = uuid();
   insertBranch.run(id, repo.id, name, fromCommitId || null, nowISO());
   res.json({ ok: true, id });
@@ -2137,6 +2270,8 @@ app.post('/api/repos/:repoId/commits', (req, res) => {
   } = req.body;
   const repo = getRepo.get(req.params.repoId);
   if (!repo) return res.status(404).json({ error: 'not_found' });
+  const writeErr = requireWriteAccess(repo, req.user);
+  if (writeErr) return res.status(403).json({ error: 'forbidden', message: writeErr });
   const br = getBranch.get(repo.id, branch);
   if (!br) return res.status(404).json({ error: 'branch_not_found' });
   if (br.head_commit_id !== baseCommitId) {
@@ -2374,6 +2509,8 @@ app.post('/api/repos/:repoId/easy-save', (req, res) => {
     if (!repo) {
       return res.status(404).json({ ok: false, error: 'repo_not_found' });
     }
+    const writeErr = requireWriteAccess(repo, req.user);
+    if (writeErr) return res.status(403).json({ ok: false, error: 'forbidden', message: writeErr });
 
     const branchName = String(req.body.branch || 'main');
     const expectedParentId =
@@ -2469,6 +2606,8 @@ app.post('/api/repos/:repoId/merge', (req, res) => {
   const { ours, theirs, targetBranch, author = 'cli' } = req.body;
   const repo = getRepo.get(req.params.repoId);
   if (!repo) return res.status(404).json({ error: 'not_found' });
+  const writeErr = requireWriteAccess(repo, req.user);
+  if (writeErr) return res.status(403).json({ error: 'forbidden', message: writeErr });
 
   const oursId = String(ours || '').trim();
   const theirsId = String(theirs || '').trim();
@@ -2556,6 +2695,8 @@ app.post('/api/repos/:repoId/push', (req, res) => {
   } = req.body;
   const repo = getRepo.get(req.params.repoId);
   if (!repo) return res.status(404).json({ error: 'not_found' });
+  const writeErr = requireWriteAccess(repo, req.user);
+  if (writeErr) return res.status(403).json({ error: 'forbidden', message: writeErr });
   const br = getBranch.get(repo.id, branch);
   if (!br) return res.status(404).json({ error: 'branch_not_found' });
   if (br.head_commit_id !== baseCommitId) {
@@ -2728,6 +2869,8 @@ app.get('/ui/repos/:repoId/merge', (req, res) => {
 app.post('/ui/repos/:repoId/merge-resolve', (req, res) => {
   const repo = getRepo.get(req.params.repoId);
   if (!repo) return res.status(404).send('Repo not found');
+  const writeErr = requireWriteAccess(repo, req.user);
+  if (writeErr) return res.status(403).send(writeErr);
 
   const { baseId, oursId, theirsId, targetBranch, resolutions } = req.body;
 
@@ -2981,6 +3124,8 @@ app.post(
       if (!repo) {
         return res.status(404).json({ error: 'repo_not_found' });
       }
+      const writeErr = requireWriteAccess(repo, req.user);
+      if (writeErr) return res.status(403).json({ error: 'forbidden', message: writeErr });
 
       const br = getBranch.get(repo.id, branch);
       const head = br?.head_commit_id

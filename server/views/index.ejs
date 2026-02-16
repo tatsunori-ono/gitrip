@@ -3,6 +3,7 @@
 
   <div class="card">
     <form class="row" method="post" action="/ui/repos">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <label style="flex:1">
         Trip title
         <input name="title" placeholder="e.g., London Weekend" />

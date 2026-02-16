@@ -13,6 +13,7 @@
     <link rel="manifest" href="/public/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="/public/favicon.svg" />
     <meta name="theme-color" content="#ec5643" />
+    <meta name="csrf-token" content="<%= csrfToken %>">
   </head>
   <body>
     <header>
@@ -47,6 +48,7 @@
             <form method="post"
                   action="/ui/logout"
                   style="margin:0">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <button class="btn btn-ghost" type="submit">Log out</button>
             </form>
           <% } else { %>
@@ -65,6 +67,25 @@
           navigator.serviceWorker.register('/public/sw.js').catch(() => {});
         });
       }
+      // Auto-attach CSRF token to all fetch POST/PUT/DELETE requests
+      (function() {
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+        var origFetch = window.fetch;
+        window.fetch = function(url, opts) {
+          opts = opts || {};
+          var method = (opts.method || 'GET').toUpperCase();
+          if (method !== 'GET' && method !== 'HEAD') {
+            opts.headers = opts.headers || {};
+            if (opts.headers instanceof Headers) {
+              if (!opts.headers.has('X-CSRF-Token')) opts.headers.set('X-CSRF-Token', csrfToken);
+            } else {
+              if (!opts.headers['X-CSRF-Token']) opts.headers['X-CSRF-Token'] = csrfToken;
+            }
+          }
+          return origFetch.call(this, url, opts);
+        };
+      })();
     </script>
     <script>
       (function setupAccessibility() {

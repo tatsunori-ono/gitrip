@@ -612,9 +612,15 @@
             const title = document.createElement('div');
             title.className = 'explore-sugg-title';
             const { primary, rest } = splitFullName(item);
-            title.innerHTML = rest
-              ? `<strong>${primary}</strong><span class="explore-sugg-rest">, ${rest}</span>`
-              : `<strong>${primary}</strong>`;
+            const strong = document.createElement('strong');
+            strong.textContent = primary;
+            title.appendChild(strong);
+            if (rest) {
+              const span = document.createElement('span');
+              span.className = 'explore-sugg-rest';
+              span.textContent = ', ' + rest;
+              title.appendChild(span);
+            }
 
             btn.appendChild(title);
 

@@ -75,9 +75,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/api/')) {
+  // Only cache safe, public API endpoints — skip sensitive endpoints
+  // (user data, trip plans, checklists, etc.) to avoid leaking private data
+  if (url.pathname.startsWith('/api/geo/')) {
     event.respondWith(networkFirst(request));
     return;
+  }
+
+  // Don't cache other /api/ routes (private trip data, auth, etc.)
+  if (url.pathname.startsWith('/api/')) {
+    return; // let the browser handle normally (no caching)
   }
 
   event.respondWith(networkFirst(request));

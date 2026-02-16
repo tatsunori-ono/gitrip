@@ -7,6 +7,13 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 COPY . .
 
+# Create non-root user for running the application
+RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser \
+    && mkdir -p /data \
+    && chown -R appuser:appuser /app /data
+
+USER appuser
+
 # Persistent volume is mounted at /data by fly.toml
 ENV DATABASE_PATH=/data/gitrip.db
 ENV PORT=8080

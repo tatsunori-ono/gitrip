@@ -44,6 +44,7 @@
             <a href="/ui/about">About</a>
             <a href="/ui/public">Public trips</a>
             <a href="/ui/explore">Quick route</a>
+            <a href="/ui/algorithm">How it works</a>
           </nav>
         </div>
         <div class="nav-right">
@@ -79,17 +80,18 @@
     <main id="mainContent" tabindex="-1" role="main">
       <%- body %>
     </main>
-    <footer role="contentinfo" style="text-align:center;padding:24px 16px;color:var(--muted);font-size:13px">
+    <footer role="contentinfo" style="text-align:center;padding:3px 2px;color:var(--muted);font-size:13px">
       <nav aria-label="Footer navigation">
         <a href="/ui/about">About</a> &middot;
         <a href="/ui/public">Public trips</a> &middot;
-        <a href="/ui/explore">Quick route</a>
+        <a href="/ui/explore">Quick route</a> &middot;
+        <a href="/ui/algorithm">How it works</a>
       </nav>
       <nav aria-label="Legal" style="margin-top:6px">
         <a href="/ui/privacy">Privacy Policy</a> &middot;
         <a href="/ui/terms">Terms of Use</a>
       </nav>
-      <p style="margin-top:8px">&copy; <%= new Date().getFullYear() %> GiTrip. Version-controlled trip planning.</p>
+      <p style="margin-top:8px">&copy; <%= new Date().getFullYear() %> GiTrip - Git for Collaborative Trip Planning</p>
     </footer>
     <script>
       if ('serviceWorker' in navigator) {

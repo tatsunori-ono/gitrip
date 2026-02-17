@@ -24,7 +24,7 @@ import { db, migrate, rowToCommit } from './db.js';
 import { mergeSnapshots } from './merge.js';
 import { autoPlan } from './planner.js';
 import { nominatimSearch, nominatimLookup } from './geosearch.js';
-import { routeLegs } from './routing.js';
+import { routeLegs, orsMatrix, orsLegs, gmapsTransitLegs, haversineMinutes } from './routing.js';
 import { optimizeQuickRoute } from './quickroute.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1092,6 +1092,7 @@ app.get('/sitemap.xml', (req, res) => {
     { loc: '/ui/about', priority: '0.8', changefreq: 'monthly' },
     { loc: '/ui/public', priority: '0.9', changefreq: 'daily' },
     { loc: '/ui/explore', priority: '0.7', changefreq: 'monthly' },
+    { loc: '/ui/algorithm', priority: '0.6', changefreq: 'monthly' },
     { loc: '/ui/login', priority: '0.3', changefreq: 'yearly' },
     { loc: '/ui/signup', priority: '0.3', changefreq: 'yearly' },
     { loc: '/ui/privacy', priority: '0.2', changefreq: 'yearly' },
@@ -1139,6 +1140,150 @@ app.get('/ui/about', (req, res) => {
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'GBP' },
     },
   });
+});
+
+app.get('/ui/algorithm', (req, res) => {
+  res.render('algorithm', {
+    pageTitle: 'How Route Optimisation Works',
+    pageDescription: 'An interactive visual explanation of the Nearest Neighbour algorithm used by GiTrip to find the shortest route between your travel destinations.',
+    canonicalUrl: canonical(req, '/ui/algorithm'),
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      name: 'How Route Optimisation Works',
+      description: 'Interactive educational visualisation of the Nearest Neighbour greedy algorithm for route optimisation.',
+      author: { '@type': 'Organization', name: 'GiTrip' },
+    },
+  });
+});
+
+/* --- Algorithm page: travel-time matrix endpoint --- */
+app.post('/api/algo-matrix', express.json(), async (req, res) => {
+  try {
+    const points = Array.isArray(req.body.points) ? req.body.points : [];
+    const mode = String(req.body.mode || 'walking').toLowerCase();
+    if (points.length < 2 || points.length > 20) {
+      return res.json({ ok: false, error: 'Invalid number of points' });
+    }
+    const coords = points.map(p => ({ lat: Number(p.lat), lng: Number(p.lng) }));
+
+    // Try real routing matrix first (ORS supports walking/driving/cycling)
+    if (['walking', 'driving', 'cycling'].includes(mode)) {
+      const ors = await orsMatrix(coords, mode);
+      if (ors && ors.ok && Array.isArray(ors.minutes)) {
+        return res.json({ ok: true, provider: 'ors', unit: 'min', matrix: ors.minutes });
+      }
+    }
+
+    // Transit: pairwise Google Directions (small N only)
+    if (mode === 'transit' && coords.length <= 12) {
+      const n = coords.length;
+      const M = Array.from({ length: n }, () => Array(n).fill(Infinity));
+      for (let i = 0; i < n; i++) M[i][i] = 0;
+      const tasks = [];
+      for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+          if (i === j) continue;
+          tasks.push((async () => {
+            const r = await gmapsTransitLegs([coords[i], coords[j]]);
+            if (r && r.ok && Array.isArray(r.minutes) && Number.isFinite(r.minutes[0])) {
+              M[i][j] = r.minutes[0];
+            } else {
+              M[i][j] = haversineMinutes(coords[i], coords[j], 'driving');
+            }
+          })());
+        }
+      }
+      await Promise.all(tasks);
+      return res.json({ ok: true, provider: 'google_transit', unit: 'min', matrix: M });
+    }
+
+    // Fallback: Haversine-based estimate
+    const n = coords.length;
+    const M = [];
+    for (let i = 0; i < n; i++) {
+      M[i] = [];
+      for (let j = 0; j < n; j++) {
+        M[i][j] = i === j ? 0 : haversineMinutes(coords[i], coords[j], mode);
+      }
+    }
+    return res.json({ ok: true, provider: 'haversine', unit: 'min', matrix: M });
+  } catch (err) {
+    return res.json({ ok: false, error: 'Matrix computation failed' });
+  }
+});
+
+/* --- Algorithm page: route geometry for ordered waypoints --- */
+app.post('/api/algo-geometry', express.json(), async (req, res) => {
+  try {
+    const mode = String(req.body.mode || 'walking').toLowerCase();
+
+    // Batch mode: array of edge pairs processed sequentially (avoids ORS rate limits)
+    const edges = Array.isArray(req.body.edges) ? req.body.edges : null;
+    if (edges) {
+      if (edges.length > 80) return res.json({ ok: false });
+      const results = [];
+      for (const edge of edges) {
+        const a = { lat: Number(edge?.from?.lat), lng: Number(edge?.from?.lng) };
+        const b = { lat: Number(edge?.to?.lat), lng: Number(edge?.to?.lng) };
+        if (!Number.isFinite(a.lat) || !Number.isFinite(b.lat)) {
+          results.push({ coords: null, segments: null });
+          continue;
+        }
+        try {
+          if (mode === 'transit') {
+            const g = await gmapsTransitLegs([a, b]);
+            if (g?.ok && g.geometries?.[0]?.length > 1) {
+              const coords = g.geometries[0].map(p => [p.lat, p.lng]);
+              const segs = (g.legSegments?.[0] || []).map(seg => ({
+                points: (seg.points || []).map(p => [p.lat, p.lng]),
+                subMode: seg.subMode || 'transit',
+              }));
+              results.push({ coords, segments: segs.length ? segs : null });
+            } else {
+              results.push({ coords: null, segments: null });
+            }
+          } else {
+            const g = await orsLegs([a, b], mode);
+            if (g?.ok && g.geometries?.[0]?.length > 1) {
+              results.push({ coords: g.geometries[0].map(p => [p.lat, p.lng]), segments: null });
+            } else {
+              results.push({ coords: null, segments: null });
+            }
+          }
+        } catch {
+          results.push({ coords: null, segments: null });
+        }
+      }
+      return res.json({ ok: true, results });
+    }
+
+    // Fallback: single route of waypoints
+    const points = Array.isArray(req.body.points) ? req.body.points : [];
+    if (points.length < 2 || points.length > 20) return res.json({ ok: false });
+    const coords = points.map(p => ({ lat: Number(p.lat), lng: Number(p.lng) }));
+    if (mode === 'transit') {
+      const g = await gmapsTransitLegs(coords);
+      if (g?.ok && Array.isArray(g.geometries)) {
+        const legs = g.geometries.map(geo => geo.map(p => [p.lat, p.lng]));
+        const segments = (g.legSegments || []).map(legSegs =>
+          (legSegs || []).map(seg => ({
+            points: (seg.points || []).map(p => [p.lat, p.lng]),
+            subMode: seg.subMode || 'transit',
+          }))
+        );
+        return res.json({ ok: true, legs, segments });
+      }
+    } else {
+      const g = await orsLegs(coords, mode);
+      if (g?.ok && Array.isArray(g.geometries)) {
+        return res.json({ ok: true, legs: g.geometries.map(geo => geo.map(p => [p.lat, p.lng])) });
+      }
+    }
+    return res.json({ ok: false });
+  } catch {
+    return res.json({ ok: false });
+  }
 });
 
 app.get('/ui/privacy', (req, res) => {

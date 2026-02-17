@@ -1,0 +1,127 @@
+<!-- server/views/algorithm.ejs -->
+
+<!-- Compact hero -->
+<div class="algo-hero" data-readable="true">
+  <h1>How GiTrip Optimises Routes</h1>
+  <p class="lead">
+    GiTrip uses different algorithms depending on the number of stops.
+    Explore each approach step by step below using London landmarks.
+  </p>
+</div>
+
+<!-- Main visualisation -->
+<section class="algo-main">
+  <div class="algo-layout">
+
+    <!-- Map -->
+    <div class="algo-map-wrap">
+      <div id="algoMap" aria-label="Algorithm visualisation showing destinations being connected on a map"></div>
+      <div id="algoPhase" class="algo-phase" aria-live="polite"></div>
+      <div id="algoStats" class="algo-stats" hidden></div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="algo-sidebar">
+      <!-- Algorithm tabs -->
+      <div class="algo-tabs">
+        <button class="algo-tab active" data-algo="nn">Nearest Neighbour</button>
+        <button class="algo-tab" data-algo="nn2opt">NN + 2-opt</button>
+        <button class="algo-tab" data-algo="hk">Held-Karp DP</button>
+      </div>
+      <p id="algoDescription" class="algo-description"></p>
+
+      <!-- Playback controls -->
+      <div class="algo-controls card">
+        <div class="algo-controls-row">
+          <label class="algo-start-label">
+            Start
+            <select id="algoStartSelect"></select>
+          </label>
+          <label class="algo-start-label">
+            Mode
+            <select id="algoModeSelect">
+              <option value="walking">Walking</option>
+              <option value="cycling">Cycling</option>
+              <option value="driving">Driving</option>
+              <option value="transit">Transit</option>
+            </select>
+          </label>
+          <button id="algoPlayBtn" class="btn btn-primary" type="button" aria-label="Play animation">
+            <i class="fa-solid fa-play" aria-hidden="true"></i> Play
+          </button>
+          <button id="algoPauseBtn" class="btn" type="button" aria-label="Pause animation" hidden>
+            <i class="fa-solid fa-pause" aria-hidden="true"></i> Pause
+          </button>
+          <button id="algoStepBtn" class="btn" type="button" aria-label="Step forward one step">
+            <i class="fa-solid fa-forward-step" aria-hidden="true"></i> Step
+          </button>
+          <button id="algoResetBtn" class="btn" type="button" aria-label="Reset animation">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Reset
+          </button>
+          <label class="algo-speed-label">
+            Speed
+            <input id="algoSpeedSlider" type="range" min="0.25" max="10" step="0.25" value="1" />
+            <span id="algoSpeedValue" class="algo-speed-value">1&times;</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Pseudocode -->
+      <div class="algo-pseudocode-panel card">
+        <h2 id="algoPseudoTitle">Pseudocode</h2>
+        <pre id="algoPseudocode" class="algo-code" aria-label="Algorithm pseudocode with current-line highlighting"><code></code></pre>
+      </div>
+
+      <!-- Legend -->
+      <div class="algo-legend card">
+        <div class="algo-legend-row">
+          <div class="algo-legend-item">
+            <span class="algo-legend-swatch algo-legend-swatch--current"></span> Current
+          </div>
+          <div class="algo-legend-item">
+            <span class="algo-legend-swatch algo-legend-swatch--visited"></span> Visited
+          </div>
+          <div class="algo-legend-item">
+            <span class="algo-legend-swatch algo-legend-swatch--unvisited"></span> Unvisited
+          </div>
+          <div class="algo-legend-item">
+            <span class="algo-legend-swatch algo-legend-swatch--search"></span> Search
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Educational context -->
+  <div class="algo-context">
+    <article class="algo-context-card card" data-readable="true">
+      <h3><i class="fa-solid fa-gauge-high" aria-hidden="true"></i> Time Complexity</h3>
+      <p>
+        <strong>Nearest Neighbour</strong> runs in O(N&sup2;). <strong>2-opt</strong> adds
+        O(N&sup2;) per pass. <strong>Held&ndash;Karp</strong> is exact but exponential:
+        O(2<sup>N</sup>&middot;N&sup2;), feasible only for small N.
+      </p>
+    </article>
+    <article class="algo-context-card card" data-readable="true">
+      <h3><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Trade-offs</h3>
+      <p>
+        The NN greedy approach can produce paths up to 25&percnt; longer than optimal.
+        Adding <strong>2-opt</strong> iteratively reverses sub-segments to shorten the route.
+        <strong>Held&ndash;Karp</strong> guarantees the shortest path but is too slow for many stops.
+      </p>
+    </article>
+    <article class="algo-context-card card" data-readable="true">
+      <h3><i class="fa-solid fa-code-branch" aria-hidden="true"></i> When GiTrip Uses Each</h3>
+      <p>
+        For <strong>12 or fewer</strong> stops GiTrip uses Held&ndash;Karp for the exact optimum.
+        For <strong>more than 12</strong> it falls back to Nearest Neighbour + 2-opt,
+        trading optimality for speed. Try each tab to compare.
+      </p>
+    </article>
+  </div>
+</section>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/public/algorithm.css" />
+<script src="/public/algorithm.js" defer></script>

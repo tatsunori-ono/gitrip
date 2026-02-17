@@ -26,13 +26,22 @@
 
       <label>
         Password
-        <input type="password" name="password" required minlength="10">
+        <input type="password" name="password" id="signupPassword" required minlength="10">
       </label>
+      <ul class="pw-rules" id="pwRules">
+        <li id="pwLen"><span class="pw-circle"></span> At least 10 characters</li>
+        <li id="pwUpper"><span class="pw-circle"></span> One uppercase letter</li>
+        <li id="pwLower"><span class="pw-circle"></span> One lowercase letter</li>
+        <li id="pwNum"><span class="pw-circle"></span> One number</li>
+      </ul>
 
       <label>
         Confirm password
-        <input type="password" name="confirm" required minlength="10">
+        <input type="password" name="confirm" id="signupConfirm" required minlength="10">
       </label>
+      <ul class="pw-rules" id="pwMatchRules" style="display:none">
+        <li id="pwMatch"><span class="pw-circle"></span> Passwords match</li>
+      </ul>
 
       <p class="time" style="margin-top:8px">
         By signing up, you agree to our
@@ -49,3 +58,97 @@
     </form>
   </div>
 </section>
+
+<style>
+  .pw-rules {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--muted, #667085);
+  }
+  .pw-rules li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+  }
+  .pw-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid #d0d5dd;
+    flex-shrink: 0;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .pw-rules li.pass .pw-circle {
+    border-color: #16a34a;
+    background: #16a34a;
+  }
+  .pw-rules li.pass .pw-circle::after {
+    content: '';
+    display: block;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-bottom: 2px;
+  }
+  .pw-rules li.pass {
+    color: #16a34a;
+  }
+</style>
+
+<script>
+  (function () {
+    var pw = document.getElementById('signupPassword');
+    var confirm = document.getElementById('signupConfirm');
+    var matchWrap = document.getElementById('pwMatchRules');
+    if (!pw || !confirm) return;
+
+    var rules = [
+      { id: 'pwLen', test: function (v) { return v.length >= 10; } },
+      { id: 'pwUpper', test: function (v) { return /[A-Z]/.test(v); } },
+      { id: 'pwLower', test: function (v) { return /[a-z]/.test(v); } },
+      { id: 'pwNum', test: function (v) { return /[0-9]/.test(v); } },
+    ];
+
+    function checkPassword() {
+      var val = pw.value;
+      rules.forEach(function (r) {
+        var el = document.getElementById(r.id);
+        if (!el) return;
+        if (r.test(val)) {
+          el.classList.add('pass');
+        } else {
+          el.classList.remove('pass');
+        }
+      });
+      checkMatch();
+    }
+
+    function checkMatch() {
+      var cVal = confirm.value;
+      if (cVal.length > 0) {
+        matchWrap.style.display = '';
+        var el = document.getElementById('pwMatch');
+        if (el) {
+          if (pw.value === cVal && cVal.length > 0) {
+            el.classList.add('pass');
+          } else {
+            el.classList.remove('pass');
+          }
+        }
+      } else {
+        matchWrap.style.display = 'none';
+      }
+    }
+
+    pw.addEventListener('input', checkPassword);
+    confirm.addEventListener('input', checkMatch);
+  })();
+</script>

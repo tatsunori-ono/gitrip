@@ -53,9 +53,9 @@
     return 2 * R * Math.asin(Math.sqrt(h));
   }
 
-  function haversineMetres(a, b) {
-    return haversineKm(a, b) * 1000;
-  }
+  // function haversineMetres(a, b) {
+  //   return haversineKm(a, b) * 1000;
+  // }
 
   function buildMatrix(pts) {
     var n = pts.length;
@@ -422,7 +422,24 @@
   }
 
   function getGeoCached(fromIdx, toIdx) {
-    return geoCache[geoCacheKey(fromIdx, toIdx)] || null;
+    var fwd = geoCache[geoCacheKey(fromIdx, toIdx)];
+    if (fwd) return fwd;
+    // 2-opt reverses segments, so check the reverse direction too
+    var rev = geoCache[geoCacheKey(toIdx, fromIdx)];
+    if (rev) {
+      var reversed = {
+        coords: rev.coords ? rev.coords.slice().reverse() : null,
+        segments: rev.segments
+          ? rev.segments.slice().reverse().map(function (seg) {
+              return { points: seg.points.slice().reverse(), subMode: seg.subMode };
+            })
+          : null,
+      };
+      // Cache the reversed version for future lookups
+      geoCache[geoCacheKey(fromIdx, toIdx)] = reversed;
+      return reversed;
+    }
+    return null;
   }
 
   function getGeoCoords(fromIdx, toIdx) {
@@ -469,26 +486,42 @@
     }).addTo(edgeLayer);
   }
 
-  function showSearchRing(fromIdx, toIdx, progress) {
-    ringLayer.clearLayers();
-    var a = LANDMARKS[fromIdx], b = LANDMARKS[toIdx];
-    var r = progress * haversineMetres(a, b);
-    if (r > 0) {
-      L.circle([a.lat, a.lng], {
-        radius: r, color: '#ec5643', weight: 3,
-        opacity: Math.max(0.15, 0.9 - progress * 0.6),
-        fillColor: '#ec5643', fillOpacity: Math.max(0, 0.12 - progress * 0.1),
-        fill: true, dashArray: '6 4', interactive: false,
-      }).addTo(ringLayer);
-    }
-  }
+  // Ring animation commented out — it used geographic distance which doesn't
+  // reflect travel-time comparisons the algorithm actually makes.
+  // function showSearchRing(fromIdx, toIdx, progress) {
+  //   ringLayer.clearLayers();
+  //   var a = LANDMARKS[fromIdx], b = LANDMARKS[toIdx];
+  //   var r = progress * haversineMetres(a, b);
+  //   if (r > 0) {
+  //     L.circle([a.lat, a.lng], {
+  //       radius: r, color: '#ec5643', weight: 3,
+  //       opacity: Math.max(0.15, 0.9 - progress * 0.6),
+  //       fillColor: '#ec5643', fillOpacity: Math.max(0, 0.12 - progress * 0.1),
+  //       fill: true, dashArray: '6 4', interactive: false,
+  //     }).addTo(ringLayer);
+  //   }
+  // }
 
   function showScanLine(fromIdx, toIdx) {
     scanLayer.clearLayers();
     var a = LANDMARKS[fromIdx], b = LANDMARKS[toIdx];
     L.polyline([[a.lat, a.lng], [b.lat, b.lng]], {
-      color: '#ec5643', weight: 1, opacity: 0.2, dashArray: '4 4', interactive: false,
+      color: '#ec5643', weight: 2, opacity: 0.45, dashArray: '6 4', interactive: false,
     }).addTo(scanLayer);
+
+    // Show the travel time being evaluated along the scan line
+    if (state.matrix) {
+      var cost = state.matrix[fromIdx][toIdx];
+      var mid = [(a.lat + b.lat) / 2, (a.lng + b.lng) / 2];
+      L.marker(mid, {
+        icon: L.divIcon({
+          className: 'algo-scan-label',
+          html: '<span style="background:rgba(27,37,31,0.85);color:#f97316;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap">' + formatCost(cost) + '</span>',
+          iconSize: [0, 0], iconAnchor: [0, 0],
+        }),
+        interactive: false,
+      }).addTo(scanLayer);
+    }
   }
 
   function clearTransient() {
@@ -646,7 +679,6 @@
 
     switch (step.type) {
       case 'scan_node':
-        showSearchRing(step.current, step.candidate, state.subProgress);
         showScanLine(step.current, step.candidate);
         if (!state.visitedSet[step.candidate]) updateMarkerState(step.candidate, 'candidate');
         break;

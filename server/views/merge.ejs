@@ -49,6 +49,110 @@
       color: #6b7280;
     }
 
+    /* --- Diff highlighting --- */
+    .diff-added {
+      background: #ecfdf3;
+      border-left: 3px solid #16a34a;
+      padding-left: 7px;
+      border-radius: 4px;
+      margin: 2px 0;
+    }
+    .diff-removed {
+      background: #fef2f2;
+      border-left: 3px solid #ef4444;
+      padding-left: 7px;
+      border-radius: 4px;
+      margin: 2px 0;
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+    .diff-modified {
+      background: #fffbeb;
+      border-left: 3px solid #f97316;
+      padding-left: 7px;
+      border-radius: 4px;
+      margin: 2px 0;
+    }
+
+    .plan-diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .plan-diff-col-heading {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0 0 6px;
+    }
+    .plan-diff-col-heading .branch-label {
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .diff-legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 8px 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .diff-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .diff-legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    .plan-base-ref { margin-top: 8px; }
+    .plan-base-ref > summary {
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* --- Diff map --- */
+    .diff-map-frame {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      height: 360px;
+      background: #e5e7eb;
+    }
+    .diff-map-frame .leaflet-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* --- Conflict mini-cards --- */
+    .conflict-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 6px;
+      font-size: 13px;
+    }
+    .conflict-compare-card {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+    }
+    .conflict-compare-card .label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    /* --- Timeline side-by-side --- */
     .merge-timeline-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -86,8 +190,9 @@
 
     .merge-timeline svg {
       width: 100%;
-      height: 120px;
+      height: 100px;
       display: block;
+      overflow: hidden;
     }
 
     .merge-conflict rect.tl-block-rect {
@@ -95,16 +200,99 @@
       stroke-width: 1.5px;
       fill: #fde2e2;
     }
+    .tl-diff-added rect.tl-block-rect { fill: #bbf7d0; stroke: #16a34a; stroke-width: 1.2px; }
+    .tl-diff-removed rect.tl-block-rect { fill: #fecaca; stroke: #ef4444; stroke-width: 1.2px; opacity: 0.5; }
+    .tl-diff-modified rect.tl-block-rect { fill: #fed7aa; stroke: #f97316; stroke-width: 1.2px; }
 
     .merge-merged {
       margin-top: 10px;
     }
 
-    @media (max-width: 900px) {
-      .merge-timeline {
-        height: 50px;
-      }
+    /* --- Per-stop merge toggles --- */
+    .merge-stop-toggles {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
+    .merge-stop-toggles-heading {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 2px;
+    }
+    .merge-stop-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f9fafb;
+      font-size: 13px;
+    }
+    .merge-stop-toggle .stop-info {
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+    .merge-stop-toggle .stop-info .stop-name {
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .merge-stop-toggle .stop-info .stop-day {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .merge-stop-toggle .stop-options {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+    .merge-stop-toggle .stop-option {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .merge-stop-toggle .stop-option:has(input:checked) {
+      border-color: #6366f1;
+      background: #eef2ff;
+      font-weight: 600;
+    }
+    .merge-stop-toggle .stop-option.opt-disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+    .merge-stop-toggle .stop-option input[type="radio"] {
+      margin: 0;
+      width: 12px;
+      height: 12px;
+    }
+    .merge-stop-toggle .stop-option .opt-time {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    @media (max-width: 900px) {
+      .plan-diff-grid { grid-template-columns: 1fr; }
+      .conflict-compare { grid-template-columns: 1fr; }
+      .merge-stop-toggle { flex-direction: column; align-items: flex-start; }
+    }
+
+    /* --- High contrast --- */
+    .high-contrast .diff-added { background: #064e3b; color: #f8f8f8; border-color: #16a34a; }
+    .high-contrast .diff-removed { background: #450a0a; color: #f8f8f8; border-color: #ef4444; }
+    .high-contrast .diff-modified { background: #451a03; color: #f8f8f8; border-color: #f97316; }
+    .high-contrast .diff-map-frame { border: 1px solid #f97316; }
+    .high-contrast .conflict-compare-card { background: #1a1a2e; border-color: #444; }
   </style>
 
   <div class="card">
@@ -132,7 +320,7 @@
 
     <% if (!baseId) { %>
       <p class="time">
-        Couldn’t compute a common base commit for these branches, so a proper 3‑way merge isn’t available.
+        Couldn't compute a common base commit for these branches, so a proper 3‑way merge isn't available.
         You can still compare the two plans below.
       </p>
     <% } else if (!conflicts.length) { %>
@@ -179,19 +367,16 @@
                   </div>
                 </div>
 
-                <details style="margin-top:6px">
-                  <summary class="time">Preview diff</summary>
-                  <div class="row" style="margin-top:8px">
-                    <div style="flex:1">
-                      <div class="time">Source (ours)</div>
-                      <pre class="code"><%- (c.ours||'').slice(0,20000) %></pre>
-                    </div>
-                    <div style="flex:1">
-                      <div class="time">Target (theirs)</div>
-                      <pre class="code"><%- (c.theirs||'').slice(0,20000) %></pre>
-                    </div>
+                <div class="row" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+                  <div style="flex:1">
+                    <div class="time">Source (ours)</div>
+                    <pre class="code"><%- (c.ours||'').slice(0,20000) %></pre>
                   </div>
-                </details>
+                  <div style="flex:1">
+                    <div class="time">Target (theirs)</div>
+                    <pre class="code"><%- (c.theirs||'').slice(0,20000) %></pre>
+                  </div>
+                </div>
               <% } else if (c.type==='plan-stop-time') { %>
                 <div>
                   <strong>Stop time conflict:</strong>
@@ -221,23 +406,21 @@
                     </span>
                   </label>
                 </div>
-                <details style="margin-top:6px">
-                  <summary class="time">Preview times</summary>
-                  <ul class="list" style="margin-top:4px">
-                    <li class="time">
-                      <strong>Base:</strong>
-                      <%= c.base?.arrive || '??:??' %> → <%= c.base?.depart || '??:??' %>
-                    </li>
-                    <li class="time">
-                      <strong>Source:</strong>
-                      <%= c.ours?.arrive || '??:??' %> → <%= c.ours?.depart || '??:??' %>
-                    </li>
-                    <li class="time">
-                      <strong>Target:</strong>
-                      <%= c.theirs?.arrive || '??:??' %> → <%= c.theirs?.depart || '??:??' %>
-                    </li>
-                  </ul>
-                </details>
+
+                <div class="conflict-compare">
+                  <div class="conflict-compare-card">
+                    <div class="label">Base</div>
+                    <div><%= c.base?.arrive || '??:??' %> &rarr; <%= c.base?.depart || '??:??' %></div>
+                  </div>
+                  <div class="conflict-compare-card" style="background:#ecfdf3;border-color:#bbf7d0">
+                    <div class="label">Source</div>
+                    <div><%= c.ours?.arrive || '??:??' %> &rarr; <%= c.ours?.depart || '??:??' %></div>
+                  </div>
+                  <div class="conflict-compare-card" style="background:#eff6ff;border-color:#bfdbfe">
+                    <div class="label">Target</div>
+                    <div><%= c.theirs?.arrive || '??:??' %> &rarr; <%= c.theirs?.depart || '??:??' %></div>
+                  </div>
+                </div>
               <% } else if (c.type==='plan-stop-delete') { %>
                 <div>
                   <strong>Stop deleted vs edited:</strong>
@@ -287,30 +470,31 @@
                   </label>
                 </div>
 
-                <details style="margin-top:6px">
-                  <summary class="time">Preview</summary>
-                  <ul class="list" style="margin-top:4px">
-                    <li class="time">
-                      <strong>Base:</strong>
-                      <%= c.base?.name || '—' %>
-                      (<%= c.base?.arrive || '??:??' %> → <%= c.base?.depart || '??:??' %>)
-                    </li>
-                    <li class="time">
-                      <strong>Source:</strong>
-                      <% if (!c.ours) { %>deleted<% } else { %>
-                        <%= c.ours?.name || '—' %>
-                        (<%= c.ours?.arrive || '??:??' %> → <%= c.ours?.depart || '??:??' %>)
-                      <% } %>
-                    </li>
-                    <li class="time">
-                      <strong>Target:</strong>
-                      <% if (!c.theirs) { %>deleted<% } else { %>
-                        <%= c.theirs?.name || '—' %>
-                        (<%= c.theirs?.arrive || '??:??' %> → <%= c.theirs?.depart || '??:??' %>)
-                      <% } %>
-                    </li>
-                  </ul>
-                </details>
+                <div class="conflict-compare">
+                  <div class="conflict-compare-card">
+                    <div class="label">Base</div>
+                    <div><%= c.base?.name || '—' %></div>
+                    <div class="time"><%= c.base?.arrive || '??:??' %> &rarr; <%= c.base?.depart || '??:??' %></div>
+                  </div>
+                  <div class="conflict-compare-card" style="background:#ecfdf3;border-color:#bbf7d0">
+                    <div class="label">Source</div>
+                    <% if (!c.ours) { %>
+                      <div style="color:#ef4444">Deleted</div>
+                    <% } else { %>
+                      <div><%= c.ours?.name || '—' %></div>
+                      <div class="time"><%= c.ours?.arrive || '??:??' %> &rarr; <%= c.ours?.depart || '??:??' %></div>
+                    <% } %>
+                  </div>
+                  <div class="conflict-compare-card" style="background:#eff6ff;border-color:#bfdbfe">
+                    <div class="label">Target</div>
+                    <% if (!c.theirs) { %>
+                      <div style="color:#ef4444">Deleted</div>
+                    <% } else { %>
+                      <div><%= c.theirs?.name || '—' %></div>
+                      <div class="time"><%= c.theirs?.arrive || '??:??' %> &rarr; <%= c.theirs?.depart || '??:??' %></div>
+                    <% } %>
+                  </div>
+                </div>
               <% } else if (c.type==='plan-whole') { %>
                 <div>
                   <strong>Itinerary conflict:</strong>
@@ -325,100 +509,97 @@
                   <label><input type="radio" name="c<%= idx %>" value="theirs" /> Use target plan</label>
                 </div>
 
-                <details style="margin-top:6px">
-                  <summary class="time">Preview plans</summary>
-                  <div class="plan-preview-grid" style="margin-top:8px">
-                    <div class="plan-preview-col">
-                      <div class="time"><strong>Base</strong></div>
-                      <% const pB = c.base; %>
-                      <% if (!pB || !Array.isArray(pB.days) || !pB.days.length) { %>
-                        <div class="plan-preview-empty">No plan</div>
-                      <% } else { %>
-                        <% pB.days.forEach(function(d){ %>
-                          <div class="plan-preview-day">
-                            <div class="plan-preview-day-title"><%= d.date || d.id %></div>
-                            <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
-                              <div class="plan-preview-empty">No stops</div>
-                            <% } else { %>
-                              <% d.stops.forEach(function(s){ %>
-                                <% if (s) { %>
-                                  <div class="plan-preview-stop">
-                                    <strong><%= s.name || 'Untitled stop' %></strong>
-                                    <% if (s.arrive || s.depart) { %>
-                                      <span class="time">
-                                        <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
-                                      </span>
-                                    <% } %>
-                                  </div>
-                                <% } %>
-                              <% }); %>
-                            <% } %>
-                          </div>
-                        <% }); %>
-                      <% } %>
-                    </div>
-
-                    <div class="plan-preview-col">
-                      <div class="time"><strong>Source</strong></div>
-                      <% const pO = c.ours; %>
-                      <% if (!pO || !Array.isArray(pO.days) || !pO.days.length) { %>
-                        <div class="plan-preview-empty">No plan</div>
-                      <% } else { %>
-                        <% pO.days.forEach(function(d){ %>
-                          <div class="plan-preview-day">
-                            <div class="plan-preview-day-title"><%= d.date || d.id %></div>
-                            <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
-                              <div class="plan-preview-empty">No stops</div>
-                            <% } else { %>
-                              <% d.stops.forEach(function(s){ %>
-                                <% if (s) { %>
-                                  <div class="plan-preview-stop">
-                                    <strong><%= s.name || 'Untitled stop' %></strong>
-                                    <% if (s.arrive || s.depart) { %>
-                                      <span class="time">
-                                        <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
-                                      </span>
-                                    <% } %>
-                                  </div>
-                                <% } %>
-                              <% }); %>
-                            <% } %>
-                          </div>
-                        <% }); %>
-                      <% } %>
-                    </div>
-
-                    <div class="plan-preview-col">
-                      <div class="time"><strong>Target</strong></div>
-                      <% const pT = c.theirs; %>
-                      <% if (!pT || !Array.isArray(pT.days) || !pT.days.length) { %>
-                        <div class="plan-preview-empty">No plan</div>
-                      <% } else { %>
-                        <% pT.days.forEach(function(d){ %>
-                          <div class="plan-preview-day">
-                            <div class="plan-preview-day-title"><%= d.date || d.id %></div>
-                            <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
-                              <div class="plan-preview-empty">No stops</div>
-                            <% } else { %>
-                              <% d.stops.forEach(function(s){ %>
-                                <% if (s) { %>
-                                  <div class="plan-preview-stop">
-                                    <strong><%= s.name || 'Untitled stop' %></strong>
-                                    <% if (s.arrive || s.depart) { %>
-                                      <span class="time">
-                                        <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
-                                      </span>
-                                    <% } %>
-                                  </div>
-                                <% } %>
-                              <% }); %>
-                            <% } %>
-                          </div>
-                        <% }); %>
-                      <% } %>
-                    </div>
+                <div class="plan-preview-grid" style="margin-top:8px">
+                  <div class="plan-preview-col">
+                    <div class="time"><strong>Base</strong></div>
+                    <% const pB = c.base; %>
+                    <% if (!pB || !Array.isArray(pB.days) || !pB.days.length) { %>
+                      <div class="plan-preview-empty">No plan</div>
+                    <% } else { %>
+                      <% pB.days.forEach(function(d){ %>
+                        <div class="plan-preview-day">
+                          <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                          <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                            <div class="plan-preview-empty">No stops</div>
+                          <% } else { %>
+                            <% d.stops.forEach(function(s){ %>
+                              <% if (s) { %>
+                                <div class="plan-preview-stop">
+                                  <strong><%= s.name || 'Untitled stop' %></strong>
+                                  <% if (s.arrive || s.depart) { %>
+                                    <span class="time">
+                                      <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
+                                    </span>
+                                  <% } %>
+                                </div>
+                              <% } %>
+                            <% }); %>
+                          <% } %>
+                        </div>
+                      <% }); %>
+                    <% } %>
                   </div>
-                </details>
+
+                  <div class="plan-preview-col">
+                    <div class="time"><strong>Source</strong></div>
+                    <% const pO = c.ours; %>
+                    <% if (!pO || !Array.isArray(pO.days) || !pO.days.length) { %>
+                      <div class="plan-preview-empty">No plan</div>
+                    <% } else { %>
+                      <% pO.days.forEach(function(d){ %>
+                        <div class="plan-preview-day">
+                          <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                          <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                            <div class="plan-preview-empty">No stops</div>
+                          <% } else { %>
+                            <% d.stops.forEach(function(s){ %>
+                              <% if (s) { %>
+                                <div class="plan-preview-stop">
+                                  <strong><%= s.name || 'Untitled stop' %></strong>
+                                  <% if (s.arrive || s.depart) { %>
+                                    <span class="time">
+                                      <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
+                                    </span>
+                                  <% } %>
+                                </div>
+                              <% } %>
+                            <% }); %>
+                          <% } %>
+                        </div>
+                      <% }); %>
+                    <% } %>
+                  </div>
+
+                  <div class="plan-preview-col">
+                    <div class="time"><strong>Target</strong></div>
+                    <% const pT = c.theirs; %>
+                    <% if (!pT || !Array.isArray(pT.days) || !pT.days.length) { %>
+                      <div class="plan-preview-empty">No plan</div>
+                    <% } else { %>
+                      <% pT.days.forEach(function(d){ %>
+                        <div class="plan-preview-day">
+                          <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                          <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                            <div class="plan-preview-empty">No stops</div>
+                          <% } else { %>
+                            <% d.stops.forEach(function(s){ %>
+                              <% if (s) { %>
+                                <div class="plan-preview-stop">
+                                  <strong><%= s.name || 'Untitled stop' %></strong>
+                                  <% if (s.arrive || s.depart) { %>
+                                    <span class="time">
+                                      <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
+                                    </span>
+                                  <% } %>
+                                </div>
+                              <% } %>
+                            <% }); %>
+                          <% } %>
+                        </div>
+                      <% }); %>
+                    <% } %>
+                  </div>
+                </div>
               <% } %>
               <input type="hidden" id="meta<%= idx %>" value='<%- JSON.stringify(c) %>' />
             </li>
@@ -433,18 +614,194 @@
       </form>
     <% } %>
 
+    <%
+      /* ---- Diff computation ---- */
+      var baseStopIndex = {};
+      if (basePlan && Array.isArray(basePlan.days)) {
+        basePlan.days.forEach(function(d) {
+          if (!d || !Array.isArray(d.stops)) return;
+          d.stops.forEach(function(s) {
+            if (!s) return;
+            baseStopIndex[d.id + '::' + s.id] = s;
+          });
+        });
+      }
+
+      function computeDiffStatus(plan) {
+        var status = {};
+        if (!plan || !Array.isArray(plan.days)) return status;
+        plan.days.forEach(function(d) {
+          if (!d || !Array.isArray(d.stops)) return;
+          d.stops.forEach(function(s) {
+            if (!s) return;
+            var key = d.id + '::' + s.id;
+            var bs = baseStopIndex[key];
+            if (!bs) {
+              status[key] = 'added';
+            } else if (bs.arrive !== s.arrive || bs.depart !== s.depart) {
+              status[key] = 'modified';
+            } else {
+              status[key] = 'unchanged';
+            }
+          });
+        });
+        Object.keys(baseStopIndex).forEach(function(key) {
+          if (!(key in status)) status[key] = 'removed';
+        });
+        return status;
+      }
+
+      var ourDiffStatus = computeDiffStatus(ourPlan);
+      var theirDiffStatus = computeDiffStatus(theirPlan);
+
+      function diffClass(statusMap, dayId, stopId) {
+        var key = dayId + '::' + stopId;
+        var st = statusMap[key];
+        if (st === 'added') return 'diff-added';
+        if (st === 'removed') return 'diff-removed';
+        if (st === 'modified') return 'diff-modified';
+        return '';
+      }
+    %>
+
     <% if (basePlan || ourPlan || theirPlan) { %>
       <h3 style="margin-top:16px">Plan comparison</h3>
       <p class="time">
-        Base is the common ancestor; Source is <strong><%= source %></strong>; Target is
-        <strong><%= target %></strong>.
+        Diff vs the common ancestor (base).
+        Source is <strong><%= source %></strong>; Target is <strong><%= target %></strong>.
       </p>
-      <div class="plan-preview-grid">
+
+      <div class="diff-legend">
+        <span class="diff-legend-item">
+          <span class="diff-legend-swatch" style="background:#ecfdf3;border:1px solid #16a34a"></span> Added
+        </span>
+        <span class="diff-legend-item">
+          <span class="diff-legend-swatch" style="background:#fef2f2;border:1px solid #ef4444"></span> Removed
+        </span>
+        <span class="diff-legend-item">
+          <span class="diff-legend-swatch" style="background:#fffbeb;border:1px solid #f97316"></span> Time changed
+        </span>
+        <span class="diff-legend-item">
+          <span class="diff-legend-swatch" style="background:#fff;border:1px solid var(--border)"></span> Unchanged
+        </span>
+      </div>
+
+      <div class="plan-diff-grid">
+        <!-- Source column -->
         <div class="plan-preview-col">
-          <div class="time">
-            <strong>Base</strong>
-            <% if (baseId) { %> (common ancestor)<% } else { %> (n/a)<% } %>
+          <div class="plan-diff-col-heading">
+            Source <span class="branch-label">(<%= source %>)</span>
           </div>
+          <% if (!ourPlan || !Array.isArray(ourPlan.days) || !ourPlan.days.length) { %>
+            <div class="plan-preview-empty">No plan</div>
+          <% } else { %>
+            <% ourPlan.days.forEach(function(d) { %>
+              <div class="plan-preview-day">
+                <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                  <div class="plan-preview-empty">No stops</div>
+                <% } else { %>
+                  <% d.stops.forEach(function(s) { %>
+                    <% if (s) { %>
+                      <div class="plan-preview-stop <%= diffClass(ourDiffStatus, d.id, s.id) %>">
+                        <strong><%= s.name || 'Untitled stop' %></strong>
+                        <% if (s.arrive || s.depart) { %>
+                          <span class="time">
+                            <%= s.arrive || '??:??' %> &rarr; <%= s.depart || '??:??' %>
+                          </span>
+                        <% } %>
+                      </div>
+                    <% } %>
+                  <% }); %>
+                <% } %>
+                <%
+                  /* Render removed stops (in base but missing from source for this day) */
+                  if (basePlan && Array.isArray(basePlan.days)) {
+                    var baseDay = basePlan.days.find(function(bd) { return bd.id === d.id; });
+                    if (baseDay && Array.isArray(baseDay.stops)) {
+                      baseDay.stops.forEach(function(bs) {
+                        if (!bs) return;
+                        var key = d.id + '::' + bs.id;
+                        if (ourDiffStatus[key] === 'removed') { %>
+                          <div class="plan-preview-stop diff-removed">
+                            <strong><%= bs.name || 'Untitled stop' %></strong>
+                            <% if (bs.arrive || bs.depart) { %>
+                              <span class="time">
+                                <%= bs.arrive || '??:??' %> &rarr; <%= bs.depart || '??:??' %>
+                              </span>
+                            <% } %>
+                          </div>
+                <%      }
+                      });
+                    }
+                  }
+                %>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+
+        <!-- Target column -->
+        <div class="plan-preview-col">
+          <div class="plan-diff-col-heading">
+            Target <span class="branch-label">(<%= target %>)</span>
+          </div>
+          <% if (!theirPlan || !Array.isArray(theirPlan.days) || !theirPlan.days.length) { %>
+            <div class="plan-preview-empty">No plan</div>
+          <% } else { %>
+            <% theirPlan.days.forEach(function(d) { %>
+              <div class="plan-preview-day">
+                <div class="plan-preview-day-title"><%= d.date || d.id %></div>
+                <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
+                  <div class="plan-preview-empty">No stops</div>
+                <% } else { %>
+                  <% d.stops.forEach(function(s) { %>
+                    <% if (s) { %>
+                      <div class="plan-preview-stop <%= diffClass(theirDiffStatus, d.id, s.id) %>">
+                        <strong><%= s.name || 'Untitled stop' %></strong>
+                        <% if (s.arrive || s.depart) { %>
+                          <span class="time">
+                            <%= s.arrive || '??:??' %> &rarr; <%= s.depart || '??:??' %>
+                          </span>
+                        <% } %>
+                      </div>
+                    <% } %>
+                  <% }); %>
+                <% } %>
+                <%
+                  if (basePlan && Array.isArray(basePlan.days)) {
+                    var baseDayT = basePlan.days.find(function(bd) { return bd.id === d.id; });
+                    if (baseDayT && Array.isArray(baseDayT.stops)) {
+                      baseDayT.stops.forEach(function(bs) {
+                        if (!bs) return;
+                        var key = d.id + '::' + bs.id;
+                        if (theirDiffStatus[key] === 'removed') { %>
+                          <div class="plan-preview-stop diff-removed">
+                            <strong><%= bs.name || 'Untitled stop' %></strong>
+                            <% if (bs.arrive || bs.depart) { %>
+                              <span class="time">
+                                <%= bs.arrive || '??:??' %> &rarr; <%= bs.depart || '??:??' %>
+                              </span>
+                            <% } %>
+                          </div>
+                <%      }
+                      });
+                    }
+                  }
+                %>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Base as collapsible reference -->
+      <details class="plan-base-ref">
+        <summary>
+          <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
+          Show base plan (common ancestor)
+        </summary>
+        <div class="plan-preview-col" style="margin-top:8px;max-height:none">
           <% if (!basePlan || !Array.isArray(basePlan.days) || !basePlan.days.length) { %>
             <div class="plan-preview-empty">No plan</div>
           <% } else { %>
@@ -471,66 +828,31 @@
             <% }); %>
           <% } %>
         </div>
-
-        <div class="plan-preview-col">
-          <div class="time"><strong>Source</strong> (<%= source %>)</div>
-          <% if (!ourPlan || !Array.isArray(ourPlan.days) || !ourPlan.days.length) { %>
-            <div class="plan-preview-empty">No plan</div>
-          <% } else { %>
-            <% ourPlan.days.forEach(function(d){ %>
-              <div class="plan-preview-day">
-                <div class="plan-preview-day-title"><%= d.date || d.id %></div>
-                <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
-                  <div class="plan-preview-empty">No stops</div>
-                <% } else { %>
-                  <% d.stops.forEach(function(s){ %>
-                    <% if (s) { %>
-                      <div class="plan-preview-stop">
-                        <strong><%= s.name || 'Untitled stop' %></strong>
-                        <% if (s.arrive || s.depart) { %>
-                          <span class="time">
-                            <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
-                          </span>
-                        <% } %>
-                      </div>
-                    <% } %>
-                  <% }); %>
-                <% } %>
-              </div>
-            <% }); %>
-          <% } %>
-        </div>
-
-        <div class="plan-preview-col">
-          <div class="time"><strong>Target</strong> (<%= target %>)</div>
-          <% if (!theirPlan || !Array.isArray(theirPlan.days) || !theirPlan.days.length) { %>
-            <div class="plan-preview-empty">No plan</div>
-          <% } else { %>
-            <% theirPlan.days.forEach(function(d){ %>
-              <div class="plan-preview-day">
-                <div class="plan-preview-day-title"><%= d.date || d.id %></div>
-                <% if (!Array.isArray(d.stops) || !d.stops.length) { %>
-                  <div class="plan-preview-empty">No stops</div>
-                <% } else { %>
-                  <% d.stops.forEach(function(s){ %>
-                    <% if (s) { %>
-                      <div class="plan-preview-stop">
-                        <strong><%= s.name || 'Untitled stop' %></strong>
-                        <% if (s.arrive || s.depart) { %>
-                          <span class="time">
-                            <%= s.arrive || '??:??' %> → <%= s.depart || '??:??' %>
-                          </span>
-                        <% } %>
-                      </div>
-                    <% } %>
-                  <% }); %>
-                <% } %>
-              </div>
-            <% }); %>
-          <% } %>
-        </div>
-      </div>
+      </details>
     <% } %>
+  </div>
+
+  <!-- Diff map -->
+  <div class="card" style="margin-top:12px">
+    <h2>Diff map</h2>
+    <p class="time">All stops color-coded by change status. Hover for details.</p>
+    <div class="diff-legend" style="margin-bottom:8px">
+      <span class="diff-legend-item">
+        <span class="diff-legend-swatch" style="background:#16a34a"></span> Added
+      </span>
+      <span class="diff-legend-item">
+        <span class="diff-legend-swatch" style="background:#ef4444"></span> Removed
+      </span>
+      <span class="diff-legend-item">
+        <span class="diff-legend-swatch" style="background:#f97316"></span> Time changed
+      </span>
+      <span class="diff-legend-item">
+        <span class="diff-legend-swatch" style="background:#9ca3af"></span> Unchanged
+      </span>
+    </div>
+    <div class="diff-map-frame">
+      <div id="diffMap" style="width:100%;height:100%"></div>
+    </div>
   </div>
 
   <div class="card" style="margin-top:12px">
@@ -553,9 +875,14 @@
 
   <div class="card merge-merged">
     <h2>Merged timeline preview</h2>
-    <div id="timelineMerged"></div>
+    <p class="time">Pick which version of each changed stop to include. Unchanged stops are kept automatically.</p>
+    <div id="mergeStopToggles"></div>
+    <div id="timelineMerged" style="margin-top:10px"></div>
   </div>
 </section>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 const basePlan = <%- JSON.stringify(basePlan || null) %>;
@@ -564,8 +891,72 @@ const theirPlan = <%- JSON.stringify(theirPlan || null) %>;
 const mergedPlanBase = <%- JSON.stringify(mergedPlan || null) %>;
 const conflictMeta = <%- JSON.stringify(conflicts || []) %>;
 
+/* Build client-side diff status maps (mirrors the EJS scriptlet logic) */
+function buildBaseIndex(plan) {
+  const idx = {};
+  if (plan && Array.isArray(plan.days)) {
+    plan.days.forEach(d => {
+      if (!d || !Array.isArray(d.stops)) return;
+      d.stops.forEach(s => { if (s) idx[d.id + '::' + s.id] = s; });
+    });
+  }
+  return idx;
+}
+function buildDiffMap(plan, baseIdx) {
+  const status = {};
+  if (!plan || !Array.isArray(plan.days)) return status;
+  plan.days.forEach(d => {
+    if (!d || !Array.isArray(d.stops)) return;
+    d.stops.forEach(s => {
+      if (!s) return;
+      const key = d.id + '::' + s.id;
+      const bs = baseIdx[key];
+      if (!bs) status[key] = 'added';
+      else if (bs.arrive !== s.arrive || bs.depart !== s.depart) status[key] = 'modified';
+      else status[key] = 'unchanged';
+    });
+  });
+  Object.keys(baseIdx).forEach(key => { if (!(key in status)) status[key] = 'removed'; });
+  return status;
+}
+const _baseIdx = buildBaseIndex(basePlan);
+const ourDiffMap = buildDiffMap(ourPlan, _baseIdx);
+const theirDiffMap = buildDiffMap(theirPlan, _baseIdx);
+
 async function mergeDirect(e){
   e.preventDefault();
+
+  /* Check if user changed any per-stop toggles from auto-defaults */
+  const toggleDecs = typeof collectToggleDecisions === 'function' ? collectToggleDecisions() : [];
+  const hasOverrides = toggleDecs.some(d => {
+    const key = d.dayId + '::' + d.stopId;
+    return _toggleDefaults[key] !== d.choice;
+  });
+
+  if (hasOverrides) {
+    /* User customised stops — use the resolve flow instead of direct merge */
+    const resolutions = JSON.stringify(toggleDecs);
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/ui/repos/<%= repo.id %>/merge-resolve';
+    const fields = {
+      _csrf: '<%= csrfToken %>',
+      baseId: document.getElementById('base').value,
+      oursId: document.getElementById('ours').value,
+      theirsId: document.getElementById('theirs').value,
+      targetBranch: document.getElementById('targetBranch').value,
+      resolutions: resolutions,
+    };
+    Object.keys(fields).forEach(k => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = k; inp.value = fields[k];
+      form.appendChild(inp);
+    });
+    document.body.appendChild(form);
+    form.submit();
+    return;
+  }
+
   const body = {
     base: document.getElementById('base').value,
     ours: document.getElementById('ours').value,
@@ -596,6 +987,9 @@ function submitResolutions(){
     const meta = JSON.parse(m.value);
     res.push({ ...meta, choice: chosen ? chosen.value : 'base' });
   });
+  /* Append per-stop toggle decisions */
+  const toggleDecs = typeof collectToggleDecisions === 'function' ? collectToggleDecisions() : [];
+  toggleDecs.forEach(d => res.push(d));
   document.getElementById('resolutions').value = JSON.stringify(res);
   return true;
 }
@@ -613,7 +1007,7 @@ function toMin(t) {
   return (parts[0] || 0) * 60 + (parts[1] || 0);
 }
 
-function renderTimeline(container, plan, conflictSet) {
+function renderTimeline(container, plan, conflictSet, diffMap) {
   if (!container) return;
   container.innerHTML = '';
   if (!plan || !Array.isArray(plan.days) || !plan.days.length) {
@@ -672,13 +1066,25 @@ function renderTimeline(container, plan, conflictSet) {
       const a = toMin(s.arrive);
       const b = toMin(s.depart);
       if (a == null || b == null) return;
-      const left = ((a - actStart) / span) * 1000;
-      const width = Math.max(8, ((b - a) / span) * 1000);
+      let left = ((a - actStart) / span) * 1000;
+      let width = Math.max(8, ((b - a) / span) * 1000);
+      if (left < 0) { width = Math.max(8, width + left); left = 0; }
+      if (left + width > 1000) { width = Math.max(8, 1000 - left); }
+      if (left >= 1000) return;
       const labelYOffset = (Math.floor(left / 50) % 2) ? 22 : 38;
       const labelY = 68 + labelYOffset;
 
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('class', 'tl-block' + (conflictSet && conflictSet.has(`${d.id}::${s.id}`) ? ' merge-conflict' : ''));
+      const stopKey = `${d.id}::${s.id}`;
+      let cls = 'tl-block';
+      if (conflictSet && conflictSet.has(stopKey)) cls += ' merge-conflict';
+      if (diffMap) {
+        const ds = diffMap[stopKey];
+        if (ds === 'added') cls += ' tl-diff-added';
+        else if (ds === 'removed') cls += ' tl-diff-removed';
+        else if (ds === 'modified') cls += ' tl-diff-modified';
+      }
+      g.setAttribute('class', cls);
 
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       rect.setAttribute('class', 'tl-block-rect');
@@ -779,7 +1185,6 @@ function applyResolutions() {
     if (ps) {
       md.stops[idx] = JSON.parse(JSON.stringify(ps));
     } else {
-      // chosen version deleted it
       md.stops.splice(idx, 1);
     }
   });
@@ -793,15 +1198,317 @@ const conflictSet = new Set(
     .map((c) => `${c.dayId}::${c.stopId}`)
 );
 
-renderTimeline(document.getElementById('timelineBase'), basePlan, conflictSet);
-renderTimeline(document.getElementById('timelineOurs'), ourPlan, conflictSet);
-renderTimeline(document.getElementById('timelineTheirs'), theirPlan, conflictSet);
-renderTimeline(document.getElementById('timelineMerged'), mergedPlanBase, conflictSet);
+/* ---- Per-stop merge toggles ---- */
+
+/* Collect all unique dayId::stopId keys with their diff status */
+const _allStopKeys = {};
+function _indexPlanKeys(plan, label) {
+  if (!plan || !Array.isArray(plan.days)) return;
+  plan.days.forEach(d => {
+    if (!d || !Array.isArray(d.stops)) return;
+    d.stops.forEach(s => {
+      if (!s) return;
+      const key = d.id + '::' + s.id;
+      if (!_allStopKeys[key]) _allStopKeys[key] = { dayId: d.id, stopId: s.id, dayDate: d.date || d.id };
+      _allStopKeys[key][label] = s;
+    });
+  });
+}
+_indexPlanKeys(basePlan, 'base');
+_indexPlanKeys(ourPlan, 'ours');
+_indexPlanKeys(theirPlan, 'theirs');
+
+/* Filter to only stops that differ from base */
+const _differingStops = Object.keys(_allStopKeys).filter(key => {
+  const st = ourDiffMap[key] || theirDiffMap[key];
+  return st && st !== 'unchanged';
+}).map(key => _allStopKeys[key]);
+
+/* Determine auto-default choice for each differing stop */
+function _autoDefault(info) {
+  const key = info.dayId + '::' + info.stopId;
+  const ourSt = ourDiffMap[key];
+  const theirSt = theirDiffMap[key];
+  // If it's a conflict (both changed), default to ours
+  if (ourSt && ourSt !== 'unchanged' && theirSt && theirSt !== 'unchanged') return 'ours';
+  // Only source changed
+  if (ourSt && ourSt !== 'unchanged') return 'ours';
+  // Only target changed
+  if (theirSt && theirSt !== 'unchanged') return 'theirs';
+  return 'base';
+}
+
+/* Store the defaults so we can detect user overrides */
+const _toggleDefaults = {};
+_differingStops.forEach(info => {
+  const key = info.dayId + '::' + info.stopId;
+  _toggleDefaults[key] = _autoDefault(info);
+});
+
+function renderMergeToggles() {
+  const container = document.getElementById('mergeStopToggles');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!_differingStops.length) {
+    container.innerHTML = '<div class="plan-preview-empty">No differing stops — merge is clean.</div>';
+    return;
+  }
+
+  const heading = document.createElement('div');
+  heading.className = 'merge-stop-toggles-heading';
+  heading.textContent = 'Per-stop version picker (' + _differingStops.length + ' changed)';
+  container.appendChild(heading);
+
+  const list = document.createElement('div');
+  list.className = 'merge-stop-toggles';
+
+  /* Group by day */
+  const byDay = {};
+  _differingStops.forEach(info => {
+    if (!byDay[info.dayId]) byDay[info.dayId] = { date: info.dayDate, stops: [] };
+    byDay[info.dayId].stops.push(info);
+  });
+
+  Object.keys(byDay).forEach(dayId => {
+    const dayGroup = byDay[dayId];
+
+    dayGroup.stops.forEach(info => {
+      const key = info.dayId + '::' + info.stopId;
+      const row = document.createElement('div');
+      row.className = 'merge-stop-toggle';
+
+      /* Stop info */
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'stop-info';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'stop-name';
+      const anyStop = info.ours || info.theirs || info.base;
+      nameEl.textContent = shortName(anyStop?.name || 'Stop');
+      const dayEl = document.createElement('div');
+      dayEl.className = 'stop-day';
+      dayEl.textContent = dayGroup.date;
+      infoDiv.appendChild(nameEl);
+      infoDiv.appendChild(dayEl);
+      row.appendChild(infoDiv);
+
+      /* Options */
+      const opts = document.createElement('div');
+      opts.className = 'stop-options';
+
+      const radioName = 'stop-' + key;
+      const defaultChoice = _toggleDefaults[key] || 'base';
+
+      [
+        { value: 'base', label: 'Base', stop: info.base },
+        { value: 'ours', label: 'Source', stop: info.ours },
+        { value: 'theirs', label: 'Target', stop: info.theirs },
+      ].forEach(opt => {
+        const lbl = document.createElement('label');
+        lbl.className = 'stop-option' + (opt.stop ? '' : ' opt-disabled');
+
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = radioName;
+        radio.value = opt.value;
+        if (opt.value === defaultChoice) radio.checked = true;
+        if (!opt.stop) radio.disabled = true;
+        radio.addEventListener('change', onToggleChange);
+        lbl.appendChild(radio);
+
+        const text = document.createElement('span');
+        text.textContent = opt.label;
+        lbl.appendChild(text);
+
+        if (opt.stop && (opt.stop.arrive || opt.stop.depart)) {
+          const time = document.createElement('span');
+          time.className = 'opt-time';
+          time.textContent = ' ' + (opt.stop.arrive || '?') + '\u2192' + (opt.stop.depart || '?');
+          lbl.appendChild(time);
+        } else if (!opt.stop) {
+          const gone = document.createElement('span');
+          gone.className = 'opt-time';
+          gone.textContent = ' (none)';
+          lbl.appendChild(gone);
+        }
+
+        opts.appendChild(lbl);
+      });
+
+      row.appendChild(opts);
+      list.appendChild(row);
+    });
+  });
+
+  container.appendChild(list);
+}
+
+function buildMergedFromToggles() {
+  /* Start with conflict-resolved plan */
+  let merged = applyResolutions();
+  if (!merged) merged = clonePlan(mergedPlanBase);
+  if (!merged) return null;
+
+  /* Apply per-stop toggle overrides */
+  _differingStops.forEach(info => {
+    const key = info.dayId + '::' + info.stopId;
+    const radioName = 'stop-' + key;
+    const checked = document.querySelector('input[name="' + CSS.escape(radioName) + '"]:checked');
+    if (!checked) return;
+
+    const choice = checked.value;
+    const pickPlan = choice === 'ours' ? ourPlan : choice === 'theirs' ? theirPlan : basePlan;
+    const pd = pickPlan?.days?.find(d => d.id === info.dayId);
+    const ps = pd ? (pd.stops || []).find(s => s && s.id === info.stopId) : null;
+
+    const md = merged.days?.find(d => d.id === info.dayId);
+    if (!md) {
+      /* Day doesn't exist in merged plan; if we're adding a stop, create the day */
+      if (ps) {
+        if (!merged.days) merged.days = [];
+        merged.days.push({ id: info.dayId, date: info.dayDate, stops: [JSON.parse(JSON.stringify(ps))] });
+      }
+      return;
+    }
+
+    if (!Array.isArray(md.stops)) md.stops = [];
+    const idx = md.stops.findIndex(s => s && s.id === info.stopId);
+
+    if (ps) {
+      if (idx >= 0) {
+        md.stops[idx] = JSON.parse(JSON.stringify(ps));
+      } else {
+        md.stops.push(JSON.parse(JSON.stringify(ps)));
+      }
+    } else {
+      if (idx >= 0) md.stops.splice(idx, 1);
+    }
+  });
+
+  return merged;
+}
+
+function onToggleChange() {
+  const merged = buildMergedFromToggles();
+  renderTimeline(document.getElementById('timelineMerged'), merged, conflictSet, null);
+}
+
+/* Collect per-stop toggle decisions for form submission */
+function collectToggleDecisions() {
+  const decisions = [];
+  _differingStops.forEach(info => {
+    const key = info.dayId + '::' + info.stopId;
+    const radioName = 'stop-' + key;
+    const checked = document.querySelector('input[name="' + CSS.escape(radioName) + '"]:checked');
+    if (!checked) return;
+    decisions.push({
+      type: 'plan-stop-time',
+      dayId: info.dayId,
+      stopId: info.stopId,
+      choice: checked.value,
+    });
+  });
+  return decisions;
+}
+
+renderTimeline(document.getElementById('timelineBase'), basePlan, conflictSet, null);
+renderTimeline(document.getElementById('timelineOurs'), ourPlan, conflictSet, ourDiffMap);
+renderTimeline(document.getElementById('timelineTheirs'), theirPlan, conflictSet, theirDiffMap);
+renderMergeToggles();
+onToggleChange(); /* initial merged timeline render */
 
 document.querySelectorAll('input[type="radio"][name^="c"]').forEach((el) => {
   el.addEventListener('change', () => {
-    const merged = applyResolutions();
-    renderTimeline(document.getElementById('timelineMerged'), merged, conflictSet);
+    onToggleChange();
   });
 });
+
+/* ----- Diff Map ----- */
+(function initDiffMap() {
+  if (typeof L === 'undefined') return;
+  var mapEl = document.getElementById('diffMap');
+  if (!mapEl) return;
+
+  var diffMap = L.map(mapEl);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors',
+  }).addTo(diffMap);
+
+  /* Build stop indices for each plan */
+  var baseIdx = {}, ourIdx = {}, theirIdx = {};
+
+  function indexPlan(plan, idx) {
+    if (!plan || !Array.isArray(plan.days)) return;
+    plan.days.forEach(function(d) {
+      if (!d || !Array.isArray(d.stops)) return;
+      d.stops.forEach(function(s) {
+        if (s) idx[d.id + '::' + s.id] = s;
+      });
+    });
+  }
+  indexPlan(basePlan, baseIdx);
+  indexPlan(ourPlan, ourIdx);
+  indexPlan(theirPlan, theirIdx);
+
+  /* Collect unique stops with diff status */
+  var allKeys = {};
+  [baseIdx, ourIdx, theirIdx].forEach(function(m) {
+    Object.keys(m).forEach(function(k) { allKeys[k] = true; });
+  });
+
+  var colorMap = {
+    added:     { color: '#065f46', fillColor: '#16a34a', fillOpacity: 0.8 },
+    removed:   { color: '#991b1b', fillColor: '#ef4444', fillOpacity: 0.8 },
+    modified:  { color: '#9a3412', fillColor: '#f97316', fillOpacity: 0.8 },
+    unchanged: { color: '#6b7280', fillColor: '#9ca3af', fillOpacity: 0.5 },
+  };
+
+  var bounds = [];
+  Object.keys(allKeys).forEach(function(key) {
+    var bs = baseIdx[key], os = ourIdx[key], ts = theirIdx[key];
+    var stop = os || ts || bs;
+    if (!stop) return;
+    var lat = Number(stop.lat), lng = Number(stop.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    var inBase = !!bs, inOurs = !!os, inTheirs = !!ts;
+    var status = 'unchanged';
+    if (!inBase && (inOurs || inTheirs)) {
+      status = 'added';
+    } else if (inBase && !inOurs && !inTheirs) {
+      status = 'removed';
+    } else if (inBase) {
+      var timeChanged =
+        (inOurs && (os.arrive !== bs.arrive || os.depart !== bs.depart)) ||
+        (inTheirs && (ts.arrive !== bs.arrive || ts.depart !== bs.depart));
+      if (timeChanged) status = 'modified';
+    }
+
+    var style = colorMap[status] || colorMap.unchanged;
+    var marker = L.circleMarker([lat, lng], {
+      radius: 8, weight: 2,
+      color: style.color, fillColor: style.fillColor, fillOpacity: style.fillOpacity,
+    }).addTo(diffMap);
+
+    var statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+    marker.bindTooltip(
+      '<strong>' + (stop.name || 'Stop') + '</strong><br>' +
+      statusLabel +
+      (stop.arrive ? '<br>' + stop.arrive + ' &rarr; ' + stop.depart : ''),
+      { direction: 'top' }
+    );
+
+    bounds.push([lat, lng]);
+  });
+
+  if (bounds.length) {
+    diffMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+  } else {
+    diffMap.setView([51.5074, -0.1278], 11);
+    mapEl.innerHTML = '<div class="plan-preview-empty" style="padding:20px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;background:rgba(255,255,255,0.9);border-radius:8px">No stops with coordinates</div>';
+  }
+
+  setTimeout(function() { diffMap.invalidateSize(); }, 200);
+})();
 </script>

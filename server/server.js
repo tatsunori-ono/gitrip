@@ -3169,11 +3169,8 @@ app.post('/ui/repos/:repoId/merge-resolve', (req, res) => {
       }
     } else if (d.type === 'plan-stop-time') {
       const { dayId, stopId, choice } = d;
-      const days = merged.plan?.days || [];
-      const day = days.find((x) => x.id === dayId);
-      if (!day) continue;
-      const stop = day.stops.find((s) => s.id === stopId);
-      if (!stop) continue;
+      if (!merged.plan) continue;
+      if (!Array.isArray(merged.plan.days)) merged.plan.days = [];
 
       const pick =
         choice === 'ours'
@@ -3184,9 +3181,24 @@ app.post('/ui/repos/:repoId/merge-resolve', (req, res) => {
 
       const pd = pick.snapshot.plan?.days?.find((x) => x.id === dayId);
       const ps = pd ? (pd.stops || []).find((s) => s.id === stopId) : null;
+
+      let day = merged.plan.days.find((x) => x.id === dayId);
+      if (!day) {
+        if (!ps) continue; // nothing to add
+        day = { id: dayId, date: pd?.date || dayId, stops: [] };
+        merged.plan.days.push(day);
+      }
+      if (!Array.isArray(day.stops)) day.stops = [];
+
+      const idx = day.stops.findIndex((s) => s && s.id === stopId);
       if (ps) {
-        stop.arrive = ps.arrive;
-        stop.depart = ps.depart;
+        if (idx >= 0) {
+          day.stops[idx] = JSON.parse(JSON.stringify(ps));
+        } else {
+          day.stops.push(JSON.parse(JSON.stringify(ps)));
+        }
+      } else {
+        if (idx >= 0) day.stops.splice(idx, 1);
       }
     } else if (d.type === 'plan-whole') {
       const choice = d.choice || 'base';

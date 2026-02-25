@@ -1124,3 +1124,125 @@ html[data-repo-tab="view"] .tl-handle{
 html[data-repo-tab="view"] .tl-block{
   cursor:default;
 }
+
+/* ============================================
+   Page fade-in transition
+   ============================================ */
+@keyframes pageIn{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:translateY(0)}
+}
+main{animation:pageIn .3s ease-out both}
+
+/* ============================================
+   Toast notifications
+   ============================================ */
+#toastContainer{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  z-index:10000;
+  display:flex;
+  flex-direction:column-reverse;
+  gap:8px;
+  pointer-events:none;
+  max-width:380px;
+  width:100%;
+}
+@media(max-width:480px){
+  #toastContainer{right:8px;left:8px;max-width:none}
+}
+
+@keyframes toastIn{
+  from{opacity:0;transform:translateX(40px)}
+  to{opacity:1;transform:translateX(0)}
+}
+@keyframes toastOut{
+  from{opacity:1;transform:translateX(0)}
+  to{opacity:0;transform:translateX(40px)}
+}
+
+.toast{
+  pointer-events:auto;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:12px 14px;
+  border-radius:10px;
+  background:#233331;
+  color:#f8f8f8;
+  font-size:13px;
+  line-height:1.4;
+  box-shadow:0 8px 24px rgba(0,0,0,.2);
+  border-left:4px solid #6366f1;
+  animation:toastIn .3s ease-out both;
+}
+.toast.removing{
+  animation:toastOut .25s ease-in both;
+}
+.toast-error{border-left-color:#ef4444}
+.toast-success{border-left-color:#16a34a}
+.toast-info{border-left-color:#6366f1}
+
+.toast-icon{
+  flex-shrink:0;
+  font-size:15px;
+  margin-top:1px;
+}
+.toast-error .toast-icon{color:#fca5a5}
+.toast-success .toast-icon{color:#86efac}
+.toast-info .toast-icon{color:#a5b4fc}
+
+.toast-msg{flex:1}
+
+.toast-close{
+  flex-shrink:0;
+  background:none;
+  border:none;
+  color:#9ca3af;
+  font-size:14px;
+  cursor:pointer;
+  padding:0 2px;
+  line-height:1;
+}
+.toast-close:hover{color:#fff}
+
+/* High-contrast toasts */
+.high-contrast .toast{
+  background:#0a0a0a;
+  border-color:#f97316;
+  box-shadow:0 4px 16px rgba(0,0,0,.6);
+}
+
+/* ============================================
+   Skeleton loading placeholders
+   ============================================ */
+@keyframes shimmer{
+  0%{background-position:-400px 0}
+  100%{background-position:400px 0}
+}
+.skeleton{
+  background:linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%);
+  background-size:800px 100%;
+  animation:shimmer 1.5s ease-in-out infinite;
+  border-radius:8px;
+}
+.skeleton-line{
+  height:14px;
+  border-radius:6px;
+  margin-bottom:8px;
+}
+.skeleton-line:last-child{width:60%}
+.skeleton-card{
+  height:120px;
+  border-radius:var(--radius);
+}
+.skeleton-circle{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+}
+.high-contrast .skeleton{
+  background:linear-gradient(90deg,#1a1a2e 25%,#252540 50%,#1a1a2e 75%);
+  background-size:800px 100%;
+}

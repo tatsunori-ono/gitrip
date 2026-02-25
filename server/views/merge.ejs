@@ -974,7 +974,7 @@ async function mergeDirect(e){
     window.location.href = '/ui/repos/<%= repo.id %>';
   } else {
     const j = await r.json().catch(()=>({}));
-    alert('Merge failed: ' + (j.error || 'conflicts occurred'));
+    showToast('Merge failed: ' + (j.error || 'conflicts occurred'), 'error');
     window.location.reload();
   }
 }

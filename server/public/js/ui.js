@@ -83,7 +83,7 @@ function attachSearch(button, row) {
     const nameInput = row.querySelector('input[name$="[name]"]');
     const name = (nameInput?.value || '').trim();
     if (!name) {
-      alert('Type a name first.');
+      showToast('Type a name first.', 'info');
       return;
     }
 
@@ -92,12 +92,12 @@ function attachSearch(button, row) {
       data = await searchPlaces(name);
     } catch (e) {
       console.error('searchPlaces error', e);
-      alert('Search error. Try again, or type coordinates manually.');
+      showToast('Search error. Try again, or type coordinates manually.', 'error');
       return;
     }
 
     if (!data.length) {
-      alert('No results.');
+      showToast('No results found.', 'info');
       return;
     }
 

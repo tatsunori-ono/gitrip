@@ -345,10 +345,38 @@ function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', cookie);
 }
 
+/**
+ * Ensure the request has a user identity. If the visitor is not logged in,
+ * create a lightweight anonymous ("guest") user + session so they can own
+ * repos and pass write-access checks without signing up.
+ */
+function ensureAnonIdentity(req, res) {
+  if (req.user) return req.user;
+
+  const id = uuid();
+  const now = nowISO();
+  insertUser.run(id, `anon-${id}@guest`, 'Guest', 'none', now);
+
+  const sessionId = uuid();
+  insertSession.run(sessionId, id, now);
+  setSessionCookie(res, sessionId);
+
+  const user = getUserById.get(id);
+  req.user = user;
+  res.locals.currentUser = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    profileImageUrl: user.profile_image_url || null,
+  };
+  return user;
+}
+
 /** Require that the user is logged in and is the owner or a collaborator with write access. */
 function requireWriteAccess(repo, user) {
   if (!repo) return 'Repo not found';
   if (!user) return 'You must be logged in to modify this trip.';
+  if (!repo.owner_user_id) return null; // legacy unowned repo — allow edits
   if (repo.owner_user_id === user.id) return null; // owner
   const collab = getCollaborator.get(repo.id, user.id);
   if (collab && (collab.role === 'owner' || collab.role === 'editor')) return null;
@@ -1723,8 +1751,9 @@ app.get('/ui/public', (req, res) => {
 app.post('/ui/repos', (req, res) => {
   const id = uuid();
   const title = req.body.title || 'Untitled Trip';
-  const ownerId = req.user ? req.user.id : null;
-  const visibility = ownerId ? 'private' : 'public';
+  ensureAnonIdentity(req, res);
+  const ownerId = req.user.id;
+  const visibility = 'private';
 
   insertRepo.run(
     id,

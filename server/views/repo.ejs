@@ -644,7 +644,7 @@
                             data-commit-id="<%= c.id %>"
                             data-key-auto="<%= c.keyChangeAuto ? '1' : '0' %>"
                             data-key-manual="<%= c.keyChangeManual ? '1' : '0' %>">
-                      <%= c.keyChangeManual ? 'Unmark key change' : 'Mark key change' %>
+                      <%= (c.keyChangeManual || c.keyChangeAuto) ? 'Unmark key change' : 'Mark key change' %>
                     </button>
                   <% } %>
                   <span class="time"> Takes you back to how the trip looked then.</span>
@@ -2175,7 +2175,10 @@
       btn.addEventListener('click', async () => {
         const commitId = btn.getAttribute('data-commit-id');
         if (!commitId) return;
-        const manual = btn.getAttribute('data-key-manual') === '1' ? 0 : 1;
+        const isManual = btn.getAttribute('data-key-manual') === '1';
+        const isAuto = btn.getAttribute('data-key-auto') === '1';
+        const isCurrentlyKey = isManual || isAuto;
+        const manual = isCurrentlyKey ? 0 : 1;
 
         btn.disabled = true;
         try {
@@ -2187,7 +2190,9 @@
           if (!resp.ok) throw new Error('request_failed');
 
           btn.setAttribute('data-key-manual', manual ? '1' : '0');
-          btn.textContent = manual ? 'Unmark key change' : 'Mark key change';
+          if (manual === 0) btn.setAttribute('data-key-auto', '0');
+          const isNowKey = manual === 1;
+          btn.textContent = isNowKey ? 'Unmark key change' : 'Mark key change';
 
           const li = btn.closest('.commit-item');
           if (li) {
@@ -2210,7 +2215,7 @@
             }
           }
         } catch (e) {
-          alert('Could not update key change. Please try again.');
+          showToast('Could not update key change. Please try again.', 'error');
         } finally {
           btn.disabled = false;
         }
@@ -2636,7 +2641,7 @@
 
     async function easySaveTrip() {
       if (!Array.isArray(window.days)) {
-        alert('Nothing to save yet – please run the planner or add places first.');
+        showToast('Nothing to save yet — please run the planner or add places first.', 'info');
         return;
       }
 
@@ -2669,13 +2674,13 @@
         const json = await resp.json().catch(() => ({}));
 
         if (resp.status === 409 && json.error === 'non_fast_forward') {
-          alert(json.message || 'Your trip changed in another tab or device. Please refresh and try again.');
+          showToast(json.message || 'Your trip changed in another tab or device. Please refresh and try again.', 'error');
           return;
         }
 
         if (!resp.ok || !json.ok) {
           console.error('easy-save error', json);
-          alert(json.error || 'Save failed. Please try again.');
+          showToast(json.error || 'Save failed. Please try again.', 'error');
           return;
         }
 
@@ -2683,7 +2688,7 @@
         location.reload();
       } catch (e) {
         console.error('easySaveTrip error', e);
-        alert('Save failed. Please check your connection and try again.');
+        showToast('Save failed. Please check your connection and try again.', 'error');
       } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = originalText;

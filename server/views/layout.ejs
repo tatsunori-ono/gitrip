@@ -262,5 +262,43 @@
         }
       })();
     </script>
+    <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+    <script>
+      window.showToast = function(message, type, durationMs) {
+        type = type || 'info';
+        durationMs = durationMs || 4000;
+        var container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        var icons = {
+          error:   '<i class="fa-solid fa-circle-exclamation"></i>',
+          success: '<i class="fa-solid fa-circle-check"></i>',
+          info:    '<i class="fa-solid fa-circle-info"></i>'
+        };
+
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+        toast.setAttribute('role', 'alert');
+
+        toast.innerHTML =
+          '<span class="toast-icon">' + (icons[type] || icons.info) + '</span>' +
+          '<span class="toast-msg">' + message + '</span>' +
+          '<button class="toast-close" aria-label="Dismiss">&times;</button>';
+
+        toast.querySelector('.toast-close').addEventListener('click', function() {
+          dismiss(toast);
+        });
+
+        container.appendChild(toast);
+
+        var timer = setTimeout(function() { dismiss(toast); }, durationMs);
+
+        function dismiss(el) {
+          clearTimeout(timer);
+          el.classList.add('removing');
+          el.addEventListener('animationend', function() { el.remove(); });
+        }
+      };
+    </script>
   </body>
 </html>

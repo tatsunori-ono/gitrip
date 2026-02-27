@@ -1246,3 +1246,214 @@ main{animation:pageIn .3s ease-out both}
   background:linear-gradient(90deg,#1a1a2e 25%,#252540 50%,#1a1a2e 75%);
   background-size:800px 100%;
 }
+
+/* ============================================
+   Mobile Responsive Styles
+   ============================================ */
+
+:root{
+  --header-height:94px;
+}
+
+/* --- Hamburger menu button --- */
+.nav-hamburger{
+  display:none;
+  flex-direction:column;
+  justify-content:center;
+  gap:5px;
+  background:none;
+  border:none;
+  cursor:pointer;
+  padding:8px;
+  z-index:1001;
+}
+.nav-hamburger__bar{
+  display:block;
+  width:24px;
+  height:2px;
+  background:#fff;
+  border-radius:2px;
+  transition:transform 0.25s ease, opacity 0.25s ease;
+}
+
+/* --- 768px: Primary mobile breakpoint --- */
+@media(max-width:768px){
+  :root{ --header-height:68px; }
+
+  /* Show hamburger */
+  .nav-hamburger{ display:flex; }
+
+  .nav-bar{ flex-wrap:wrap; }
+
+  .nav-links,
+  .nav-right{
+    display:none;
+    width:100%;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  body.nav-open .nav-links,
+  body.nav-open .nav-right{
+    display:flex;
+  }
+
+  /* Animate hamburger to X */
+  body.nav-open .nav-hamburger__bar:nth-child(1){
+    transform:rotate(45deg) translate(5px,5px);
+  }
+  body.nav-open .nav-hamburger__bar:nth-child(2){
+    opacity:0;
+  }
+  body.nav-open .nav-hamburger__bar:nth-child(3){
+    transform:rotate(-45deg) translate(5px,-5px);
+  }
+
+  /* Nav links stacked */
+  .nav-links a{
+    display:block;
+    padding:10px 0;
+    border-bottom:1px solid rgba(255,255,255,0.1);
+  }
+  .nav-links a + a{ margin-left:0; }
+
+  /* Nav right items stacked */
+  .nav-right{
+    padding-top:8px;
+    border-top:1px solid rgba(255,255,255,0.15);
+  }
+  .nav-right a.nav-link,
+  .nav-right .btn-ghost{
+    padding:10px 0;
+    min-height:44px;
+    display:flex;
+    align-items:center;
+  }
+
+  /* Shrink logo on mobile */
+  .logo-link img{ height:44px; }
+
+  /* Keep logo + hamburger on same row */
+  .nav-left{ width:auto; flex:1; }
+
+  /* Hide user chip text (visible in expanded menu) */
+  .user-chip{ display:none; }
+
+  /* Footer touch-friendly */
+  footer nav a{
+    display:inline-block;
+    padding:8px 4px;
+    min-height:44px;
+    line-height:28px;
+  }
+
+  /* Day blocks */
+  .day{ padding:10px; }
+  .day-header{ flex-direction:column; align-items:flex-start; }
+  .day-actions{ width:100%; justify-content:flex-start; }
+
+  /* Map controls stack */
+  .map-header{ flex-direction:column; }
+  .map-header-controls{ align-items:flex-start; width:100%; }
+  .map-controls{ flex-wrap:wrap; }
+  #daySelect{ min-width:160px; }
+
+  /* Repo header row */
+  .repo-header-row{ flex-direction:column; gap:8px; }
+
+  /* Account page */
+  .account-header{ flex-direction:column; align-items:flex-start; }
+
+  /* Gallery grid */
+  .gallery-grid{ grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); }
+
+  /* About hero */
+  .about-hero{ padding:48px 16px; }
+  .about-hero h1{ font-size:32px; }
+  .about-hero__content{ gap:24px; }
+  .logo-frame{ width:160px; height:160px; }
+  .logo-frame img{ width:300px; height:300px; }
+  .about-node{ min-height:240px; min-width:240px; padding:40px; }
+
+  /* Section actions wrap */
+  .section-actions{ gap:8px; }
+
+  /* Fullscreen map inset */
+  .map-frame--pseudo-full{ inset:8px; border-radius:12px; }
+
+  /* Touch targets */
+  .toast-close{
+    min-width:44px; min-height:44px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .map-fs-btn{ padding:10px 14px; min-width:44px; min-height:44px; }
+  .checklist-remove{ min-width:44px; min-height:44px; }
+  .tl-handle{ stroke:transparent; stroke-width:14px; }
+}
+
+/* --- 640px: Small tablet / large phone --- */
+@media(max-width:640px){
+  .day-stop-list{ padding-left:16px; }
+  .day-stop-list .day-leg-bullets{ padding-left:12px; }
+
+  .commit-badge, .day-alert-badge{ font-size:10px; padding:2px 6px; }
+  .day-header h3{ font-size:15px; }
+
+  .compare-branches{ flex-direction:column; }
+
+  .contrib-row{
+    grid-template-columns:24px 1fr;
+    gap:4px;
+  }
+  .contrib-bar-wrap, .contrib-count{
+    grid-column:1 / -1;
+  }
+}
+
+/* --- 480px: Small phone --- */
+@media(max-width:480px){
+  h1{ font-size:22px; }
+  h2{ font-size:17px; }
+  .container{ padding:0 12px; margin:16px auto; }
+
+  .btn{ min-height:44px; padding:10px 14px; }
+
+  /* Repo tabs: horizontal scroll */
+  .repo-tabs{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    flex-wrap:nowrap;
+    gap:4px;
+    padding:4px 4px 0;
+  }
+  .repo-tab{
+    white-space:nowrap;
+    flex-shrink:0;
+    padding:8px 10px;
+    font-size:13px;
+  }
+
+  .map-frame{ height:250px; }
+
+  .section-actions .btn{
+    flex:1;
+    text-align:center;
+    justify-content:center;
+  }
+
+  /* About page */
+  .about-node{ min-height:200px; min-width:200px; padding:30px; }
+  .about-node h2{ font-size:16px; }
+  .about-node p{ font-size:13px; }
+  .about-hero h1{ font-size:26px; }
+  .about-hero .lead{ font-size:15px; }
+  .about-hero{ padding:36px 14px; }
+  .logo-frame{ width:120px; height:120px; }
+  .logo-frame img{ width:200px; height:200px; }
+  .about-grid{ gap:24px; padding:20px 0 10px; }
+}
+
+/* --- 880px: Repo grid (extend existing) --- */
+@media(max-width:880px){
+  .map-frame{ height:300px; }
+}

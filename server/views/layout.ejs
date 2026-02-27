@@ -75,6 +75,12 @@
             <a href="/ui/signup" class="nav-link">Sign up</a>
           <% } %>
         </div>
+        <button class="nav-hamburger" id="navHamburger" type="button"
+                aria-label="Toggle navigation menu" aria-expanded="false">
+          <span class="nav-hamburger__bar"></span>
+          <span class="nav-hamburger__bar"></span>
+          <span class="nav-hamburger__bar"></span>
+        </button>
       </div>
     </header>
     <main id="mainContent" tabindex="-1" role="main">
@@ -260,6 +266,23 @@
         } else {
           init();
         }
+      })();
+    </script>
+    <script>
+      (function() {
+        var btn = document.getElementById('navHamburger');
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+          var expanded = btn.getAttribute('aria-expanded') === 'true';
+          btn.setAttribute('aria-expanded', String(!expanded));
+          document.body.classList.toggle('nav-open');
+        });
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest('.nav-bar') && document.body.classList.contains('nav-open')) {
+            document.body.classList.remove('nav-open');
+            btn.setAttribute('aria-expanded', 'false');
+          }
+        });
       })();
     </script>
     <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>

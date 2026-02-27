@@ -335,14 +335,20 @@ function setSessionCookie(res, sessionId) {
   const cookie =
     `gitrip_sid=${encodeURIComponent(sessionId)}; ` +
     `Path=/; HttpOnly; SameSite=Lax; Max-Age=86400${isProduction ? '; Secure' : ''}`;
-  res.setHeader('Set-Cookie', cookie);
+  res.setHeader('Set-Cookie', [
+    res.getHeader('Set-Cookie') || [],
+    cookie,
+  ].flat().filter(Boolean));
 }
 
 function clearSessionCookie(res) {
   const isProduction = !!(process.env.NODE_ENV === 'production' || process.env.FLY_APP_NAME);
   const cookie =
     `gitrip_sid=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${isProduction ? '; Secure' : ''}`;
-  res.setHeader('Set-Cookie', cookie);
+  res.setHeader('Set-Cookie', [
+    res.getHeader('Set-Cookie') || [],
+    cookie,
+  ].flat().filter(Boolean));
 }
 
 /**
@@ -375,8 +381,8 @@ function ensureAnonIdentity(req, res) {
 /** Require that the user is logged in and is the owner or a collaborator with write access. */
 function requireWriteAccess(repo, user) {
   if (!repo) return 'Repo not found';
-  if (!user) return 'You must be logged in to modify this trip.';
   if (!repo.owner_user_id) return null; // legacy unowned repo — allow edits
+  if (!user) return 'You must be logged in to modify this trip.';
   if (repo.owner_user_id === user.id) return null; // owner
   const collab = getCollaborator.get(repo.id, user.id);
   if (collab && (collab.role === 'owner' || collab.role === 'editor')) return null;
@@ -1582,6 +1588,7 @@ app.post('/api/quick/optimize', async (req, res) => {
 // ---------- QUICK MAP API: start a repo from the computed trip ----------
 app.post('/api/quick/start-repo', (req, res) => {
   try {
+    ensureAnonIdentity(req, res);
     const title = String(req.body.title || 'Untitled Trip').trim() || 'Untitled Trip';
     const mode = String(req.body.mode || 'walking').toLowerCase();
 
@@ -1677,8 +1684,8 @@ app.post('/api/quick/start-repo', (req, res) => {
     };
 
     const repoId = uuid();
-    const ownerId = req.user ? req.user.id : null;
-    const visibility = ownerId ? 'private' : 'public';
+    const ownerId = req.user.id;
+    const visibility = 'private';
 
     insertRepo.run(
       repoId,

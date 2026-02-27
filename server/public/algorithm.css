@@ -317,3 +317,40 @@
 .high-contrast .algo-code .line.active{background:rgba(249,115,22,0.2);color:#f97316}
 .high-contrast .algo-context-card h3{color:#f97316}
 .high-contrast .algo-pseudocode-panel h2{color:#f97316}
+
+/* --- Algorithm page mobile --- */
+@media(max-width:768px){
+  .algo-hero{ padding:14px 16px; }
+  .algo-hero h1{ font-size:18px; }
+
+  .algo-main{ padding:14px 12px 40px; }
+
+  .algo-map-wrap{ aspect-ratio:4/3; }
+
+  .algo-tab{
+    padding:10px 8px;
+    font-size:11px;
+    min-height:44px;
+  }
+
+  .algo-controls .btn{
+    min-height:44px;
+    padding:8px 14px;
+  }
+
+  .algo-speed-label input[type="range"]{ width:80px; }
+
+  .algo-code{ font-size:10px; padding:8px; }
+
+  .algo-stats{
+    white-space:normal;
+    max-width:calc(100% - 24px);
+    font-size:12px;
+    padding:6px 14px;
+  }
+
+  .algo-context{
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+}

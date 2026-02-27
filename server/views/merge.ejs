@@ -286,6 +286,15 @@
       .conflict-compare { grid-template-columns: 1fr; }
       .merge-stop-toggle { flex-direction: column; align-items: flex-start; }
     }
+    @media (max-width: 640px) {
+      .plan-preview-grid { flex-direction: column; }
+      .plan-preview-col { max-height: 200px; }
+      .diff-map-frame { height: 250px; }
+      .merge-stop-toggle .stop-option {
+        min-height: 44px;
+        padding: 6px 10px;
+      }
+    }
 
     /* --- High contrast --- */
     .high-contrast .diff-added { background: #064e3b; color: #f8f8f8; border-color: #16a34a; }

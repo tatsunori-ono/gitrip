@@ -2,7 +2,7 @@
 
 .explore-page {
   position: relative;
-  height: calc(100vh - 70px);
+  height: calc(100vh - var(--header-height, 94px));
   min-height: 520px;
 }
 
@@ -546,4 +546,41 @@
   color: #111827;
   box-shadow: 0 8px 22px rgba(0,0,0,0.12);
   white-space: nowrap;
+}
+
+/* --- Explore mobile refinements --- */
+@media(max-width:768px){
+  .explore-sidebar__toggle{
+    width:36px;
+    height:36px;
+  }
+}
+
+@media(max-width:480px){
+  .explore-panel{
+    top:8px;
+    left:8px;
+    width:calc(100% - 16px);
+    max-width:none;
+    max-height:55%;
+    padding:10px;
+    font-size:13px;
+  }
+  .explore-panel h1{ font-size:20px; }
+
+  .explore-row{
+    grid-template-columns:28px 1fr 34px 34px;
+    gap:6px;
+    padding:6px;
+  }
+  .explore-handle{ display:none; }
+
+  .explore-remove,
+  .explore-save{
+    width:40px;
+    height:40px;
+  }
+
+  .explore-sidebar{ max-height:35%; }
+  .bookmark-list{ padding:6px; }
 }

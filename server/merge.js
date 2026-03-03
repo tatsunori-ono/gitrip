@@ -13,6 +13,36 @@
  */
 
 /**
+ * Recursive deep equality for snapshot data (objects, arrays, primitives).
+ * Key-order independent — avoids the JSON.stringify pitfall where identical
+ * objects with different key insertion order compare as unequal.
+ */
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return a === b;
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== 'object') return a === b;
+
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const k of keysA) {
+    if (!Object.prototype.hasOwnProperty.call(b, k)) return false;
+    if (!deepEqual(a[k], b[k])) return false;
+  }
+  return true;
+}
+
+/**
  * Compute per-key changes between a base object and two branch objects.
  * Returns an array of change descriptors with side='L', 'R', or 'BOTH'
  * (conflict) depending on which branches modified each key.
@@ -28,16 +58,13 @@ export function diffMaps(base, left, right) {
     const b = base[k];
     const l = left[k];
     const r = right[k];
-    const bStr = JSON.stringify(b);
-    const lStr = JSON.stringify(l);
-    const rStr = JSON.stringify(r);
-    const changedL = bStr !== lStr;
-    const changedR = bStr !== rStr;
+    const changedL = !deepEqual(b, l);
+    const changedR = !deepEqual(b, r);
     if (changedL && !changedR) {
       changes.push({ key: k, side: 'L', value: l });
     } else if (!changedL && changedR) {
       changes.push({ key: k, side: 'R', value: r });
-    } else if (changedL && changedR && lStr === rStr) {
+    } else if (changedL && changedR && deepEqual(l, r)) {
       changes.push({ key: k, side: 'L', value: l });
     } else if (changedL && changedR) {
       changes.push({ key: k, side: 'BOTH', left: l, right: r });
@@ -143,19 +170,18 @@ export function mergeSnapshots(base, ours, theirs) {
   }
 
   // simple cases: only one side changed, or both changed to the same thing
-  const bpStr = JSON.stringify(bp);
-  const opStr = JSON.stringify(op);
-  const tpStr = JSON.stringify(tp);
+  const bpEqOp = deepEqual(bp, op);
+  const bpEqTp = deepEqual(bp, tp);
 
-  if (bpStr === opStr && bpStr !== tpStr) {
+  if (bpEqOp && !bpEqTp) {
     out.plan = tp;
     return { snapshot: out, conflicts };
   }
-  if (bpStr === tpStr && bpStr !== opStr) {
+  if (bpEqTp && !bpEqOp) {
     out.plan = op;
     return { snapshot: out, conflicts };
   }
-  if (opStr === tpStr) {
+  if (deepEqual(op, tp)) {
     out.plan = op;
     return { snapshot: out, conflicts };
   }
@@ -219,7 +245,20 @@ export function mergeSnapshots(base, ours, theirs) {
   ]);
   const mergedDays = [];
 
-  for (const dayId of dayIds) {
+  // Sort days deterministically by date (ISO strings sort chronologically)
+  const sortedDayIds = [...dayIds].sort((a, b) => {
+    const dateA =
+      daysBase.find((d) => d.id === a)?.date ||
+      daysOurs.find((d) => d.id === a)?.date ||
+      daysTheirs.find((d) => d.id === a)?.date || a;
+    const dateB =
+      daysBase.find((d) => d.id === b)?.date ||
+      daysOurs.find((d) => d.id === b)?.date ||
+      daysTheirs.find((d) => d.id === b)?.date || b;
+    return dateA < dateB ? -1 : dateA > dateB ? 1 : 0;
+  });
+
+  for (const dayId of sortedDayIds) {
     const b =
       daysBase.find((d) => d.id === dayId) || {
         id: dayId,
@@ -251,8 +290,7 @@ export function mergeSnapshots(base, ours, theirs) {
     ]);
     const mergedStops = [];
 
-    const eq = (x, y) =>
-      JSON.stringify(x || null) === JSON.stringify(y || null);
+    const eq = (x, y) => deepEqual(x ?? null, y ?? null);
 
     for (const sid of stopIds) {
       const bs = sb[sid];
@@ -269,6 +307,11 @@ export function mergeSnapshots(base, ours, theirs) {
       } else if (!changedO && !changedT) {
         if (bs) mergedStops.push(bs);
       } else {
+        // Both branches deleted this stop — silent agreement, omit it.
+        if (!os && !ts) {
+          continue;
+        }
+
         // Deleted on one side while the other modified: flag explicit conflict.
         if ((os && !ts) || (!os && ts)) {
           conflicts.push({
@@ -283,14 +326,11 @@ export function mergeSnapshots(base, ours, theirs) {
           continue;
         }
 
-        // both changed → see if it's only the times or the full stop
+        // both changed → check times first, then other fields
         const timeEq = (a, b) =>
           a?.arrive === b?.arrive && a?.depart === b?.depart;
 
-        if (timeEq(os, ts)) {
-          const merged = { ...(ts || {}), ...(os || {}) };
-          if (Object.keys(merged).length) mergedStops.push(merged);
-        } else {
+        if (!timeEq(os, ts)) {
           conflicts.push({
             type: 'plan-stop-time',
             dayId,
@@ -300,9 +340,62 @@ export function mergeSnapshots(base, ours, theirs) {
             theirs: ts,
           });
           if (bs) mergedStops.push(bs);
+        } else {
+          // Times agree — merge field by field, detect non-time conflicts
+          const CONFLICT_FIELDS = ['name', 'lat', 'lng', 'notes', 'stayMin', 'routeMode'];
+          let merged = { ...(bs || {}) };
+          let hasFieldConflict = false;
+          const conflictingFields = [];
+
+          for (const field of CONFLICT_FIELDS) {
+            const bVal = bs?.[field] ?? null;
+            const oVal = os?.[field] ?? null;
+            const tVal = ts?.[field] ?? null;
+            const oChanged = !deepEqual(bVal, oVal);
+            const tChanged = !deepEqual(bVal, tVal);
+
+            if (oChanged && tChanged && !deepEqual(oVal, tVal)) {
+              hasFieldConflict = true;
+              conflictingFields.push(field);
+            } else if (oChanged && !tChanged) {
+              merged[field] = oVal;
+            } else if (!oChanged && tChanged) {
+              merged[field] = tVal;
+            }
+          }
+
+          if (hasFieldConflict) {
+            conflicts.push({
+              type: 'plan-stop-field',
+              dayId,
+              stopId: sid,
+              fields: conflictingFields,
+              base: bs,
+              ours: os,
+              theirs: ts,
+            });
+            if (bs) mergedStops.push(bs);
+          } else {
+            // Apply agreed-upon times from ours
+            merged.arrive = os?.arrive ?? bs?.arrive;
+            merged.depart = os?.depart ?? bs?.depart;
+            if (Object.keys(merged).length) mergedStops.push(merged);
+          }
         }
       }
     }
+
+    // Sort stops deterministically by arrive time, then name
+    mergedStops.sort((a, b) => {
+      const minOf = (hhmm) => {
+        if (!hhmm) return Infinity;
+        const [h, m] = String(hhmm).split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+      };
+      const diff = minOf(a.arrive) - minOf(b.arrive);
+      if (diff !== 0) return diff;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
 
     mergedDays.push({
       id: dayId,

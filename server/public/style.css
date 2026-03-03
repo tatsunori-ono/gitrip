@@ -155,8 +155,8 @@ header a{ color:#fff; text-decoration:none; font-weight:700; letter-spacing:.2px
   user-select:none;
 }
 
-.container{ max-width:1200px; margin: 24px auto; padding: 0 18px; }
-.repo-container{ max-width:1200px; }
+.container{ max-width:1400px; margin: 24px auto; padding: 0 18px; }
+.repo-container{ max-width:1400px; }
 
 h1{margin:14px 0 8px; font-size:28px}
 h2{margin:3px 0 3px; font-size:20px}
@@ -284,7 +284,8 @@ label{ display:flex; flex-direction:column; font-size:12px; color:var(--muted) }
   border:1px solid #fecaca;
 }
 .repo-grid{ display:grid; grid-template-columns:1fr; gap:14px }
-@media (min-width: 880px){ .repo-grid{ grid-template-columns: 1fr 350px } }
+@media (min-width: 880px){ .repo-grid{ grid-template-columns: 1fr 420px } }
+@media (min-width: 1200px){ .repo-grid{ grid-template-columns: 1fr 480px } }
 
 .map-frame{
   position:relative;
@@ -528,9 +529,12 @@ pre.code{
 /* Branch / workflow graph */
 .branch-graph{
   position:relative;
-  padding:4px 0;
+  padding:10px 8px;
   overflow-x:auto;
   max-width:100%;
+  background:#f8fafc;
+  border:1px solid #e5e7eb;
+  border-radius:8px;
 }
 .branch-graph svg{
   display:block;
@@ -538,25 +542,32 @@ pre.code{
 .branch-node{
   fill:var(--primary);
   stroke:#ffffff;
-  stroke-width:1.5;
+  stroke-width:2;
+  cursor:pointer;
+  transition:opacity .15s;
+}
+.branch-node:hover{
+  opacity:.75;
 }
 .branch-edge{
-  stroke:#d1d5db;
-  stroke-width:1;
+  stroke:#cbd5e1;
+  stroke-width:2;
 }
 .branch-node-head{
   fill:#10b981; /* green for branch heads */
 }
 .branch-node-current{
   stroke:var(--primary); /* accent outline for current branch HEAD */
-  stroke-width:2;
+  stroke-width:3;
 }
 .branch-label{
-  font-size:10px;
+  font-size:12px;
   fill:var(--text);
+  font-family:inherit;
 }
 .branch-label-current{
-  font-weight:600;
+  font-weight:700;
+  fill:var(--primary);
 }
 
 .about-hero{

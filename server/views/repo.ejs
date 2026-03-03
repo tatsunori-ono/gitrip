@@ -2911,11 +2911,11 @@
 
     const laneCount = lanes.length || 1;
     const rowCount = commits.length;
-    const laneGap = 26;
-    const rowGap = 28;
-    const radius = 4;
-    const margin = 10;
-    const labelSpace = 160;
+    const laneGap = 36;
+    const rowGap = 38;
+    const radius = 7;
+    const margin = 16;
+    const labelSpace = 180;
     const width = margin * 2 + laneGap * (laneCount - 1) + radius * 2 + labelSpace;
     const height = margin * 2 + rowGap * (rowCount - 1) + radius * 2;
 
@@ -2933,20 +2933,35 @@
     svg.setAttribute('height', height);
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
-    // Edges from commit → parents
+    // Edges from commit → parents (curved when crossing lanes)
     commits.forEach(c => {
       const parents = Array.isArray(c.parents) ? c.parents : [];
       parents.forEach(pid => {
         if (!nodeInfo.has(pid)) return;
         const childPos = posForId(c.id);
         const parentPos = posForId(pid);
-        const line = document.createElementNS(ns, 'line');
-        line.setAttribute('x1', childPos.x);
-        line.setAttribute('y1', childPos.y + radius);
-        line.setAttribute('x2', parentPos.x);
-        line.setAttribute('y2', parentPos.y - radius);
-        line.setAttribute('class', 'branch-edge');
-        svg.appendChild(line);
+        if (childPos.x === parentPos.x) {
+          // Same lane — straight line
+          const line = document.createElementNS(ns, 'line');
+          line.setAttribute('x1', childPos.x);
+          line.setAttribute('y1', childPos.y + radius);
+          line.setAttribute('x2', parentPos.x);
+          line.setAttribute('y2', parentPos.y - radius);
+          line.setAttribute('class', 'branch-edge');
+          svg.appendChild(line);
+        } else {
+          // Cross-lane — smooth cubic bezier
+          const y1 = childPos.y + radius;
+          const y2 = parentPos.y - radius;
+          const midY = (y1 + y2) / 2;
+          const path = document.createElementNS(ns, 'path');
+          path.setAttribute('d',
+            `M ${childPos.x} ${y1} C ${childPos.x} ${midY}, ${parentPos.x} ${midY}, ${parentPos.x} ${y2}`
+          );
+          path.setAttribute('class', 'branch-edge');
+          path.setAttribute('fill', 'none');
+          svg.appendChild(path);
+        }
       });
     });
 
@@ -2960,7 +2975,7 @@
       const circle = document.createElementNS(ns, 'circle');
       circle.setAttribute('cx', pos.x);
       circle.setAttribute('cy', pos.y);
-      circle.setAttribute('r', isHead ? radius + 1 : radius);
+      circle.setAttribute('r', isHead ? radius + 3 : radius);
 
       let cls = 'branch-node';
       if (isHead) cls += ' branch-node-head';
@@ -2976,8 +2991,8 @@
 
       if (headNames && headNames.length) {
         const label = document.createElementNS(ns, 'text');
-        label.setAttribute('x', pos.x + radius + 6);
-        label.setAttribute('y', pos.y + 4);
+        label.setAttribute('x', pos.x + radius + 10);
+        label.setAttribute('y', pos.y + 5);
         let lcls = 'branch-label';
         if (isCurrent) lcls += ' branch-label-current';
         label.setAttribute('class', lcls);

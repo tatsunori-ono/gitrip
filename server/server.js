@@ -32,6 +32,36 @@ const app = express();
 
 migrate();
 
+// ---------- In-memory TTL cache ----------
+class TTLCache {
+  constructor({ ttlMs, maxEntries = 500 }) {
+    this.ttlMs = ttlMs;
+    this.maxEntries = maxEntries;
+    this.store = new Map();
+  }
+
+  get(key) {
+    const entry = this.store.get(key);
+    if (!entry) return undefined;
+    if (Date.now() > entry.expireAt) {
+      this.store.delete(key);
+      return undefined;
+    }
+    return entry.value;
+  }
+
+  set(key, value) {
+    if (this.store.size >= this.maxEntries && !this.store.has(key)) {
+      const firstKey = this.store.keys().next().value;
+      this.store.delete(firstKey);
+    }
+    this.store.set(key, { value, expireAt: Date.now() + this.ttlMs });
+  }
+}
+
+const geoCache = new TTLCache({ ttlMs: 10 * 60 * 1000, maxEntries: 200 });
+const weatherCache = new TTLCache({ ttlMs: 30 * 60 * 1000, maxEntries: 300 });
+
 // ---------- Security headers ----------
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -65,6 +95,34 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: 'Too many attempts, please try again later.',
 });
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests, please try again later.',
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'API rate limit exceeded, please try again later.',
+});
+
+const geoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Geo search rate limit exceeded, please try again later.',
+});
+
+app.use(globalLimiter);
+app.use('/api/', apiLimiter);
+app.use('/api/geo/', geoLimiter);
 
 app.use(morgan('dev'));
 app.use(bodyParser.json({ limit: '5mb' }));
@@ -2713,6 +2771,10 @@ app.get('/api/repos/:repoId/weather', async (req, res) => {
       const coord = pickDayCoord(day);
       if (!date || !coord) return null;
 
+      const wCacheKey = `${date}:${coord.lat.toFixed(3)}:${coord.lng.toFixed(3)}`;
+      const cached = weatherCache.get(wCacheKey);
+      if (cached !== undefined) return cached;
+
       const isPast = date < today;
       const baseUrl = isPast
         ? 'https://archive-api.open-meteo.com/v1/archive'
@@ -2742,7 +2804,7 @@ app.get('/api/repos/:repoId/weather', async (req, res) => {
       const precip = data.daily.precipitation_probability_max?.[idx];
       const code = data.daily.weathercode?.[idx];
 
-      return {
+      const result = {
         date,
         tmax: Number.isFinite(tmax) ? Math.round(tmax) : null,
         tmin: Number.isFinite(tmin) ? Math.round(tmin) : null,
@@ -2750,6 +2812,8 @@ app.get('/api/repos/:repoId/weather', async (req, res) => {
         code: Number.isFinite(code) ? code : null,
         label: weatherLabelFromCode(code),
       };
+      weatherCache.set(wCacheKey, result);
+      return result;
     });
 
     const results = (await Promise.all(requests)).filter(Boolean);
@@ -2891,6 +2955,30 @@ app.post('/api/repos/:repoId/easy-save', (req, res) => {
   }
 });
 
+/**
+ * Ensure every day and stop in a snapshot has a stable ID before merge.
+ * Days use their date as ID if missing; stops get a UUID.
+ */
+function normalizeSnapshotIds(snapshot) {
+  if (!snapshot || !snapshot.plan || !Array.isArray(snapshot.plan.days)) {
+    return snapshot;
+  }
+  for (const day of snapshot.plan.days) {
+    if (!day) continue;
+    if (day.id == null || String(day.id).trim() === '') {
+      day.id = day.date || uuid();
+    }
+    if (!Array.isArray(day.stops)) continue;
+    for (const s of day.stops) {
+      if (!s) continue;
+      if (s.id == null || String(s.id).trim() === '') {
+        s.id = uuid();
+      }
+    }
+  }
+  return snapshot;
+}
+
 app.post('/api/repos/:repoId/merge', (req, res) => {
   const { ours, theirs, targetBranch, author = 'cli' } = req.body;
   const repo = getRepo.get(req.params.repoId);
@@ -2938,9 +3026,9 @@ app.post('/api/repos/:repoId/merge', (req, res) => {
   }
 
   const { snapshot, conflicts } = mergeSnapshots(
-    baseC.snapshot,
-    ourC.snapshot,
-    theirC.snapshot
+    normalizeSnapshotIds(baseC.snapshot),
+    normalizeSnapshotIds(ourC.snapshot),
+    normalizeSnapshotIds(theirC.snapshot)
   );
   if (conflicts.length) return res.status(409).json({ conflicts });
 
@@ -3019,7 +3107,12 @@ app.get('/api/geo/search', async (req, res) => {
 
     // Fuzzy search: results are ranked so the closest name match is first,
     // and we still return up to `limit` suggestions.
-    const results = await fuzzySearchPlaces(q, limit);
+    const cacheKey = `${q.toLowerCase()}::${limit}`;
+    let results = geoCache.get(cacheKey);
+    if (!results) {
+      results = await fuzzySearchPlaces(q, limit);
+      geoCache.set(cacheKey, results);
+    }
 
     res.json({
       ok: true,
@@ -3131,9 +3224,9 @@ app.get('/ui/repos/:repoId/merge', (req, res) => {
   let mergedPlan = null;
   if (baseC && ourC && theirC) {
     const resMerge = mergeSnapshots(
-      baseC.snapshot,
-      ourC.snapshot,
-      theirC.snapshot
+      normalizeSnapshotIds(baseC.snapshot),
+      normalizeSnapshotIds(ourC.snapshot),
+      normalizeSnapshotIds(theirC.snapshot)
     );
     conflicts = resMerge.conflicts || [];
     mergedPlan = resMerge.snapshot?.plan || null;
@@ -3178,9 +3271,9 @@ app.post('/ui/repos/:repoId/merge-resolve', (req, res) => {
   const theirC = rowToCommit(theirRow);
 
   const { snapshot } = mergeSnapshots(
-    baseC.snapshot,
-    ourC.snapshot,
-    theirC.snapshot
+    normalizeSnapshotIds(baseC.snapshot),
+    normalizeSnapshotIds(ourC.snapshot),
+    normalizeSnapshotIds(theirC.snapshot)
   );
   let merged = snapshot;
 
@@ -3270,6 +3363,40 @@ app.post('/ui/repos/:repoId/merge-resolve', (req, res) => {
       } else {
         // chosen version deleted it
         day.stops.splice(idx, 1);
+      }
+    } else if (d.type === 'plan-stop-field') {
+      // Field conflict — same resolution logic as plan-stop-time
+      const { dayId, stopId, choice } = d;
+      if (!merged.plan) continue;
+      if (!Array.isArray(merged.plan.days)) merged.plan.days = [];
+
+      const pick =
+        choice === 'ours'
+          ? ourC
+          : choice === 'theirs'
+          ? theirC
+          : baseC;
+
+      const pd = pick.snapshot.plan?.days?.find((x) => x.id === dayId);
+      const ps = pd ? (pd.stops || []).find((s) => s.id === stopId) : null;
+
+      let day = merged.plan.days.find((x) => x.id === dayId);
+      if (!day) {
+        if (!ps) continue;
+        day = { id: dayId, date: pd?.date || dayId, stops: [] };
+        merged.plan.days.push(day);
+      }
+      if (!Array.isArray(day.stops)) day.stops = [];
+
+      const idx = day.stops.findIndex((s) => s && s.id === stopId);
+      if (ps) {
+        if (idx >= 0) {
+          day.stops[idx] = JSON.parse(JSON.stringify(ps));
+        } else {
+          day.stops.push(JSON.parse(JSON.stringify(ps)));
+        }
+      } else {
+        if (idx >= 0) day.stops.splice(idx, 1);
       }
     }
   }

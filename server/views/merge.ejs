@@ -379,11 +379,11 @@
                 <div class="row" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
                   <div style="flex:1">
                     <div class="time">Source (ours)</div>
-                    <pre class="code"><%- (c.ours||'').slice(0,20000) %></pre>
+                    <pre class="code"><%= (c.ours||'').slice(0,20000) %></pre>
                   </div>
                   <div style="flex:1">
                     <div class="time">Target (theirs)</div>
-                    <pre class="code"><%- (c.theirs||'').slice(0,20000) %></pre>
+                    <pre class="code"><%= (c.theirs||'').slice(0,20000) %></pre>
                   </div>
                 </div>
               <% } else if (c.type==='plan-stop-time') { %>
@@ -502,6 +502,55 @@
                       <div><%= c.theirs?.name || '—' %></div>
                       <div class="time"><%= c.theirs?.arrive || '??:??' %> &rarr; <%= c.theirs?.depart || '??:??' %></div>
                     <% } %>
+                  </div>
+                </div>
+              <% } else if (c.type==='plan-stop-field') { %>
+                <div>
+                  <strong>Stop field conflict:</strong>
+                  day <code><%= c.dayId %></code>,
+                  stop <code><%= c.stopId %></code>
+                </div>
+                <p class="time">
+                  Both branches changed
+                  <strong><%= (c.fields || []).join(', ') %></strong>
+                  to different values. Choose which version to keep.
+                </p>
+                <div class="row">
+                  <label>
+                    <input type="radio" name="c<%= idx %>" value="base" checked />
+                    Keep base
+                  </label>
+                  <label>
+                    <input type="radio" name="c<%= idx %>" value="ours" />
+                    Use source
+                  </label>
+                  <label>
+                    <input type="radio" name="c<%= idx %>" value="theirs" />
+                    Use target
+                  </label>
+                </div>
+
+                <div class="conflict-compare">
+                  <div class="conflict-compare-card">
+                    <div class="label">Base</div>
+                    <div><%= c.base?.name || '—' %></div>
+                    <% (c.fields || []).forEach(function(f){ %>
+                      <div class="time"><%= f %>: <%= c.base?.[f] ?? '—' %></div>
+                    <% }) %>
+                  </div>
+                  <div class="conflict-compare-card" style="background:#ecfdf3;border-color:#bbf7d0">
+                    <div class="label">Source</div>
+                    <div><%= c.ours?.name || '—' %></div>
+                    <% (c.fields || []).forEach(function(f){ %>
+                      <div class="time"><%= f %>: <%= c.ours?.[f] ?? '—' %></div>
+                    <% }) %>
+                  </div>
+                  <div class="conflict-compare-card" style="background:#eff6ff;border-color:#bfdbfe">
+                    <div class="label">Target</div>
+                    <div><%= c.theirs?.name || '—' %></div>
+                    <% (c.fields || []).forEach(function(f){ %>
+                      <div class="time"><%= f %>: <%= c.theirs?.[f] ?? '—' %></div>
+                    <% }) %>
                   </div>
                 </div>
               <% } else if (c.type==='plan-whole') { %>

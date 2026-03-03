@@ -778,3 +778,6 @@ export async function autoPlan({
 
   return { transport, days, overflow };
 }
+
+// Exported for unit testing
+export { toMin, toHHMM, applyOpeningHours };

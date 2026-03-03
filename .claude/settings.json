@@ -8,7 +8,8 @@
       "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/gitrip.db \"SELECT COUNT\\(*\\) FROM sessions;\")",
       "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/gitrip.db \"SELECT s.id, s.user_id, u.email FROM sessions s JOIN users u ON s.user_id = u.id;\")",
       "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/gitrip.db \"SELECT r.id, r.title, r.owner_user_id, u.email FROM repos r LEFT JOIN users u ON r.owner_user_id = u.id WHERE u.email LIKE ''anon%'';\")",
-      "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/gitrip.db \"SELECT rc.repo_id, rc.user_id, rc.role, u.email FROM repo_collaborators rc JOIN users u ON rc.user_id = u.id WHERE u.email LIKE ''anon%'';\")"
+      "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/gitrip.db \"SELECT rc.repo_id, rc.user_id, rc.role, u.email FROM repo_collaborators rc JOIN users u ON rc.user_id = u.id WHERE u.email LIKE ''anon%'';\")",
+      "Bash(npm test)"
     ]
   }
 }

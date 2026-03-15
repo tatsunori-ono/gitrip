@@ -1,0 +1,118 @@
+% !TEX root = ../Report.tex
+% ======================================================================
+\chapter{Conclusions and Future Work}
+% ======================================================================
+
+This chapter summarises achievements, critiques the system against its goals,
+discusses limitations, and proposes future work.
+
+\section{Conclusions}
+GiTrip demonstrates that Git-like version control semantics can be meaningfully
+applied to collaborative trip planning. The completed system meets the Must-have
+objectives from the Project Specification:
+\begin{itemize}
+  \item repository-based trip storage with commits and branches,
+  \item constraint-aware automatic scheduling integrating routing data,
+  \item interactive timeline and map editing with commit saving,
+  \item three-way merge with a dedicated conflict-resolution UI.
+\end{itemize}
+
+Evaluation results provide objective evidence that users can successfully
+generate feasible itineraries and resolve merge conflicts within target times.
+Survey feedback confirms perceived novelty and practical value, particularly for
+group trips and scenarios requiring careful coordination.
+
+\section{Critical Reflection and Lessons Learned}
+Several lessons emerged during development and evaluation:
+\begin{itemize}
+  \item \textbf{Git concepts are powerful but cognitively expensive.} During
+        Evaluation Day, even participants who understood the UI hesitated when
+        encountering terms like branch and merge. The Easy mode toggle proved
+        essential, but discoverability and mental model support remain ongoing
+        work.
+  \item \textbf{Structured merge is domain-specific.} Early iterations used
+        \texttt{JSON.stringify}-based comparison, which caused subtle bugs when
+        key ordering differed between branches. Switching to deep structural
+        equality, stable IDs, and explicit deletion semantics resolved these
+        issues but required substantial reworking of the merge engine.
+  \item \textbf{Constraint scheduling requires explainability.} Feedback from
+        testing showed that users trusted the auto-scheduler more when
+        adjustments (e.g., opening-hours nudges) were visibly annotated with
+        reasons.
+  \item \textbf{External dependency management matters.} During development,
+        OpenRouteService rate limits and occasional Google Directions failures
+        highlighted the need for Haversine-based fallback strategies to keep the
+        planner usable under degraded conditions.
+\end{itemize}
+
+\section{Limitations}
+Key limitations include:
+\begin{itemize}
+  \item \textbf{Accessibility of interactive components:} maps and drag-based
+        timelines remain challenging for keyboard-only and screen-reader users.
+  \item \textbf{Merge granularity trade-offs:} while field-level conflicts are
+        supported for selected fields, a fully general per-field resolver could
+        overwhelm users.
+  \item \textbf{No real-time collaboration:} GiTrip supports asynchronous
+        collaboration via branches and merges, but not simultaneous live editing
+        (CRDT/OT).
+  \item \textbf{Heuristic scheduling:} the planner prioritises feasibility and
+        responsiveness over global optimality.
+\end{itemize}
+
+\section{Future Work}
+Future work opportunities are substantial:
+\begin{itemize}
+  \item \textbf{Improved onboarding and guidance:} in-product tutorials for
+        branching/merging, contextual tips, and clearer ``Save'' semantics to
+        reduce confusion.
+  \item \textbf{Accessibility enhancements:} keyboard-operable alternatives for
+        timeline edits, text-based route editing, and stronger ARIA support.
+  \item \textbf{Real-time collaboration:} explore CRDT-based shared plan editing,
+        while preserving a mergeable history model.
+  \item \textbf{Richer merge resolution:} expand conflict detection to additional
+        fields, include conflict previews, and support partial merges.
+  \item \textbf{Routing extensions:} support ferries/planes as explicit legs,
+        integrate GTFS-based transit where applicable, and improve offline routing
+        approximations.
+  \item \textbf{Optional ML/AI extensions:} while excluded from the MVP, future
+        versions could use machine learning to:
+        \begin{itemize}
+          \item learn user preferences (pace, activity types) and suggest better
+                defaults,
+          \item predict realistic dwell times and travel-time uncertainty,
+          \item recommend destinations based on context (with careful privacy
+                design).
+        \end{itemize}
+        These ideas should be implemented cautiously to maintain explainability
+        and avoid undermining deterministic feasibility guarantees.
+\end{itemize}
+
+% ======================================================================
+\chapter*{Author's Assessment of the Project}
+\addcontentsline{toc}{chapter}{Author's Assessment of the Project}
+% ======================================================================
+
+\textbf{What is the (technical) contribution of this project?} GiTrip contributes
+a practical system that applies Git-style branching, committing, and three-way
+merging to structured itinerary data, integrated with constraint-aware scheduling
+and interactive timeline/map editing.
+
+\textbf{Why is this contribution relevant to Computer Science?} The project
+connects software configuration management concepts (history, merging, conflict
+resolution) with human-centred planning, demonstrating how domain semantics
+change the design of storage, algorithms, and user interfaces.
+
+\textbf{How can others make use of the work?} Developers can reuse the
+snapshot-based repository model, merge engine patterns for structured JSON, and
+the planner's constraint-handling approach in other collaborative planning
+domains.
+
+\textbf{Why should this project be considered an achievement?} It delivers an
+end-to-end deployed application combining routing integration, a scheduler, and a
+merge UI; evaluation shows users can complete core tasks successfully with limited
+guidance.
+
+\textbf{What are the limitations?} The main limitations are accessibility for
+interactive controls, dependence on external routing providers, and the absence
+of real-time collaboration and AI-based recommendation within the MVP scope.

@@ -201,16 +201,15 @@
 }
 
 .explore-suggestions {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
+  position: fixed;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-  z-index: 1200;
+  z-index: 9999;
   overflow: hidden;
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .explore-suggestions button {

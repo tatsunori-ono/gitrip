@@ -7,7 +7,7 @@
     <div style="flex:1; min-width:0">
       <h1 style="margin:0"><%= repo.title %></h1>
 
-      <div class="kv" style="margin-top:8px">
+      <div class="kv advanced-only" style="margin-top:8px">
         <span class="repo-id-label">Branch</span>
         <code><%= currentBranch %></code>
 
@@ -55,17 +55,38 @@
     </p>
   <% } %>
 
+  <!-- Trip description (branch-level, stored in snapshot.files) -->
+  <% const tripDescription = (snapshot && snapshot.files && snapshot.files.description) || ''; %>
+  <div class="repo-description" style="margin-top:8px">
+    <p class="time repo-description__view"
+       id="descriptionView"
+       data-tab-show="view"
+       style="margin:0; white-space:pre-wrap; <%= tripDescription ? '' : 'display:none' %>"><%= tripDescription %></p>
+    <% if (canEdit) { %>
+      <div data-tab-only="edit" style="margin-bottom:4px">
+        <textarea id="descriptionEdit"
+                  class="repo-description__edit"
+                  placeholder="Add a trip description…"
+                  rows="2"
+                  style="width:100%; resize:vertical"><%= tripDescription %></textarea>
+        <span id="descriptionStatus" class="time" style="font-size:0.8em"></span>
+      </div>
+    <% } %>
+  </div>
+
   <!-- Secondary navbar -->
   <nav class="repo-tabs" role="tablist" aria-label="Trip sections">
     <button type="button" class="repo-tab" role="tab" data-tab="view" title="Preview the trip plan and map">
       <i class="fa-solid fa-eye" aria-hidden="true"></i> View
     </button>
+    <% if (canEdit) { %>
     <button type="button" class="repo-tab" role="tab" data-tab="edit" title="Edit stops, timeline, and routes">
       <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Edit
     </button>
     <button type="button" class="repo-tab" role="tab" data-tab="settings" title="Manage sharing, visibility, and settings">
       <i class="fa-solid fa-gear" aria-hidden="true"></i> Settings
     </button>
+    <% } %>
   </nav>
 
   <!-- PLAN PANEL: used by View + Edit -->
@@ -85,7 +106,7 @@
 
       <!-- Auto planner (Edit tab only) -->
       <form method="get" action="/ui/planner/<%= repo.id %>" data-tab-only="edit">
-        <button class="btn btn-primary">Auto-plan</button>
+        <button class="btn btn-primary"><i class="fa-solid fa-route" aria-hidden="true"></i> Auto-plan</button>
       </form>
 
       <!-- New Branch (advanced-only) -->
@@ -98,33 +119,34 @@
       </form>
 
       <!-- Merge (advanced-only) -->
-      <form id="mergeForm" class="row advanced-only" method="get" action="/ui/repos/<%= repo.id %>/merge">
-        <label>Source
+      <form id="mergeForm" class="row advanced-only" method="get" action="/ui/repos/<%= repo.id %>/merge"
+            title="Merge the source branch into the target branch. Conflicts will be shown for resolution.">
+        <label>Source <span class="time">(merge from)</span>
           <select name="source">
             <% branches.forEach(b=> { %>
               <option value="<%= b.name %>" <%=b.name===currentBranch ? 'selected' : '' %>><%= b.name %></option>
             <% }) %>
           </select>
         </label>
-        <label>Target
+        <label>Target <span class="time">(merge into)</span>
           <select name="target">
             <% branches.forEach(b=> { %>
               <option value="<%= b.name %>" <%=b.name==='main' ? 'selected' : '' %>><%= b.name %></option>
             <% }) %>
           </select>
         </label>
-        <button class="btn">Merge…</button>
+        <button class="btn"><i class="fa-solid fa-code-merge" aria-hidden="true"></i> Compare &amp; merge</button>
       </form>
     </div>
     <div class="section-actions" data-tab-only="view">
       <button class="btn" type="button" onclick="exportPlanPdf()" data-tab-only="view">
-        Export to PDF
+        <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Export to PDF
       </button>
       <button class="btn"
               type="button"
               data-tab-only="view"
               onclick="location.href='/ui/repos/<%= repo.id %>/ical?branch=<%= encodeURIComponent(currentBranch) %>'">
-        Download iCal
+        <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Download iCal
       </button>
     </div>
 
@@ -133,10 +155,10 @@
       <div>
         <!-- Easy-mode multi-place quick add (Edit only) -->
         <div class="card easy-only" data-tab-only="edit" style="margin:0 0 12px">
-          <h3>Add places (easy mode)</h3>
+          <h3>Places (easy mode)</h3>
           <p class="time">
-            Type one place per line. GiTrip will add them to
-            <strong><%= currentBranch %></strong> and auto‑schedule a new version.
+            Type one place per line. Add or remove places, then click
+            Auto‑plan to schedule on <span class="mode-advanced"><code><%= currentBranch %></code></span><span class="mode-easy"><%= currentBranch %></span>.
           </p>
 
           <%
@@ -196,14 +218,14 @@
 
             <div style="align-self:flex-end">
               <button class="btn btn-primary" type="submit">
-                Add &amp; auto-plan
+                Auto-plan
               </button>
             </div>
           </form>
         </div>
 
         <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px">
-          <h2 style="margin:0">Latest Plan (<%= currentBranch %>)</h2>
+          <h2 style="margin:0">Latest Plan (<span class="mode-advanced"><code><%= currentBranch %></code></span><span class="mode-easy"><%= currentBranch %></span>)</h2>
         </div>
 
         <%
@@ -337,13 +359,13 @@
                             <span class="place-secondary">, <%= restName %></span>
                           <% } %>
                           <% if (s.openingHours) { %>
-                            <span class="place-secondary"> • <%= s.openingHours %></span>
+                            <span class="place-secondary"> | <%= s.openingHours %></span>
                           <% } %>
                           <span class="time">
-                            • <%= s.arrive %> → <%= s.depart %>
+                            | <%= s.arrive %> → <%= s.depart %>
                           </span>
                           <% if (s.__nudged) { %>
-                            <span class="time"> • adjusted due to <%= s.__nudged %></span>
+                            <span class="time"> | adjusted due to <%= s.__nudged %></span>
                           <% } %>
                         </div>
 
@@ -449,7 +471,7 @@
                 <li>
                   <strong><%= p.name %></strong>
                   <% if (p.stayMin) { %>
-                    <span class="time"> • ~<%= p.stayMin %> min</span>
+                    <span class="time"> | ≈<%= p.stayMin %> min</span>
                   <% } %>
                 </li>
               <% }); %>
@@ -458,32 +480,23 @@
         <% } %>
 
         <div class="card" data-tab-show="view,edit" style="margin-top:12px">
-          <h3>Travel alerts</h3>
-          <p class="time" style="margin-top:0">
+          <h3><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Travel alerts</h3>
+          <p class="time" data-tab-only="edit" style="margin-top:0">
             Paste notes about strikes, closures, or public holidays for this trip.
           </p>
-          <label class="time" for="travelAlertsNotes">Notes</label>
-          <textarea id="travelAlertsNotes"
+          <p class="time" id="travelAlertsView" data-tab-show="view"
+             style="margin:0; white-space:pre-wrap; display:none"></p>
+          <label class="time" data-tab-only="edit" for="travelAlertsNotes">Notes</label>
+          <textarea id="travelAlertsNotes" data-tab-only="edit"
                     rows="3"
                     placeholder="e.g., Underground strike on 12 Dec, city centre closures on marathon day."></textarea>
-          <div class="row" style="margin-top:8px; align-items:center; gap:10px" data-tab-only="edit">
-            <button id="travelAlertsSave"
-                    class="btn btn-primary"
-                    type="button"
-                    <%= currentUser ? '' : 'disabled' %>>
-              Save notes
-            </button>
-            <span id="travelAlertsStatus" class="time" role="status" aria-live="polite"></span>
-          </div>
-          <% if (!currentUser) { %>
-            <p class="time" style="margin-top:6px">Log in to save travel alert notes.</p>
-          <% } %>
+          <span id="travelAlertsStatus" data-tab-only="edit" class="time" role="status" aria-live="polite" style="font-size:0.8em"></span>
           <div id="travelAlertsFeed" class="travel-alerts-feed" style="margin-top:10px"></div>
         </div>
 
         <div class="card" data-tab-show="view,edit" style="margin-top:12px">
-          <h3>Packing checklist</h3>
-          <p class="time" style="margin-top:0">
+          <h3><i class="fa-solid fa-suitcase" aria-hidden="true"></i> Packing checklist</h3>
+          <p class="time" data-tab-only="edit" style="margin-top:0">
             Track what to bring for this trip.
           </p>
           <div class="row checklist-add-row" data-tab-only="edit">
@@ -504,7 +517,7 @@
       <aside>
         <div class="card">
         <div class="map-header">
-            <h2>Map <br> (per day)</h2>
+            <h2><i class="fa-solid fa-map" aria-hidden="true"></i> Map <br> (per day)</h2>
             <div class="map-header-controls">
               <div class="row map-controls">
                 <label>Day
@@ -546,8 +559,10 @@
           </div>
         </div>
 
+        <% if (branches.length > 1) { %>
         <div class="card" data-tab-show="view,edit" style="margin-top:12px">
           <h2>
+            <i class="fa-solid fa-code-compare" aria-hidden="true"></i>
             <span class="mode-advanced">Compare branches</span>
             <span class="mode-easy">Compare routes</span>
           </h2>
@@ -572,10 +587,11 @@
             Costs use placeholder rates per mode for quick comparison.
           </p>
         </div>
+        <% } %>
 
         <div class="card" data-tab-show="view,edit" style="margin-top:12px">
           <h2>
-            <span>Contributions</span>
+            <i class="fa-solid fa-users" aria-hidden="true"></i> <span>Contributions</span>
           </h2>
           <p class="time" style="margin-top:0">
             <span class="mode-advanced">Commit counts and contributor roles for this trip.</span>
@@ -590,7 +606,7 @@
         </div>
 
         <div class="card advanced-only" data-tab-only="edit" style="margin-top:12px">
-          <h2>Branches</h2>
+          <h2><i class="fa-solid fa-code-branch" aria-hidden="true"></i> Branches</h2>
           <div class="chips">
             <% branches.forEach(b=> { %>
               <span class="chip">
@@ -607,13 +623,15 @@
 
         <div class="card advanced-only" data-tab-only="edit" style="margin-top:12px">
           <h2 style="display:flex; align-items:center; justify-content:space-between; gap:12px">
-            <span>Commits</span>
+            <span><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Commits</span>
+            <% if (commits.length > 3) { %>
             <button id="toggleCommits" type="button" class="btn btn-sm">
               Show more
             </button>
+            <% } %>
           </h2>
           <p class="time" style="margin-top:0">
-            “Restore this version” creates a new commit on <strong><%= currentBranch %></strong> that matches that snapshot.
+            “Restore this version” creates a new commit on <span class=”mode-advanced”><code><%= currentBranch %></code></span><span class=”mode-easy”><%= currentBranch %></span> that matches that snapshot.
           </p>
           <ul class="list" id="commitList">
             <% commits.forEach((c, idx)=> { %>
@@ -656,7 +674,7 @@
 
         <!-- Visual workflow graph (advanced-only) -->
         <div class="card advanced-only" data-tab-only="edit" style="margin-top:12px">
-          <h2>Workflow graph</h2>
+          <h2><i class="fa-solid fa-diagram-project" aria-hidden="true"></i> Workflow graph</h2>
           <p class="time">
             Coloured dots show commit history; labels mark branch heads (current branch is highlighted).
           </p>
@@ -670,7 +688,7 @@
   <!-- SETTINGS PANEL -->
   <div id="repoPanelSettings" class="repo-panel" data-tab-only="settings">
     <div class="card">
-      <h2>Trip settings</h2>
+      <h2><i class="fa-solid fa-sliders" aria-hidden="true"></i> Trip settings</h2>
 
       <% if (!repo.owner_user_id || isOwner) { %>
         <form method="post"
@@ -692,16 +710,15 @@
         <span class="mode-advanced">Repo:</span>
         <span class="mode-easy">Trip ID:</span>
         <code><%= repo.id %></code>
-        •
-        <span class="mode-advanced">Branch:</span>
-        <span class="mode-easy">Version:</span>
-        <code><%= currentBranch %></code>
+        |
+        <span class="mode-advanced">Branch: <code><%= currentBranch %></code></span>
+        <span class="mode-easy">Version: <%= currentBranch %></span>
       </p>
     </div>
 
     <!-- Share / Collaborate -->
     <div class="card" style="margin-top:12px">
-      <h2>Share / Collaborate</h2>
+      <h2><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Share / Collaborate</h2>
 
       <% if (!currentUser) { %>
         <p class="time">
@@ -841,6 +858,7 @@
       <!-- Fork -->
       <div class="card" style="margin-top:12px">
         <h2>
+          <i class="fa-solid fa-code-fork" aria-hidden="true"></i>
           <span class="mode-advanced">Fork</span>
           <span class="mode-easy">Copy trip</span>
         </h2>
@@ -873,7 +891,7 @@
 
     <!-- Danger zone -->
     <div class="card" style="margin-top:12px">
-      <h2 style="color:#b91c1c; margin-bottom:4px">Danger zone</h2>
+      <h2 style="color:#b91c1c; margin-bottom:4px"><i class="fa-solid fa-skull-crossbones" aria-hidden="true"></i> Danger zone</h2>
       <% if (!currentUser) { %>
         <p class="time">Sign in as the owner to delete this trip.</p>
       <% } else if (!isOwner) { %>
@@ -894,7 +912,7 @@
                    required />
           </label>
           <button class="btn btn-danger" type="submit">
-            Delete trip
+            <i class="fa-solid fa-trash" aria-hidden="true"></i> Delete trip
           </button>
         </form>
       <% } %>
@@ -992,7 +1010,7 @@
   }
 
   (function initRepoTabs() {
-    const allowed = ['view', 'edit', 'settings'];
+    const allowed = <%- canEdit ? "['view', 'edit', 'settings']" : "['view']" %>;
     const KEY = `gitripRepoTab:${repoId}`;
 
     const btns = Array.from(document.querySelectorAll('.repo-tab[data-tab]'));
@@ -1044,7 +1062,7 @@
       const VISITED_KEY = `${KEY}:visited`;
       let visited = false;
       try { visited = localStorage.getItem(VISITED_KEY) === '1'; } catch {}
-      initial = visited ? 'view' : 'edit';
+      initial = (visited || allowed.length === 1) ? 'view' : 'edit';
       try { localStorage.setItem(VISITED_KEY, '1'); } catch {}
     }
 
@@ -1075,6 +1093,50 @@
 
   // expose days for easy-save
   window.days = days;
+
+  // Auto-save trip description on edit
+  (function () {
+    const descEl = document.getElementById('descriptionEdit');
+    const statusEl = document.getElementById('descriptionStatus');
+    if (!descEl) return;
+
+    let timer = null;
+    descEl.addEventListener('input', () => {
+      if (statusEl) statusEl.textContent = '';
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        if (statusEl) statusEl.textContent = 'Saving…';
+        try {
+          const resp = await fetch(
+            `/api/repos/${encodeURIComponent(repoId)}/description`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                branch: currentBranch,
+                description: descEl.value || ''
+              })
+            }
+          );
+          const json = await resp.json().catch(() => ({}));
+          if (resp.ok && json.ok) {
+            if (statusEl) statusEl.textContent = json.changed ? 'Saved' : '';
+            // Update the view-tab display
+            const viewEl = document.getElementById('descriptionView');
+            if (viewEl) {
+              viewEl.textContent = descEl.value;
+              viewEl.style.display = descEl.value ? '' : 'none';
+            }
+          } else {
+            if (statusEl) statusEl.textContent = 'Save failed';
+          }
+        } catch {
+          if (statusEl) statusEl.textContent = 'Save failed';
+        }
+        setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2000);
+      }, 1500);
+    });
+  })();
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function normalizeKey(value) {
@@ -1259,6 +1321,13 @@
       dstDay.stops[i].depart = s.depart;
     });
 
+    // Include any description edits
+    const descEl = document.getElementById('descriptionEdit');
+    if (descEl) {
+      if (!snap.files) snap.files = {};
+      snap.files.description = descEl.value || '';
+    }
+
     const body = {
       branch: currentBranch,
       baseCommitId: headCommit.id,
@@ -1377,7 +1446,7 @@
         if (getRepoTab() === 'view') {
           // View tab: just preview the route geometry (no commit)
           if (msg) msg.textContent = 'Previewing route…';
-          fetchAndRenderRoute(daySelect.value);
+          fetchAndRenderRoute(daySelect.value, true);
           setTimeout(() => { if (msg && msg.textContent === 'Previewing route…') msg.textContent = ''; }, 1200);
         } else {
           // Edit tab: keep the existing “recompute to apply” behavior
@@ -1474,16 +1543,32 @@
         const steps = Array.isArray(leg.steps) ? leg.steps : [];
         if (!steps.length) return;
 
+        const sumMinutes = (predicate) => {
+          let total = 0;
+          steps.forEach((st, i) => {
+            if (predicate(st, i) && typeof st.minutes === 'number') {
+              total += st.minutes;
+            }
+          });
+          return Math.round(total);
+        };
+
         const hasTransit = steps.some((st) => st && st.kind === 'transit');
         if (!hasTransit) {
+          // Walk-only leg: update the parent bullet's minutes instead of
+          // adding a redundant nested sub-bullet.
           const walkOnlyMin = sumMinutes((st) => st && st.kind === 'walk');
           if (walkOnlyMin > 0) {
-            const li = document.createElement('li');
-            li.className = 'time';
-            li.append(`Walk ~${walkOnlyMin} min `);
-            li.appendChild(createIconSpan('walking'));
-            li.append(' between these stops');
-            ul.appendChild(li);
+            const parentLeg = ul.closest('.day-leg');
+            if (parentLeg) {
+              const minsEl = parentLeg.querySelector('.leg-minutes');
+              if (minsEl) minsEl.textContent = `Walk ≈${walkOnlyMin} min`;
+              const iconEl = parentLeg.querySelector('.leg-icon');
+              if (iconEl) {
+                iconEl.innerHTML = iconHtmlForMode('walking');
+                iconEl.dataset.legMode = 'walking';
+              }
+            }
           }
           return;
         }
@@ -1498,16 +1583,6 @@
             break;
           }
         }
-
-        const sumMinutes = (predicate) => {
-          let total = 0;
-          steps.forEach((st, i) => {
-            if (predicate(st, i) && typeof st.minutes === 'number') {
-              total += st.minutes;
-            }
-          });
-          return Math.round(total);
-        };
 
         const walkBeforeMin =
           firstTransitIdx > 0
@@ -1534,29 +1609,34 @@
           const stationName =
             (firstTransit && firstTransit.departureStationName) ||
             'station';
-          li.append(`Walk ~${walkBeforeMin} min `);
+          li.append(`Walk ≈${walkBeforeMin} min `);
           li.appendChild(createIconSpan('walking'));
           li.append(` to ${stationName}`);
           ul.appendChild(li);
         }
 
-        if (firstTransit) {
+        // Render every transit step (bus, train, tube, etc.)
+        steps.forEach((st) => {
+          if (!st || st.kind !== 'transit') return;
           const li = document.createElement('li');
           li.className = 'time';
-          const lineName = firstTransit.lineName || 'Train';
-          const headsign = firstTransit.headsign
-            ? ` toward ${firstTransit.headsign}`
+          const lineName = st.lineName || 'Train';
+          const headsign = st.headsign
+            ? ` toward ${st.headsign}`
             : '';
           const duration =
-            typeof firstTransit.minutes === 'number'
-              ? ` (~${Math.round(firstTransit.minutes)} min)`
+            typeof st.minutes === 'number'
+              ? ` (≈${Math.round(st.minutes)} min)`
               : '';
-          const depTime = firstTransit.departureTimeText
-            ? ` • next at ${firstTransit.departureTimeText}`
+          const depTime = st.departureTimeText
+            ? ` | next at ${st.departureTimeText}`
             : '';
-          li.textContent = `${lineName}${headsign}${duration}${depTime}`;
+          const fromStation = st.departureStationName
+            ? ` from ${st.departureStationName}`
+            : '';
+          li.textContent = `${lineName}${headsign}${fromStation}${duration}${depTime}`;
           ul.appendChild(li);
-        }
+        });
 
         if (walkAfterMin > 0) {
           const li = document.createElement('li');
@@ -1564,7 +1644,7 @@
           const stationName =
             (lastTransit && lastTransit.arrivalStationName) ||
             'station';
-          li.append(`Walk ~${walkAfterMin} min `);
+          li.append(`Walk ≈${walkAfterMin} min `);
           li.appendChild(createIconSpan('walking'));
           li.append(` from ${stationName} to destination`);
           ul.appendChild(li);
@@ -1742,9 +1822,24 @@
       syncMarkerDraggability();
     }
 
+    // Cache route results so tab switches don't re-fetch from the API.
+    // Key: "dayId|mode", value: { segs, transitStops, transitLegs, legModes, transitFallback }
+    const routeCache = new Map();
+
+    function invalidateRouteCache(dayId) {
+      if (dayId) {
+        for (const key of routeCache.keys()) {
+          if (key.startsWith(dayId + '|')) routeCache.delete(key);
+        }
+      } else {
+        routeCache.clear();
+      }
+    }
+
     // Fetches route geometry + per-leg transit details, then renders the
     // polyline segments and updates leg icons so UI stays in sync with routing.
-    async function fetchAndRenderRoute(dayId) {
+    // Set forceRefresh=true to bypass cache (after map save, recompute, etc.)
+    async function fetchAndRenderRoute(dayId, forceRefresh) {
       clearRoutes();
       clearTransitDetails(dayId);
 
@@ -1752,14 +1847,21 @@
       if (!d || !d.stops || d.stops.length < 2) return;
 
       const mode = (modeSelect && modeSelect.value) || pendingRouteMode || currentRouteMode || 'driving';
+      const cacheKey = dayId + '|' + mode;
+
+      if (!forceRefresh && routeCache.has(cacheKey)) {
+        const cached = routeCache.get(cacheKey);
+        renderRouteFromData(dayId, mode, cached.segs, cached.transitStops, cached.transitLegs, cached.legModes, cached.transitFallback);
+        return;
+      }
 
       let segs = [];
       let transitStops = [];
       let transitLegs = [];
       let legModes = [];
+      let transitFallback = false;
 
       try {
-        // send full day data so the backend doesn't need to look into the repo
         const payload = {
           branch: currentBranch,
           dayId,
@@ -1783,18 +1885,11 @@
         );
         const json = await resp.json().catch(() => ({}));
         if (resp.ok && json.ok) {
-          if (Array.isArray(json.segments)) {
-            segs = json.segments;
-          }
-          if (mode === 'transit' && Array.isArray(json.transitStops)) {
-            transitStops = json.transitStops;
-          }
-          if (mode === 'transit' && Array.isArray(json.transitLegs)) {
-            transitLegs = json.transitLegs;
-          }
-          if (Array.isArray(json.legModes)) {
-            legModes = json.legModes;
-          }
+          if (Array.isArray(json.segments)) segs = json.segments;
+          if (mode === 'transit' && Array.isArray(json.transitStops)) transitStops = json.transitStops;
+          if (mode === 'transit' && Array.isArray(json.transitLegs)) transitLegs = json.transitLegs;
+          if (Array.isArray(json.legModes)) legModes = json.legModes;
+          transitFallback = !!json.transitFallback;
         } else {
           console.warn('route-geometry failed', json);
         }
@@ -1802,11 +1897,21 @@
         console.warn('route-geometry error', e);
       }
 
+      routeCache.set(cacheKey, { segs, transitStops, transitLegs, legModes, transitFallback });
+      renderRouteFromData(dayId, mode, segs, transitStops, transitLegs, legModes, transitFallback);
+    }
+
+    // Renders route data onto the map without fetching.
+    function renderRouteFromData(dayId, mode, segs, transitStops, transitLegs, legModes, transitFallback) {
+      clearRoutes();
+      clearTransitDetails(dayId);
+
+      if (transitFallback && window.showToast) {
+        window.showToast('Transit routing unavailable — Google Directions API key may be invalid or not enabled. Showing estimated route.', 'error', 6000);
+      }
+
       const allLatLngs = [];
 
-      // Segments can be either:
-      //  - old: [ {lat,lng}, ... ]
-      //  - new: { points:[{lat,lng},...], subMode:'walking'|'cycling'|'driving'|'transit' }
       segs.forEach((seg) => {
         let pts = seg;
         let segMode = mode;
@@ -1826,17 +1931,15 @@
           opacity: 0.95
         };
         if (m === 'walking') {
-          polyOpts.dashArray = '4 6'; // dotted walk
+          polyOpts.dashArray = '4 6';
         } else if (m === 'cycling') {
-          polyOpts.dashArray = '1 8'; // dashed cycling
+          polyOpts.dashArray = '1 8';
         }
-        // transit / driving -> solid
 
         const poly = L.polyline(latlngs, polyOpts).addTo(map);
         routeLayers.push(poly);
       });
 
-      // Transit stations (from Google transit legs)
       if (mode === 'transit' && Array.isArray(transitStops)) {
         transitStops.forEach((s, idx) => {
           if (!s || typeof s.lat !== 'number' || typeof s.lng !== 'number') return;
@@ -1865,7 +1968,6 @@
         clearTransitDetails(dayId);
       }
 
-      // Keep the leg icons next to each leg in sync with the actual route.
       updateLegIconsForMode(dayId, mode, transitLegs, legModes);
 
       if (allLatLngs.length) {
@@ -1875,9 +1977,13 @@
 
     const firstId = days[0] ? days[0].id : '';
     if (firstId) {
-      renderDayStops(firstId);
       daySelect.value = firstId;
-      fetchAndRenderRoute(firstId);
+      // Delay initial render so Leaflet has correct container dimensions
+      setTimeout(() => {
+        map.invalidateSize();
+        renderDayStops(firstId);
+        fetchAndRenderRoute(firstId);
+      }, 80);
     } else {
       map.setView([51.5074, -0.1278], 11);
     }
@@ -1985,7 +2091,7 @@
         row.innerHTML = `
           <span class="compare-cost-branch">${name}</span>
           <span class="compare-cost-min">${cost.totalMin} min</span>
-          <span class="compare-cost-value">~${cost.cost} units</span>
+          <span class="compare-cost-value">≈${cost.cost} units</span>
         `;
         costTable.appendChild(row);
       }
@@ -2093,6 +2199,13 @@
           target.stops[i].lng = s.lng;
         });
 
+        // Include any description edits
+        const descEl = document.getElementById('descriptionEdit');
+        if (descEl) {
+          if (!snap.files) snap.files = {};
+          snap.files.description = descEl.value || '';
+        }
+
         const body = {
           branch: currentBranch,
           baseCommitId: headCommit.id,
@@ -2111,8 +2224,15 @@
         );
 
         if (rs.ok) {
-          msg.textContent = 'Committed ✓';
+          msg.textContent = 'Committed ✓ — updating map…';
           setDirty(false);
+          // Re-render markers, route, and compare overlays immediately
+          renderDayStops(dayId);
+          await fetchAndRenderRoute(dayId, true);
+          // Invalidate compare cache so branch overlays use new coords
+          compareCache.delete(currentBranch);
+          renderCompareRoutes();
+          msg.textContent = 'Committed ✓';
           setTimeout(() => {
             msg.textContent = '';
           }, 1500);
@@ -2146,8 +2266,13 @@
         );
         const j = await r.json().catch(() => ({}));
         if (r.ok && j.ok) {
-          msg.textContent = 'Updated ✓';
-          setTimeout(() => location.reload(), 400);
+          if (j.transitFallback) {
+            msg.textContent = 'Updated (transit unavailable — used estimated times)';
+            if (window.showToast) window.showToast('Transit routing unavailable. Google Directions API key may be invalid or the Directions API is not enabled. Travel times are estimates.', 'error', 8000);
+          } else {
+            msg.textContent = 'Updated ✓';
+          }
+          setTimeout(() => location.reload(), j.transitFallback ? 3000 : 400);
         } else {
           msg.textContent =
             'Failed: ' + (j.error || r.statusText);
@@ -2247,6 +2372,11 @@
         if (!resp.ok || !json.ok) throw new Error('alerts_failed');
 
         notesEl.value = json.notes || '';
+        const viewEl = document.getElementById('travelAlertsView');
+        if (viewEl) {
+          viewEl.textContent = json.notes || '';
+          viewEl.style.display = json.notes ? '' : 'none';
+        }
         feedEl.innerHTML = '';
 
         const eventsByDate = json.eventsByDate || {};
@@ -2308,30 +2438,38 @@
       document.addEventListener('gitrip:tabchange', applyNotesMode);
     }
 
-    const saveAlertsBtn = document.getElementById('travelAlertsSave');
-    if (saveAlertsBtn) {
-      saveAlertsBtn.addEventListener('click', async () => {
-        const notesEl = document.getElementById('travelAlertsNotes');
-        const statusEl = document.getElementById('travelAlertsStatus');
-        if (!notesEl) return;
-        saveAlertsBtn.disabled = true;
-        if (statusEl) statusEl.textContent = 'Saving...';
-        try {
-          const resp = await fetch(`/api/repos/${encodeURIComponent(repoId)}/travel-alerts/manual`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ notes: notesEl.value || '' })
-          });
-          if (!resp.ok) throw new Error('save_failed');
-          if (statusEl) statusEl.textContent = 'Saved.';
-          setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 1500);
-        } catch (e) {
-          if (statusEl) statusEl.textContent = 'Save failed.';
-        } finally {
-          saveAlertsBtn.disabled = false;
-        }
+    // Auto-save travel alert notes
+    (function () {
+      const notesEl = document.getElementById('travelAlertsNotes');
+      const statusEl = document.getElementById('travelAlertsStatus');
+      if (!notesEl) return;
+
+      let timer = null;
+      notesEl.addEventListener('input', () => {
+        if (statusEl) statusEl.textContent = '';
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+          if (statusEl) statusEl.textContent = 'Saving…';
+          try {
+            const resp = await fetch(`/api/repos/${encodeURIComponent(repoId)}/travel-alerts/manual`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ notes: notesEl.value || '' })
+            });
+            if (!resp.ok) throw new Error('save_failed');
+            if (statusEl) statusEl.textContent = 'Saved';
+            const viewEl = document.getElementById('travelAlertsView');
+            if (viewEl) {
+              viewEl.textContent = notesEl.value;
+              viewEl.style.display = notesEl.value ? '' : 'none';
+            }
+          } catch {
+            if (statusEl) statusEl.textContent = 'Save failed';
+          }
+          setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2000);
+        }, 1500);
       });
-    }
+    })();
 
     loadTravelAlerts();
 
@@ -2370,8 +2508,8 @@
               const icon = iconForLabel(label);
               const slot = document.querySelector(`.day-weather[data-day-date="${date}"]`);
               if (!slot) return;
-              const rain = Number.isFinite(item.precip) ? ` • rain ${precip}` : '';
-              slot.innerHTML = ` <span class="time weather-line"><i class="fa-solid ${icon}" aria-hidden="true"></i> ${label} • ${low}–${high}${rain}</span>`;
+              const rain = Number.isFinite(item.precip) ? ` | rain ${precip}` : '';
+              slot.innerHTML = ` <span class="time weather-line"><i class="fa-solid ${icon}" aria-hidden="true"></i> ${label} | ${low}–${high}${rain}</span>`;
             });
             return;
           }
@@ -2398,8 +2536,8 @@
             const icon = iconForLabel(label);
             const slot = document.querySelector(`.day-weather[data-day-date="${date}"]`);
             if (!slot) return;
-            const rain = Number.isFinite(item.precip) ? ` • rain ${precip}` : '';
-            slot.innerHTML = ` <span class="time weather-line"><i class="fa-solid ${icon}" aria-hidden="true"></i> ${label} • ${low}–${high}${rain}</span>`;
+            const rain = Number.isFinite(item.precip) ? ` | rain ${precip}` : '';
+            slot.innerHTML = ` <span class="time weather-line"><i class="fa-solid ${icon}" aria-hidden="true"></i> ${label} | ${low}–${high}${rain}</span>`;
           });
         })
         .catch(() => {
@@ -2613,6 +2751,13 @@
     if (easyPlaceInput) {
       easyPlaceInput.value = addBullets(easyPlaceInput.value);
       easyPlaceInput.addEventListener('input', syncEasyPlacePreview);
+      easyPlaceInput.addEventListener('focus', () => {
+        if (!easyPlaceInput.value.trim()) {
+          easyPlaceInput.value = BULLET;
+          easyPlaceInput.selectionStart = BULLET.length;
+          easyPlaceInput.selectionEnd = BULLET.length;
+        }
+      });
       easyPlaceInput.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
@@ -2627,7 +2772,8 @@
         syncEasyPlacePreview();
       });
       easyPlaceInput.addEventListener('blur', () => {
-        easyPlaceInput.value = addBullets(easyPlaceInput.value);
+        const bulleted = addBullets(easyPlaceInput.value);
+        easyPlaceInput.value = bulleted.trim() ? bulleted : '';
         syncEasyPlacePreview();
       });
     }
@@ -2663,6 +2809,7 @@
           body: JSON.stringify({
             branch: currentBranch,
             parentId,
+            description: (document.getElementById('descriptionEdit') || {}).value || '',
             plan: {
               transport: snapshotPlan.transport || null,
               activeHours: snapshotPlan.activeHours || null,
@@ -2812,7 +2959,7 @@
       if (collaborator && collaborator.name && normalizeKey(collaborator.name) !== normalizeKey(entry.author)) {
         const nameSpan = document.createElement('span');
         nameSpan.className = 'time';
-        nameSpan.textContent = ` • ${entry.author}`;
+        nameSpan.textContent = ` | ${entry.author}`;
         li.appendChild(nameSpan);
       }
 

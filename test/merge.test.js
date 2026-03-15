@@ -106,8 +106,7 @@ test('time conflict when both changed times differently', () => {
 // --- mergeSnapshots: field conflict ---
 
 test('field conflict when times agree but notes differ', () => {
-  // Both branches change the same stop's notes (keep name/times same).
-  // planKeySet uses names, so Jaccard stays high → reaches per-stop merge.
+  // Both branches change the same stop's notes but keep times identical.
   const base = snap([day('d1', '2025-06-01', [
     stop('s1', 'Museum', '10:00', '12:00', { notes: 'original' }),
     stop('s2', 'Park', '13:00', '14:00'),
@@ -148,7 +147,6 @@ test('divergent plans with low similarity -> plan-whole conflict', () => {
 // --- mergeSnapshots: ordering ---
 
 test('merged days are sorted by date', () => {
-  // Both sides change different stops so all three plans differ → structured merge
   const base = snap([
     day('d2', '2025-06-02', [stop('s1', 'B')]),
     day('d1', '2025-06-01', [stop('s2', 'A')]),
@@ -167,7 +165,6 @@ test('merged days are sorted by date', () => {
 });
 
 test('merged stops are sorted by arrive time', () => {
-  // Both sides change different stops so structured merge runs (not fast-path)
   const base = snap([day('d1', '2025-06-01', [
     stop('s2', 'Late', '14:00', '15:00'),
     stop('s1', 'Early', '09:00', '10:00'),

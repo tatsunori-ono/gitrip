@@ -4,48 +4,47 @@
 
   <div class="explore-panel card">
     <div class="explore-panel__header">
-      <h1 style="margin:0">Quick route</h1>
-      <p class="time" style="margin:6px 0 0">
-        Add destinations, compute the shortest travel order, and preview it on the map.
-      </p>
-    </div>
+        <h1 style="margin:0">Quick route</h1>
+        <p class="time" style="margin:6px 0 0">
+          Add destinations, compute the shortest travel order, and preview it on the map.
+        </p>
+      </div>
 
-    <div class="row" style="align-items:flex-end; gap:10px; margin-top:10px">
-      <label style="flex:1; min-width:180px">
-        Trip title (optional)
-        <input id="tripTitle" placeholder="Untitled Trip" />
-      </label>
+      <div class="row" style="align-items:flex-end; gap:10px; margin-top:10px">
+        <label style="width:160px">
+          Mode
+          <select id="modeSelect">
+            <option value="walking">Walking</option>
+            <option value="driving">Driving</option>
+            <option value="transit">Transit</option>
+            <option value="cycling">Cycling</option>
+          </select>
+        </label>
+      </div>
 
-      <label style="width:160px">
-        Mode
-        <select id="modeSelect">
-          <option value="walking">Walking</option>
-          <option value="driving">Driving</option>
-          <option value="transit">Transit</option>
-          <option value="cycling">Cycling</option>
-        </select>
-      </label>
-    </div>
+      <div id="placesList" class="explore-places" style="margin-top:10px"></div>
 
-    <div id="placesList" class="explore-places" style="margin-top:10px"></div>
+      <div class="row" style="gap:8px; margin-top:10px; flex-wrap:wrap">
+        <button id="addPlaceBtn" class="btn" type="button">+ Add destination</button>
+        <button id="computeBtn" class="btn btn-primary" type="button">Compute shortest route</button>
+        <button id="clearBtn" class="btn" type="button">Clear</button>
+      </div>
 
-    <div class="row" style="gap:8px; margin-top:10px; flex-wrap:wrap">
-      <button id="addPlaceBtn" class="btn" type="button">+ Add destination</button>
-      <button id="computeBtn" class="btn btn-primary" type="button">Compute shortest route</button>
-      <button id="clearBtn" class="btn" type="button">Clear</button>
-    </div>
+      <div class="explore-summary" style="margin-top:10px">
+        <div id="summaryLine" class="time"></div>
+        <ol id="legsList" class="explore-legs"></ol>
+      </div>
 
-    <div class="explore-summary" style="margin-top:10px">
-      <div id="summaryLine" class="time"></div>
-      <ol id="legsList" class="explore-legs"></ol>
-    </div>
-
-    <div class="row" style="justify-content:space-between; align-items:center; margin-top:10px; gap:10px">
-      <button id="startRepoBtn" class="btn btn-primary" type="button" disabled>
-        Start repo with this trip
-      </button>
-      <span id="statusMsg" class="time" role="status" aria-live="polite"></span>
-    </div>
+      <div id="tripTitleLabel" style="display:none; align-items:center; margin-top:12px; gap:10px">
+        <label style="flex:1; min-width:180px">
+          Trip title (optional)
+          <input id="tripTitle" placeholder="Untitled Trip" />
+        </label>
+        <button id="startRepoBtn" class="btn btn-primary" type="button" disabled>
+          Create trip from this route
+        </button>
+      </div>
+    <span id="statusMsg" class="time" role="status" aria-live="polite" style="margin-top:6px; display:block"></span>
   </div>
 
   <aside class="explore-sidebar card" data-collapsed="false">

@@ -98,7 +98,7 @@ const authLimiter = rateLimit({
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too many requests, please try again later.',
@@ -106,7 +106,7 @@ const globalLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 60,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: 'API rate limit exceeded, please try again later.',
@@ -114,7 +114,7 @@ const apiLimiter = rateLimit({
 
 const geoLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Geo search rate limit exceeded, please try again later.',
@@ -148,7 +148,7 @@ function canonical(req, pathOverride) {
 // ---------- DB helpers ----------
 const getRepo = db.prepare('SELECT * FROM repos WHERE id=?');
 const listRepos = db.prepare('SELECT * FROM repos ORDER BY created_at DESC');
-const listPublicReposRecent = db.prepare(`
+const listPublicReposRecentAll = db.prepare(`
   SELECT r.*,
          u.email AS owner_email,
          u.name  AS owner_name,
@@ -160,7 +160,20 @@ const listPublicReposRecent = db.prepare(`
   GROUP BY r.id
   ORDER BY r.created_at DESC
 `);
-const listPublicReposStars = db.prepare(`
+const listPublicReposRecentPage = db.prepare(`
+  SELECT r.*,
+         u.email AS owner_email,
+         u.name  AS owner_name,
+         COUNT(rs.id) AS star_count
+  FROM repos r
+  LEFT JOIN users u ON u.id = r.owner_user_id
+  LEFT JOIN repo_stars rs ON rs.repo_id = r.id
+  WHERE r.visibility = 'public'
+  GROUP BY r.id
+  ORDER BY r.created_at DESC
+  LIMIT ? OFFSET ?
+`);
+const listPublicReposStarsPage = db.prepare(`
   SELECT r.*,
          u.email AS owner_email,
          u.name  AS owner_name,
@@ -171,7 +184,11 @@ const listPublicReposStars = db.prepare(`
   WHERE r.visibility = 'public'
   GROUP BY r.id
   ORDER BY star_count DESC, r.created_at DESC
+  LIMIT ? OFFSET ?
 `);
+const countPublicRepos = db.prepare(
+  `SELECT COUNT(*) AS total FROM repos WHERE visibility = 'public'`
+);
 const listReposOwnedByUser = db.prepare(
   'SELECT * FROM repos WHERE owner_user_id=? ORDER BY created_at DESC'
 );
@@ -439,8 +456,8 @@ function ensureAnonIdentity(req, res) {
 /** Require that the user is logged in and is the owner or a collaborator with write access. */
 function requireWriteAccess(repo, user) {
   if (!repo) return 'Repo not found';
-  if (!repo.owner_user_id) return null; // legacy unowned repo — allow edits
   if (!user) return 'You must be logged in to modify this trip.';
+  if (!repo.owner_user_id) return null; // legacy unowned repo — any logged-in user can edit
   if (repo.owner_user_id === user.id) return null; // owner
   const collab = getCollaborator.get(repo.id, user.id);
   if (collab && (collab.role === 'owner' || collab.role === 'editor')) return null;
@@ -497,7 +514,12 @@ app.use((req, res, next) => {
     if (isApi) {
       return res.status(403).json({ error: 'csrf_invalid', message: 'Invalid or missing CSRF token.' });
     }
-    return res.status(403).send('Invalid or missing CSRF token. Please refresh the page and try again.');
+    // For form submissions, generate a fresh token and redirect back so the
+    // user can retry with a valid token (avoids a dead-end error page).
+    const freshToken = generateCsrfToken();
+    setCsrfCookie(res, freshToken);
+    const back = req.headers.referer || '/';
+    return res.redirect(isSafeRedirect(back) ? back : '/');
   }
   next();
 });
@@ -693,6 +715,16 @@ function insertCommitWithKeyChange({
 
 function extractCitiesFromPlan(plan) {
   const cities = new Set();
+  // Segments to skip when looking for city names in Nominatim display_name strings.
+  const skipLower = new Set([
+    'united kingdom', 'england', 'scotland', 'wales', 'northern ireland',
+    'france', 'germany', 'italy', 'spain', 'netherlands', 'belgium',
+    'ireland', 'portugal', 'austria', 'switzerland', 'greece', 'turkey',
+    'united states', 'usa', 'canada', 'australia',
+  ]);
+  // UK/intl postcode pattern: e.g. "WC2E 9DD", "CV4 8NA", "SW1A 1AA", "75001"
+  const postcodeRe = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$|^\d{4,5}$/i;
+
   const days = Array.isArray(plan?.days) ? plan.days : [];
   days.forEach((day) => {
     const stops = Array.isArray(day?.stops) ? day.stops : [];
@@ -701,8 +733,44 @@ function extractCitiesFromPlan(plan) {
       if (!raw) return;
       const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
       if (!parts.length) return;
-      const pick = parts.length > 1 ? parts[parts.length - 2] : parts[0];
-      if (pick) cities.add(pick);
+
+      if (parts.length <= 2) {
+        // Short name like "London" or "British Museum, London" — use as-is
+        parts.forEach((p) => cities.add(p));
+        return;
+      }
+
+      // For long Nominatim addresses, filter out postcodes, country/region
+      // names, street numbers, and street-level segments, then pick the
+      // most city-like remaining segments.
+      const filtered = parts.filter((p) => {
+        if (postcodeRe.test(p)) return false;
+        if (skipLower.has(p.toLowerCase())) return false;
+        if (/^\d+$/.test(p)) return false; // pure house numbers
+        if (/^Greater\s/i.test(p)) return false; // "Greater London" etc.
+        if (/\bBorough\b/i.test(p)) return false; // "London Borough of Camden"
+        return true;
+      });
+
+      if (!filtered.length) {
+        // Fallback: just use the first part
+        cities.add(parts[0]);
+        return;
+      }
+
+      // Add the first segment (place name, e.g. "British Museum")
+      cities.add(filtered[0]);
+
+      // In Nominatim addresses the city sits roughly 2/3 through the
+      // filtered segments (after place, street, neighbourhood, before
+      // county/region).  Also add the last filtered segment (often the
+      // county, still useful for news matching).
+      if (filtered.length >= 3) {
+        const cityIdx = Math.floor(filtered.length * 2 / 3);
+        cities.add(filtered[cityIdx]);
+      }
+      const last = filtered[filtered.length - 1];
+      if (last !== filtered[0]) cities.add(last);
     });
   });
   return Array.from(cities);
@@ -1178,7 +1246,7 @@ app.get('/robots.txt', (req, res) => {
 
 app.get('/sitemap.xml', (req, res) => {
   const base = baseUrl(req);
-  const publicRepos = listPublicReposRecent.all();
+  const publicRepos = listPublicReposRecentAll.all();
   const staticPages = [
     { loc: '/', priority: '1.0', changefreq: 'daily' },
     { loc: '/ui/about', priority: '0.8', changefreq: 'monthly' },
@@ -1597,9 +1665,7 @@ app.post('/ui/account/profile-image', (req, res) => {
 // ---------- HOME ----------
 app.get('/', (req, res) => {
   let repos = [];
-  if (!req.user) {
-    repos = listPublicReposRecent.all();
-  } else {
+  if (req.user) {
     const seen = new Map();
     const addRepos = (rows) => {
       rows.forEach((r) => {
@@ -1610,7 +1676,6 @@ app.get('/', (req, res) => {
     };
     addRepos(listReposOwnedByUser.all(req.user.id));
     addRepos(listReposCollaborating.all(req.user.id));
-    addRepos(listPublicReposRecent.all());
     repos = Array.from(seen.values());
   }
   res.render('index', {
@@ -1800,16 +1865,39 @@ app.post('/api/quick/start-repo', (req, res) => {
 // Public gallery of trips
 app.get('/ui/public', (req, res) => {
   const sort = String(req.query.sort || 'recent');
+  const PAGE_SIZE = 12;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+  const { total } = countPublicRepos.get();
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const repos =
-    sort === 'stars' ? listPublicReposStars.all() : listPublicReposRecent.all();
+    sort === 'stars'
+      ? listPublicReposStarsPage.all(PAGE_SIZE, offset)
+      : listPublicReposRecentPage.all(PAGE_SIZE, offset);
   res.render('public-gallery', {
     repos,
     currentUser: res.locals.currentUser || null,
     sort,
+    page,
+    totalPages,
     pageTitle: 'Public Trips',
     pageDescription: 'Browse publicly shared trip itineraries on GiTrip. Discover travel plans, fork them, and customise them for your own adventures.',
     canonicalUrl: canonical(req, '/ui/public'),
   });
+});
+
+app.get('/api/public-repos', (req, res) => {
+  const sort = String(req.query.sort || 'recent');
+  const PAGE_SIZE = 12;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+  const { total } = countPublicRepos.get();
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const repos =
+    sort === 'stars'
+      ? listPublicReposStarsPage.all(PAGE_SIZE, offset)
+      : listPublicReposRecentPage.all(PAGE_SIZE, offset);
+  res.json({ ok: true, repos, page, totalPages, sort, total });
 });
 
 // ---------- REPO CREATION ----------
@@ -1910,6 +1998,8 @@ app.get('/ui/repos/:repoId', (req, res) => {
     ? !!getStarForUser.get(repo.id, currentUserId)
     : false;
 
+  const canEdit = !requireWriteAccess(repo, req.user);
+
   res.render('repo', {
     repo,
     branches,
@@ -1918,6 +2008,7 @@ app.get('/ui/repos/:repoId', (req, res) => {
     currentBranch,
     currentHeadId,
     currentUser: res.locals.currentUser || null,
+    canEdit,
     collaborators,
     forkedFrom,
     forkedFromRestricted,
@@ -2109,7 +2200,7 @@ app.post('/ui/repos/:repoId/restore', (req, res) => {
     res.redirect(`/ui/repos/${repo.id}?branch=${encodeURIComponent(targetBranchName)}`);
   } catch (e) {
     console.error('restore error', e);
-    res.status(500).send('Restore failed: ' + String(e.message || e));
+    res.status(500).send('Restore failed. Please try again.');
   }
 });
 
@@ -2284,7 +2375,7 @@ app.post('/ui/planner/:repoId/run', async (req, res) => {
     );
   } catch (err) {
     console.error('planner run error', err);
-    res.status(500).send('Planner error: ' + String(err.message || err));
+    res.status(500).send('Planner error. Please try again.');
   }
 });
 
@@ -2331,10 +2422,11 @@ app.post('/ui/repos/:repoId/easy-add', async (req, res) => {
     const baseSnap = head.snapshot || { files: {}, plan: { days: [] } };
     const basePlan = baseSnap.plan || { days: [] };
 
-    // Start from an autoPlan-style payload derived from the current plan
+    // Build a payload that keeps planner preferences but treats the textarea
+    // as the AUTHORITATIVE list of places (removals are honoured).
     const payload = planToAutoPayload(basePlan);
 
-    // If we have previous planner input, carry over its preferences
+    // Carry over planner preferences from previous run
     if (baseSnap.planInput && typeof baseSnap.planInput === 'object') {
       const prev = baseSnap.planInput;
       if (prev.startDate) payload.startDate = prev.startDate;
@@ -2352,77 +2444,50 @@ app.post('/ui/repos/:repoId/easy-add', async (req, res) => {
       if (prev.transport) payload.transport = prev.transport;
     }
 
-    // Try to fill in missing coordinates for existing places so that
-    // re-planning can consider the full trip geometry, not just the newly
-    // added stops. This lets the scheduler insert new places *between*
-    // existing ones instead of always appending them.
-    if (Array.isArray(payload.places)) {
-      for (let idx = 0; idx < payload.places.length; idx++) {
-        const p = payload.places[idx];
-        if (!p) continue;
-
-        const hasLat = Number.isFinite(p.lat);
-        const hasLng = Number.isFinite(p.lng);
-        if (hasLat && hasLng) continue;
-
-        const q = p.fullName || p.name;
-        if (!q) continue;
-
-        try {
-          const hits = await fuzzySearchPlaces(q, 1);
-          const best = Array.isArray(hits) && hits[0];
-          if (!best) continue;
-
-          const lat = Number(best.lat);
-          const lng = Number(best.lng);
-          if (Number.isFinite(lat) && Number.isFinite(lng)) {
-            p.lat = lat;
-            p.lng = lng;
-          }
-
-          if (!p.openingHours) {
-            p.openingHours =
-              best.opening_hours ||
-              (best.extratags && best.extratags.opening_hours) ||
-              null;
-          }
-
-          if (!p.fullName || p.fullName === p.name) {
-            p.fullName =
-              best.display_name ||
-              best.name ||
-              p.fullName ||
-              p.name;
-          }
-        } catch (err) {
-          console.warn(
-            'easy-add geosearch (existing place) failed for',
-            q,
-            err
-          );
-        }
-      }
+    // Build a lookup of existing places by their short display name so we
+    // can reuse metadata (coords, opening hours) for places the user kept.
+    const existingByShort = new Map();
+    for (const p of payload.places) {
+      if (!p) continue;
+      const label = String(p.name || '').trim();
+      const short = label.includes(',') ? label.slice(0, label.indexOf(',')).trim() : label;
+      const key = short.toLowerCase();
+      if (key && !existingByShort.has(key)) existingByShort.set(key, p);
     }
 
-    // Remember which branch this plan belongs to (for planner defaults)
+    // The textarea is the authoritative place list — replace payload.places
+    // entirely.  Matched existing places keep their metadata; new names are
+    // geocoded below.
+    payload.places = [];
     payload.branchName = branch;
 
     const stayMin = Number(stayRaw || 60) || 60;
 
-    // Add all requested places into the payload, then run autoPlan once
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
+      const nameKey = name.toLowerCase();
+
+      // Try to match against an existing place to preserve its metadata
+      const existing = existingByShort.get(nameKey);
+      if (existing) {
+        // Reuse the existing place (coords, opening hours, etc.)
+        existing.enabled = true;
+        payload.places.push({ ...existing, startFirst: i === 0 });
+        existingByShort.delete(nameKey); // consume so duplicates get geocoded
+        continue;
+      }
+
+      // New place — geocode it
       const newPlace = {
         id: 'place-' + Date.now() + '-' + i,
         name,
         fullName: name,
         stayMin,
         enabled: true,
-        startFirst: false,
+        startFirst: i === 0 && !payload.places.length,
       };
 
       try {
-        // Fuzzy search so small typos still resolve to the most likely place.
         const hits = await fuzzySearchPlaces(name, 3);
         const best = Array.isArray(hits) && hits[0];
         if (best) {
@@ -2442,6 +2507,11 @@ app.post('/ui/repos/:repoId/easy-add', async (req, res) => {
       }
 
       payload.places.push(newPlace);
+    }
+
+    // Ensure the first place is marked as startFirst
+    if (payload.places.length && !payload.places.some((p) => p.startFirst)) {
+      payload.places[0].startFirst = true;
     }
 
     const plan = await autoPlan(payload);
@@ -2480,7 +2550,7 @@ app.post('/ui/repos/:repoId/easy-add', async (req, res) => {
     res.redirect(`/ui/repos/${repo.id}?branch=${encodeURIComponent(branch)}`);
   } catch (e) {
     console.error('easy-add error:', e);
-    res.status(500).send('Easy add failed: ' + String(e.message || e));
+    res.status(500).send('Easy add failed. Please try again.');
   }
 });
 
@@ -2607,6 +2677,52 @@ app.post('/api/repos/:repoId/branches', (req, res) => {
   res.json({ ok: true, id });
 });
 
+// Save trip description (auto-save from edit tab)
+app.post('/api/repos/:repoId/description', (req, res) => {
+  const repo = getRepo.get(req.params.repoId);
+  if (!repo) return res.status(404).json({ ok: false, error: 'not_found' });
+  const writeErr = requireWriteAccess(repo, req.user);
+  if (writeErr) return res.status(403).json({ ok: false, error: 'forbidden' });
+
+  const branchName = String(req.body.branch || 'main');
+  const description = String(req.body.description || '');
+
+  const br = getBranch.get(repo.id, branchName);
+  if (!br) return res.status(404).json({ ok: false, error: 'branch_not_found' });
+
+  const headRow = br.head_commit_id ? getCommit.get(br.head_commit_id) : null;
+  const head = headRow ? rowToCommit(headRow) : null;
+  const snap = head?.snapshot || { files: {}, plan: { days: [] } };
+
+  // Only commit if description actually changed
+  const current = (snap.files && snap.files.description) || '';
+  if (current === description) {
+    return res.json({ ok: true, changed: false });
+  }
+
+  if (!snap.files) snap.files = {};
+  snap.files.description = description;
+
+  const commitId = uuid();
+  const author =
+    res.locals.currentUser?.email ||
+    res.locals.currentUser?.name ||
+    'web';
+
+  insertCommitWithKeyChange({
+    id: commitId,
+    repoId: repo.id,
+    author,
+    message: 'Update trip description',
+    parents: br.head_commit_id ? [br.head_commit_id] : [],
+    snapshot: snap,
+    createdAt: nowISO(),
+  });
+  updateBranchHead.run(commitId, br.id);
+
+  res.json({ ok: true, changed: true, commitId });
+});
+
 app.post('/api/repos/:repoId/commits', (req, res) => {
   const {
     branch,
@@ -2687,10 +2803,22 @@ app.get('/api/repos/:repoId/travel-alerts', async (req, res) => {
       process.env.NEWS_API_URL || 'https://gnews.io/api/v4/search';
 
     if (apiKey && dates.length && cities.length) {
-      const from = dates.slice().sort()[0];
-      const to = dates.slice().sort()[dates.length - 1];
+      const sortedDates = dates.slice().sort();
+      const firstDate = sortedDates[0];
+      const lastDate = sortedDates[sortedDates.length - 1];
+
+      // Search for articles published in the 7 days before the first trip
+      // date through the last trip date — articles about upcoming disruptions
+      // are typically published before the affected dates.
+      const fromDate = new Date(firstDate);
+      fromDate.setDate(fromDate.getDate() - 7);
+      const from = fromDate.toISOString().slice(0, 10);
+      const to = lastDate;
+
       const cityQuery = cities.slice(0, 5).map((c) => `"${c}"`).join(' OR ');
-      const q = `${cityQuery} (strike OR holiday OR disruption OR closure OR cancelled OR cancellation OR protest OR outage)`;
+      // Focus the query on transport/travel-specific disruptions to avoid
+      // unrelated news that happens to mention "closure" or "cancelled".
+      const q = `${cityQuery} (train strike OR flight cancelled OR road closure OR transport strike OR airport disruption OR tube strike OR rail disruption OR bus strike OR ferry cancelled OR travel disruption OR public holiday)`;
       const url = new URL(apiUrl);
       url.searchParams.set('q', q);
       url.searchParams.set('from', from);
@@ -2699,24 +2827,48 @@ app.get('/api/repos/:repoId/travel-alerts', async (req, res) => {
       url.searchParams.set('max', '10');
       url.searchParams.set('token', apiKey);
 
-      const resp = await fetch(url.toString());
-      if (resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        const articles = Array.isArray(data.articles) ? data.articles : [];
-        articles.forEach((item) => {
-          const published = item.publishedAt || item.date || null;
-          if (!published) return;
-          const date = new Date(published).toISOString().slice(0, 10);
-          if (!date || !dates.includes(date)) return;
-          const entry = {
-            title: item.title || 'Travel advisory',
-            url: item.url || null,
-            source: item.source?.name || null,
-          };
-          if (!eventsByDate[date]) eventsByDate[date] = [];
-          eventsByDate[date].push(entry);
-          warningDates.add(date);
-        });
+      // Words that indicate travel/transport relevance in article text.
+      const travelRe = /\b(train|rail|flight|airport|tube|metro|underground|bus|ferry|road|motorway|highway|transport|travel|strike|delay|disruption|cancelled|cancel|closure|closed|divert|suspen)/i;
+
+      try {
+        const resp = await fetch(url.toString());
+        if (resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          // Filter articles to only those with travel-relevant content.
+          const raw = Array.isArray(data.articles) ? data.articles : [];
+          const articles = raw.filter((item) => {
+            const text = `${item.title || ''} ${item.description || ''}`;
+            return travelRe.test(text);
+          });
+          articles.forEach((item) => {
+            const published = item.publishedAt || item.date || null;
+            if (!published) return;
+            const pubDate = new Date(published).toISOString().slice(0, 10);
+
+            // Assign each article to the nearest trip date (articles about
+            // disruptions may be published before the affected date).
+            let bestDate = firstDate;
+            let bestDist = Infinity;
+            for (const d of sortedDates) {
+              const dist = Math.abs(new Date(d) - new Date(pubDate));
+              if (dist < bestDist) {
+                bestDist = dist;
+                bestDate = d;
+              }
+            }
+
+            const entry = {
+              title: item.title || 'Travel advisory',
+              url: item.url || null,
+              source: item.source?.name || null,
+            };
+            if (!eventsByDate[bestDate]) eventsByDate[bestDate] = [];
+            eventsByDate[bestDate].push(entry);
+            warningDates.add(bestDate);
+          });
+        }
+      } catch (fetchErr) {
+        console.error('GNews fetch error:', fetchErr);
       }
     }
 
@@ -2741,8 +2893,8 @@ app.post('/api/repos/:repoId/travel-alerts/manual', (req, res) => {
   if (!repo || !canUserAccessRepo(repo, req.user)) {
     return res.status(404).json({ error: 'not_found' });
   }
-  if (!req.user) return res.status(403).json({ error: 'login_required' });
-
+  const writeErr = requireWriteAccess(repo, req.user);
+  if (writeErr) return res.status(403).json({ error: writeErr });
   const notes = String(req.body.notes || '').trim();
   upsertTravelAlerts.run(repoId, notes || null, nowISO());
   res.json({ ok: true });
@@ -2871,6 +3023,7 @@ app.post('/api/repos/:repoId/easy-save', (req, res) => {
         ? String(req.body.parentId).trim()
         : null;
     const clientPlan = req.body.plan || null;
+    const clientDescription = req.body.description;
 
     const br = getBranch.get(repo.id, branchName);
     if (!br) {
@@ -2924,6 +3077,12 @@ app.post('/api/repos/:repoId/easy-save', (req, res) => {
       plan: newPlan,
     };
 
+    // Persist trip description in snapshot.files (branch-level metadata)
+    if (clientDescription !== undefined) {
+      if (!newSnap.files) newSnap.files = {};
+      newSnap.files.description = String(clientDescription || '');
+    }
+
     const commitId = uuid();
     const author =
       res.locals.currentUser?.email ||
@@ -2951,7 +3110,7 @@ app.post('/api/repos/:repoId/easy-save', (req, res) => {
     console.error('easy-save error', e);
     res
       .status(500)
-      .json({ ok: false, error: String(e.message || e) });
+      .json({ ok: false, error: 'save_failed' });
   }
 });
 
@@ -3122,7 +3281,7 @@ app.get('/api/geo/search', async (req, res) => {
     console.error('Geo search error:', e);
     res
       .status(502)
-      .json({ ok: false, error: String(e.message || e) });
+      .json({ ok: false, error: 'geo_search_failed' });
   }
 });
 
@@ -3140,7 +3299,7 @@ app.get('/api/geo/lookup', async (req, res) => {
     console.error('Geo lookup error:', e);
     res
       .status(502)
-      .json({ ok: false, error: String(e.message || e) });
+      .json({ ok: false, error: 'geo_lookup_failed' });
   }
 });
 
@@ -3528,12 +3687,15 @@ app.post('/api/repos/:id/plan/route-geometry', async (req, res) => {
       rawTransitSteps
     );
 
+    const transitFallback =
+      travelMode === 'transit' && result.provider !== 'google';
     res.json({
       ok: true,
       segments,
       transitStops,
       transitLegs,
       legModes,
+      transitFallback,
     });
   } catch (err) {
     console.error('route-geometry error', err);
@@ -3623,9 +3785,13 @@ app.post(
         createdAt: nowISO(),
       });
       updateBranchHead.run(commitId, br.id);
-      res.json({ ok: true, commitId });
+
+      const transitFallback =
+        effectiveMode === 'transit' && legs.provider !== 'google';
+      res.json({ ok: true, commitId, transitFallback });
     } catch (e) {
-      res.status(500).json({ error: String(e.message || e) });
+      console.error('recompute-travel error', e);
+      res.status(500).json({ error: 'recompute_failed' });
     }
   }
 );

@@ -19,6 +19,7 @@
   const clearBtn = $('clearBtn');
   const modeSelect = $('modeSelect');
   const tripTitle = $('tripTitle');
+  const tripTitleLabel = $('tripTitleLabel');
   const startRepoBtn = $('startRepoBtn');
   const statusMsg = $('statusMsg');
   const summaryLine = $('summaryLine');
@@ -206,7 +207,7 @@
       }
     } catch {}
     bookmarkState.lists = [
-      { id: uid(), name: 'Favorites', icon: 'star', show: true, items: [] },
+      { id: uid(), name: 'Favourites', icon: 'star', show: true, items: [] },
       { id: uid(), name: 'Want to go', icon: 'bookmark', show: true, items: [] },
       { id: uid(), name: 'Starred', icon: 'heart', show: true, items: [] },
     ];
@@ -515,6 +516,7 @@
     if (legsList) legsList.innerHTML = '';
     setStatus('');
     startRepoBtn.disabled = true;
+    if (tripTitleLabel) tripTitleLabel.style.display = 'none';
     addRow();
     addRow();
   }
@@ -533,6 +535,7 @@
   function renderRows() {
     if (!placesList) return;
     placesList.innerHTML = '';
+    document.querySelectorAll('body > .explore-suggestions').forEach((el) => el.remove());
 
     state.rows.forEach((row, idx) => {
       const wrap = document.createElement('div');
@@ -570,9 +573,17 @@
       const sug = document.createElement('div');
       sug.className = 'explore-suggestions';
       sug.style.display = 'none';
+      document.body.appendChild(sug);
 
       let timer = null;
       let controller = null;
+
+      function positionSug() {
+        const rect = input.getBoundingClientRect();
+        sug.style.top = (rect.bottom + 6) + 'px';
+        sug.style.left = rect.left + 'px';
+        sug.style.width = rect.width + 'px';
+      }
 
       function hideSug() {
         sug.style.display = 'none';
@@ -635,6 +646,7 @@
             sug.appendChild(btn);
           });
 
+          positionSug();
           sug.style.display = 'block';
         }, 220);
       });
@@ -645,7 +657,6 @@
       });
 
       inputWrap.appendChild(input);
-      inputWrap.appendChild(sug);
 
       const saveBtn = document.createElement('button');
       saveBtn.type = 'button';
@@ -847,7 +858,7 @@
       if (result.routeProvider) extras.push(`route: ${result.routeProvider}`);
       summaryLine.textContent =
         stops.length >= 2
-          ? `Total travel: ~${Math.round(total)} min • ${extras.join(' • ')}`
+          ? `Total travel: ≈${Math.round(total)} min | ${extras.join(' | ')}`
           : '';
     }
 
@@ -857,7 +868,7 @@
         const from = stops[i]?.name || `Stop ${i + 1}`;
         const to = stops[i + 1]?.name || `Stop ${i + 2}`;
         const li = document.createElement('li');
-        li.textContent = `${from} → ${to}: ~${Math.round(minutes[i])} min`;
+        li.textContent = `${from} → ${to}: ≈${Math.round(minutes[i])} min`;
         legsList.appendChild(li);
       }
     }
@@ -871,10 +882,11 @@
    *  4. Draw the route on the map and display the summary.
    */
   async function computeShortest() {
-    setStatus('Preparing…');
     computeBtn.disabled = true;
+    computeBtn.textContent = 'Computing…';
     startRepoBtn.disabled = true;
     state.computed = null;
+    setStatus('Preparing…');
 
     try {
       await ensureGeocodedRows();
@@ -897,7 +909,7 @@
       const mode = modeSelect ? modeSelect.value : 'walking';
       const todayIso = new Date().toISOString().slice(0, 10);
 
-      setStatus('Optimizing route…');
+      setStatus('Optimising route…');
 
       const resp = await fetch('/api/quick/optimize', {
         method: 'POST',
@@ -918,7 +930,7 @@
 
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || !json.ok) {
-        setStatus(`Failed to optimize: ${json.error || resp.statusText}`);
+        setStatus(`Failed to optimise: ${json.error || resp.statusText}`);
         return;
       }
 
@@ -943,8 +955,10 @@
       renderSummary(json);
       drawResult(json);
       startRepoBtn.disabled = false;
+      if (tripTitleLabel) tripTitleLabel.style.display = 'flex';
     } finally {
       computeBtn.disabled = false;
+      computeBtn.textContent = 'Compute shortest route';
     }
   }
 

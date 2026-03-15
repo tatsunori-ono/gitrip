@@ -1,0 +1,116 @@
+% !TEX root = ../Report.tex
+% ======================================================================
+\chapter{Requirements and Project Specification}
+% ======================================================================
+
+This chapter describes the requirements that guided GiTrip's development, how
+they were derived, and how they map to success criteria and evaluation. It also
+documents scope boundaries, including the explicit decision to exclude AI-powered
+itinerary generation from the MVP.
+
+\section{Requirements Elicitation}
+Requirements were formed using two complementary inputs:
+\begin{itemize}
+  \item \textbf{Background research} into competitor tools (maps, planners,
+        collaboration platforms) and foundational techniques (version control,
+        scheduling heuristics).
+  \item \textbf{A preliminary survey} (n=30) conducted via Microsoft Forms
+        (Nov 24--27, 2025) to understand current trip-planning workflows,
+        perceived pain points, and interest in proposed features.
+\end{itemize}
+
+The preliminary survey provided evidence that trip planning is often
+stressful/time-consuming and that users rely on a fragmented toolkit (maps,
+documents, chats). Importantly, feedback indicated a desire for both automation
+(route/schedule generation) and change management (saving versions, exploring
+alternatives). The survey also highlighted that Git vocabulary can be
+intimidating for non-technical users, motivating the Easy mode design and the
+emphasis on clear visualisation.
+
+\begin{figure}[H]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering
+  Placeholder: summary chart(s) from the preliminary survey (Appendix A).}}
+  \caption{Preliminary survey evidence informing MoSCoW objectives
+           (placeholder).}
+  \label{fig:prelim_survey}
+\end{figure}
+
+\section{MoSCoW Objectives}
+The Project Specification defined MoSCoW objectives. The Must-have objectives
+(M1--M5) formed the MVP definition:
+
+\begin{itemize}
+  \item \textbf{M1 Trip repositories with history:} commits, branches, and
+        snapshot history; visualisation of version history.
+  \item \textbf{M2 Optimised automatic scheduler:} produce a feasible multi-day
+        plan from places, durations, ordering constraints, desired windows,
+        active hours, breaks, target day ranges, and preferences.
+  \item \textbf{M3 Routing integration:} retrieve travel-time data (e.g.,
+        OpenRouteService and Google Directions) and feed into scheduling.
+  \item \textbf{M4 Interactive visualisation:} timeline and map with editing
+        and committing.
+  \item \textbf{M5 Merge and conflicts:} structured merge for plan JSON with a
+        conflict resolver screen.
+\end{itemize}
+
+Should-have objectives included opening-hours validation and preference handling.
+The completed system implements these via opening-hours parsing and nudging, and
+compact vs sparse scheduling modes.
+
+Won't-have objectives included real-time collaborative editing (CRDT/OT),
+booking integration, budgets, social chat/reviews, native apps, and AI-powered
+itinerary generation. These exclusions were necessary to keep the project focused
+on deterministic, inspectable scheduling and version control semantics.
+
+\section{Success Criteria}
+The Evaluation Day and testing plan measured success criteria aligned with core
+objectives:
+
+\begin{itemize}
+  \item \textbf{SC1 (Merge usability):} participants can resolve a planned merge
+        conflict using the UI within a target time (goal: under 5 minutes for
+        most users).
+  \item \textbf{SC2 (Scheduling feasibility):} the auto-scheduler produces
+        non-overlapping itineraries with non-zero travel gaps for a scenario with
+        at least six stops across one to two days.
+  \item \textbf{SC3 (Usability and accessibility):} the UI is understandable
+        and usable for both Git-familiar and Git-novice users; critical
+        accessibility issues are avoided and the system remains readable and
+        navigable.
+\end{itemize}
+
+\section{Non-functional Requirements}
+Non-functional requirements were also essential given external API dependencies
+and deployment:
+
+\begin{itemize}
+  \item \textbf{Reliability:} graceful fallback when routing APIs fail; avoid
+        corrupting repository state.
+  \item \textbf{Performance:} responsive UI; reasonable planning time for
+        typical stop counts (single-digit to low-teens).
+  \item \textbf{Security and privacy:} session cookies; rate limiting; input
+        validation; avoid collecting unnecessary personal data; GDPR awareness
+        \cite{ref_gdpr}.
+  \item \textbf{Deployability:} simple deployment model with persistent storage
+        (SQLite) and environment variables for API keys.
+\end{itemize}
+
+\section{Scope Boundary: Why AI Was Excluded from the MVP}
+The Project Specification explicitly excluded AI-powered itinerary generation
+from natural language prompts. This boundary served four practical purposes:
+\begin{itemize}
+  \item \textbf{Determinism and explainability:} the scheduler must justify
+        feasibility decisions (e.g., opening-hours nudges), which is easier with
+        rule-based logic than with generative approaches.
+  \item \textbf{Evaluation clarity:} success criteria focus on constraint
+        satisfaction and merge usability, which require objective measurement.
+  \item \textbf{Privacy and deployment:} avoiding model hosting and user
+        preference profiling reduces privacy risks and operational complexity.
+  \item \textbf{Time and risk control:} adding AI would broaden the problem into
+        recommendation, preference learning, and natural-language understanding,
+        which exceeds the MVP schedule.
+\end{itemize}
+
+Machine learning is still a credible future extension and is discussed in
+Chapter~9.

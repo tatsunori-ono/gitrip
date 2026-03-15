@@ -1,0 +1,178 @@
+% !TEX root = ../Report.tex
+% ======================================================================
+\chapter{Testing}
+% ======================================================================
+
+This chapter provides evidence that GiTrip was tested systematically at unit,
+functional, and non-functional levels. The goal is to demonstrate correctness for
+core algorithms (merge and scheduler) and reliability for user-facing workflows.
+
+\section{Unit Testing}
+GiTrip includes five unit test files with 64 test cases total, executed using
+the Node.js native test framework (\texttt{node:test}) with strict assertions.
+
+\begin{table}[H]
+\centering
+\caption{Summary of unit test coverage (64 test cases).}
+\label{tab:unit_tests_summary}
+\begin{tabular}{@{}p{0.30\linewidth}p{0.50\linewidth}p{0.12\linewidth}@{}}
+\toprule
+\textbf{Test file} & \textbf{Primary coverage} & \textbf{\# tests} \\
+\midrule
+\texttt{openhours.test.js} & Opening-hours parsing and interval validation & 11 \\
+\texttt{merge.test.js}     & Three-way merge and conflict detection        & 16 \\
+\texttt{planner.test.js}   & Time utilities and opening-hours scheduling   & 13 \\
+\texttt{routing.test.js}   & Haversine fallback and constant-gap defaults  & 11 \\
+\texttt{api-keys.test.js}  & External API connectivity (ORS, Google, GNews, Open-Meteo, Nominatim) & 13 \\
+\midrule
+\textbf{Total} &  & \textbf{64} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Opening Hours Parsing and Validation}
+The opening-hours module tests include:
+\begin{itemize}
+  \item standard weekday ranges (e.g., \texttt{Mo-Fr 09:00-18:00}),
+  \item wrap-around ranges (e.g., \texttt{Fr-Mo}),
+  \item \texttt{off} keyword meaning closed,
+  \item multi-span days with breaks,
+  \item compound rules across different days,
+  \item empty/null input handling.
+\end{itemize}
+
+Validation tests check whether a proposed interval is open, closed, nudged to a
+next open slot, too long to fit, or exactly fits a boundary.
+
+\subsection{Merge Conflict Detection}
+Merge tests cover:
+\begin{itemize}
+  \item clean merges where only one side changes,
+  \item deep-equality behaviour that is independent of key order,
+  \item deletions (delete-vs-modify yields explicit
+        \texttt{plan-stop-delete} conflict),
+  \item time conflicts (\texttt{plan-stop-time}),
+  \item field conflicts (\texttt{plan-stop-field}),
+  \item whole-plan conflicts when similarity is low (\texttt{plan-whole}),
+  \item deterministic ordering of merged days and stops.
+\end{itemize}
+
+\subsection{Planner Time Utilities and Scheduling Logic}
+Planner tests cover both time-conversion functions (\texttt{toMin},
+\texttt{toHHMM}, including null/empty inputs, negative clamping, and fractional
+rounding) and the \texttt{applyOpeningHours} constraint engine, including:
+\begin{itemize}
+  \item unconstrained scheduling (no constraints; starts at proposed arrival),
+  \item clamping to active period,
+  \item soft desired windows (\texttt{desiredStart}, \texttt{desiredEnd}),
+  \item opening-hours nudging to the next open slot,
+  \item hard fixed-time windows (failure when travel arrives too late),
+  \item rejection when the stop does not fit within the active window,
+  \item rejection when the venue is closed all day.
+\end{itemize}
+
+\subsection{Routing Fallback Logic}
+Routing tests cover the Haversine fallback estimator and constant-gap defaults
+used when external routing APIs are unavailable:
+\begin{itemize}
+  \item identity case (same point returns zero travel time),
+  \item realistic distance estimation (London to Paris within expected range),
+  \item mode ordering (walking slower than cycling, cycling slower than driving),
+  \item graceful handling of null or missing coordinates,
+  \item constant-gap values for each transport mode.
+\end{itemize}
+
+\subsection{External API Connectivity}
+API connectivity tests verify that every third-party service required by GiTrip
+is correctly configured and reachable at test time:
+\begin{itemize}
+  \item \textbf{Presence checks} -- each required environment variable
+        (\texttt{ORS\_API\_KEY}, \texttt{GOOGLE\_DIRECTIONS\_API\_KEY},
+        \texttt{NEWS\_API\_KEY}) is set in \texttt{.env}.
+  \item \textbf{ORS (OpenRouteService)} -- a real matrix request and a
+        directions request confirm the key is accepted and returns valid
+        duration data.
+  \item \textbf{Google Directions} -- both driving and transit modes are
+        tested; the test asserts that the response status is \texttt{OK}
+        (not \texttt{REQUEST\_DENIED}), catching billing or API-enablement
+        issues early.
+  \item \textbf{GNews} -- a search query confirms the key returns articles
+        and a travel-specific query returns relevant results.
+  \item \textbf{Open-Meteo} -- both the forecast and archive endpoints are
+        tested with a London coordinate, verifying that daily temperature
+        and precipitation data are returned in the expected format.
+  \item \textbf{Nominatim} -- a geocoding search confirms the endpoint
+        returns results with latitude, longitude, and display name. A
+        second test verifies that the \texttt{extratags} field (which
+        carries opening-hours data from OSM) is present when requested.
+\end{itemize}
+These tests act as a deployment smoke test: a single failing assertion
+pinpoints exactly which external service is misconfigured, rather than
+requiring manual investigation of silent routing fallbacks.
+
+\section{Functional Testing}
+Functional testing verified that core workflows operate end-to-end.
+Table~\ref{tab:functional_tests} summarises key cases.
+
+\begin{table}[H]
+\centering
+\caption{Functional test cases for core workflows (summary).}
+\label{tab:functional_tests}
+\begin{tabular}{@{}p{0.52\linewidth}p{0.18\linewidth}p{0.22\linewidth}@{}}
+\toprule
+\textbf{Workflow} & \textbf{Result} & \textbf{Evidence} \\
+\midrule
+Create repo; view/edit tabs render              & Pass & Manual verification \\
+Run auto-planner; commit created; redirect      & Pass & Commit history updated \\
+Timeline edit; save commit; reload matches      & Pass & Snapshot persists \\
+Map marker drag; recompute route; save          & Pass & Geometry updates \\
+Create branch; switch branch; plan changes      & Pass & Head snapshot changes \\
+Merge branches with time conflict; resolve      & Pass & Conflict UI + merge commit \\
+Quick explore optimise; start repo from route   & Pass & Repo created from route \\
+Export PDF view                                 & Pass & Browser print output \\
+Export iCalendar (ICS)                          & Pass & Calendar import works \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Non-functional Testing and Checks}
+\subsection{Security Checks}
+GiTrip includes:
+\begin{itemize}
+  \item Content Security Policy headers and anti-framing headers,
+  \item four-tier rate limiting (global, API, geo search, and authentication
+        endpoints),
+  \item prepared statements for all database access,
+  \item conservative input normalisation for user-provided fields,
+  \item generic error messages in all user-facing responses (internal details
+        logged server-side only, preventing information leakage).
+\end{itemize}
+
+These checks are not a substitute for a full penetration test, but they provide
+reasonable baseline hardening for a deployed student project.
+
+\subsection{Accessibility Checks}
+Accessibility was guided by WCAG 2.2 \cite{ref_wcag22}. Checks included:
+\begin{itemize}
+  \item consistent labelling of controls,
+  \item avoiding information conveyed only via colour,
+  \item readable typography and spacing,
+  \item basic keyboard navigation for non-map interactions.
+\end{itemize}
+
+A more formal audit using automated tools such as Lighthouse is recommended for
+future work \cite{ref_lighthouse_overview}. The interactive map and timeline
+remain difficult to fully validate for accessibility within the project scope.
+
+\subsection{Resilience to External API Failures}
+Functional tests included scenarios where routing keys were missing or external
+calls failed. In these cases, GiTrip falls back to approximate travel-time
+estimates and still produces a schedule (potentially with reduced accuracy). This
+behaviour supports usability in constrained environments.
+
+\section{Testing Summary}
+The testing evidence demonstrates that the most error-prone components (merge
+logic and scheduler constraints) are covered by automated unit tests and that
+major user workflows function end-to-end. Remaining limitations are largely
+usability and accessibility challenges inherent in interactive planning UIs,
+rather than basic correctness failures.

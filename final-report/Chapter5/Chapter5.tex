@@ -1,0 +1,1125 @@
+% !TEX root = ../Report.tex
+% ======================================================================
+\chapter{System Design}
+% ======================================================================
+
+This chapter describes GiTrip's architecture, data model, and major subsystems:
+repository semantics, planner, routing, merging, UI interaction surfaces, and
+supporting features. Each section explains not only what was built but why that
+approach was chosen over alternatives.
+
+\section{High-level Architecture}
+GiTrip is a server-rendered web application with an Express backend and EJS
+templates for UI routes, complemented by JSON API endpoints for asynchronous
+operations. UI routes under \texttt{/ui/...} render pages such as the repo view,
+planner, merge UI, and explore mode. API routes under \texttt{/api/...} handle
+operations including commits, branches, merges, routing geometry, and quick route
+optimisation. Persistent state is stored in a SQLite database containing
+repositories, branches, commits, and social/collaboration metadata.
+
+% ── Colour definitions ───────────────────────────────────────────────────────
+% Palette: five desaturated hues drawn from a single cool-warm axis.
+% All fills are light enough to remain legible when printed in greyscale.
+\definecolor{clrClient} {RGB}{180, 205, 228}   % steel blue   – client tier
+\definecolor{clrRoute}  {RGB}{213, 225, 240}   % pale blue     – route handlers
+\definecolor{clrLogic}  {RGB}{248, 236, 196}   % warm straw    – logic modules
+\definecolor{clrService}{RGB}{196, 224, 220}   % sage teal     – service modules
+\definecolor{clrAuth}   {RGB}{236, 210, 210}   % dusty rose    – auth / security
+\definecolor{clrDB}     {RGB}{196, 224, 196}   % soft sage     – database
+\definecolor{clrExt}    {RGB}{228, 218, 200}   % warm stone    – external services
+\definecolor{clrGroup}  {RGB}{246, 246, 246}   % near-white    – server groupbox
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+    >=Stealth,
+    every node/.style={font=\small},
+    % ── Box styles ──────────────────────────────────────────────────────
+    clientbox/.style={
+      rectangle, draw=black!70, fill=clrClient, rounded corners=5pt,
+      minimum height=1.3cm, minimum width=6.0cm,
+      text centered, inner sep=8pt, align=center},
+    routebox/.style={
+      rectangle, draw=black!60, fill=clrRoute, rounded corners=4pt,
+      minimum height=1.0cm, minimum width=2.8cm,
+      text centered, inner sep=6pt, align=center},
+    logicbox/.style={
+      rectangle, draw=black!60, fill=clrLogic, rounded corners=4pt,
+      minimum height=1.0cm, minimum width=2.8cm,
+      text centered, inner sep=6pt, align=center},
+    svcbox/.style={
+      rectangle, draw=black!60, fill=clrService, rounded corners=4pt,
+      minimum height=1.0cm, minimum width=2.8cm,
+      text centered, inner sep=6pt, align=center},
+    authbox/.style={
+      rectangle, draw=black!60, fill=clrAuth, rounded corners=4pt,
+      minimum height=1.0cm, minimum width=3.6cm,
+      text centered, inner sep=6pt, align=center},
+    dbbox/.style={
+      rectangle, draw=black!70, fill=clrDB, rounded corners=5pt,
+      minimum height=1.1cm, minimum width=3.0cm,
+      text centered, inner sep=6pt, align=center},
+    extbox/.style={
+      rectangle, draw=black!55, fill=clrExt, rounded corners=4pt,
+      minimum height=1.0cm, minimum width=3.4cm,
+      text centered, inner sep=5pt, align=center},
+    groupbox/.style={
+      rectangle, draw=black!40, dashed, rounded corners=8pt,
+      fill=clrGroup, inner sep=0pt},
+    % ── Legend swatch ────────────────────────────────────────────────────
+    swatch/.style={
+      rectangle, draw=black!55, rounded corners=2pt,
+      minimum width=0.38cm, minimum height=0.28cm, inner sep=0pt},
+    % ── Arrow and label styles ───────────────────────────────────────────
+    arr/.style={->,  semithick, black!60},
+    biarr/.style={<->, semithick, black!60},
+    lbl/.style={font=\scriptsize, text=black!55, fill=white, inner sep=1.5pt},
+  ]
+
+  % ════════════════════════════════════════════════════════════════════
+  % CLIENT TIER
+  % ════════════════════════════════════════════════════════════════════
+  \node[clientbox] (browser) at (0, 0)
+    {\textbf{Browser}\\[3pt]
+     {\small EJS Templates, JavaScript, Leaflet Maps}};
+
+  % ════════════════════════════════════════════════════════════════════
+  % EXPRESS SERVER GROUP
+  % ════════════════════════════════════════════════════════════════════
+  \node[groupbox, minimum width=15cm, minimum height=7cm]
+    (serverGroup) at (0, -5.25) {};
+  \node[font=\small\bfseries, text=black!65, anchor=north west]
+    at ($(serverGroup.north west) + (8pt,-5pt)$)
+    {Express Server \textnormal{(Node.js)}};
+
+  % ── Row 1: Entry and logic layer  (y = -3.2) ────────────────────────
+  \node[routebox] (uiroutes)  at (-5.5,-3.2) {UI Routes\\{\small\texttt{/ui/\ldots}}};
+  \node[routebox] (apiroutes) at (-2.5,-3.2) {API Routes\\{\small\texttt{/api/\ldots}}};
+  \node[logicbox] (planner)   at ( 2.5,-3.2) {Planner\\{\small\texttt{planner.js}}};
+  \node[logicbox] (merge)     at ( 5.5,-3.2) {Merge\\{\small\texttt{merge.js}}};
+
+  % ── Row 2: Service layer  (y = -5.5) ────────────────────────────────
+  \node[svcbox] (routing)    at (-5.5,-5.5) {Routing\\{\small\texttt{routing.js}}};
+  \node[svcbox] (quickroute) at (-2.5,-5.5) {Quick Route\\{\small\texttt{quickroute.js}}};
+  \node[svcbox] (openhours)  at ( 2.5,-5.5) {Opening Hours Parser\\{\small\texttt{openhours.js}}};
+  \node[svcbox] (geosearch)  at ( 5.5,-5.5) {Geo Search\\{\small\texttt{geosearch.js}}};
+
+  % ── Row 3: Cross-cutting concern  (y = -7.5) ─────────────────────────
+  \node[authbox] (auth) at (0.0,-7.5)
+    {Authentication and Sessions\\{\small Rate Limiting, CSP}};
+
+  % ════════════════════════════════════════════════════════════════════
+  % DATABASE
+  % ════════════════════════════════════════════════════════════════════
+  \node[dbbox] (sqlite) at (0,-10.5) {\textbf{SQLite}\\{\small gitrip.db}};
+
+  % ════════════════════════════════════════════════════════════════════
+  % EXTERNAL SERVICES – LEFT
+  % ════════════════════════════════════════════════════════════════════
+  \node[extbox] (ors)   at (-10.5,-5.5) {ORS API\\{\small Distance Matrix and Directions}};
+  \node[extbox] (gmaps) at (-10.5,-7.0) {Google Directions\\{\small Transit Legs}};
+
+  % ════════════════════════════════════════════════════════════════════
+  % EXTERNAL SERVICES – RIGHT
+  % ════════════════════════════════════════════════════════════════════
+  \node[extbox] (nominatim) at (10.5,-5.5) {Nominatim\\{\small Geocoding + Opening Hours}};
+  \node[extbox] (weather)   at (10.5,-7.5) {Open-Meteo\\{\small Weather Forecasts}};
+  \node[extbox] (gnews)     at (10.5,-9.3) {GNews\\{\small Travel Alerts}};
+
+  % ── COLOUR LEGEND ───────────────────────────────────────────────────
+    % Change the shift coordinate to reposition the entire legend at once
+    \begin{scope}[shift={(-10.8, -2)}]
+    
+      % Swatches and labels (all coords are relative to the shift above)
+      \node[swatch, fill=clrClient]  (sw1) at (-1.30, 1.65) {};
+      \node[font=\small, anchor=west, text=black!70] at ($(sw1.east)+(3pt,0)$) {Client Tier};
+    
+      \node[swatch, fill=clrRoute]   (sw2) at (-1.30, 1.10) {};
+      \node[font=\small, anchor=west, text=black!70] at ($(sw2.east)+(3pt,0)$) {Route Handlers};
+    
+      \node[swatch, fill=clrLogic]   (sw3) at (-1.30, 0.55) {};
+      \node[font=\small, anchor=west, text=black!70] at ($(sw3.east)+(3pt,0)$) {Logic Modules};
+    
+      \node[swatch, fill=clrService] (sw4) at (-1.30, 0.00) {};
+      \node[font=\small, anchor=west, text=black!70] at ($(sw4.east)+(3pt,0)$) {Service Modules};
+    
+      \node[swatch, fill=clrAuth]    (sw5) at (-1.30,-0.55) {};
+      \node[font=\small, anchor=west, text=black!70] at ($(sw5.east)+(3pt,0)$) {Security / Middleware};
+    
+      \node[swatch, fill=clrDB]      (sw6) at (-1.30,-1.10) {};
+      \node[font=\small, anchor=west, text=black!70] at ($(sw6.east)+(3pt,0)$) {Persistent Storage};
+    
+      \node[swatch, fill=clrExt]     (sw7) at (-1.30,-1.65) {};
+      \node[font=\small, anchor=west, text=black!70] at ($(sw7.east)+(3pt,0)$) {External Services};
+
+      % Arrow style legends
+      \draw[arr] (-1.50,-2.30) -- ++(0.38,0);
+      \node[font=\small, anchor=west, text=black!70] at (-0.92,-2.30) {Module dependency};
+
+      \draw[arr, dashed] (-1.50,-2.85) -- ++(0.38,0);
+      \node[font=\small, anchor=west, text=black!70] at (-0.92,-2.85) {Middleware / auth check};
+
+      \draw[biarr] (-1.50,-3.40) -- ++(0.38,0);
+      \node[font=\small, anchor=west, text=black!70] at (-0.92,-3.40) {Bidirectional data flow};
+
+      % Border with "Key" title
+      \node[draw=black!35, rounded corners=3pt, fill=none,
+            minimum width=6cm, minimum height=6.0cm,
+            label={[font=\small\bfseries, text=black!65]north:\strut Key}]
+        at (0, -0.85) {};
+    
+    \end{scope}
+
+  % ════════════════════════════════════════════════════════════════════
+  % ARROWS  (offsets prevent overlaps at shared anchors)
+  % ════════════════════════════════════════════════════════════════════
+
+  % Browser <-> Server
+  \draw[biarr] (browser.south)
+      -- node[lbl, right=3pt]{HTTP\,/\,JSON}
+      (serverGroup.north);
+
+  % ── From UI Routes ──────────────────────────────────────────────────
+  % UI Routes -> Auth  (dashed)
+  \draw[arr, dashed] (uiroutes.south)
+      -- ++(0,-0.9) -| ([xshift=-15pt]auth.north);
+
+  % ── From API Routes ────────────────────────────────────────────────
+  % API Routes -> Quick Route  (centre of apiroutes.south)
+  \draw[arr] (apiroutes.south) -- (quickroute.north);
+
+  % API Routes -> Planner  (lower part of apiroutes.east)
+  \draw[arr] ([yshift=-2pt]apiroutes.east)
+      -- node[lbl, above=2pt]{delegates}
+      ([yshift=-2pt]planner.west);
+
+  % API Routes -> Merge  (upper part of apiroutes.east, elbow up)
+  \draw[arr] ([yshift=4pt]apiroutes.east) -- ++(0.4,0) |- (merge.north);
+
+  % API Routes -> Routing  (left edge of apiroutes.south, elbow left)
+  \draw[arr] ([xshift=-10pt]apiroutes.south)
+      -- ++(0,-0.55) -| ([xshift=8pt]routing.north);
+
+  % API Routes -> Geo Search  (right edge of apiroutes.south, elbow right)
+  \draw[arr] ([xshift=10pt]apiroutes.south)
+      -- ++(0,-0.35) -| ([xshift=-8pt]geosearch.north);
+
+  % API Routes -> Auth  (dashed, well separated from Quick Route arrow)
+  \draw[arr, dashed] ([xshift=15pt]apiroutes.south)
+      -- ++(0,-0.7) -| ([xshift=15pt]auth.north);
+
+  % ── From Planner ───────────────────────────────────────────────────
+  % Planner -> Routing  (left side of planner.south, elbow left)
+  \draw[arr] ([xshift=-6pt]planner.south)
+      -- ++(0,-0.45) -| (routing.north);
+
+  % Planner -> Opening Hours  (right side of planner.south)
+  \draw[arr] ([xshift=6pt]planner.south)
+      -- ([xshift=6pt]openhours.north);
+
+  % ── Service layer horizontal ────────────────────────────────────────
+  % Quick Route -> Routing
+  \draw[arr] (quickroute.west) -- (routing.east);
+
+  % ── Server <-> Database ─────────────────────────────────────────────
+  \draw[biarr] (serverGroup.south)
+      -- node[lbl, right=3pt]{SQL}
+      (sqlite.north);
+
+  % ── External services – left ────────────────────────────────────────
+  % Routing <-> ORS  (upper part of routing.west)
+  \draw[biarr] ([yshift=4pt]routing.west) -- ([yshift=4pt]ors.east);
+
+  % Routing <-> Google Directions  (from routing.south, L-shape)
+  \draw[biarr] (routing.south) -- ++(0,-0.4) -| (gmaps.east);
+
+  % ── External services – right ───────────────────────────────────────
+  % Geo Search <-> Nominatim
+  \draw[biarr] (geosearch.east) -- (nominatim.west);
+
+  % Server routes <-> Open-Meteo  (horizontal from server group edge)
+  \draw[biarr] (serverGroup.east |- weather) -- (weather.west);
+
+  % Server routes <-> GNews  (horizontal from server group edge)
+  \draw[biarr] (serverGroup.east |- gnews) -- (gnews.west);
+
+  \end{tikzpicture}%
+  }%
+  \caption{GiTrip high-level architecture. The browser communicates with the
+    Express server over HTTP/JSON. \textit{UI Routes} render pages while
+    \textit{API Routes} delegate to the \textit{Planner}, \textit{Merge},
+    \textit{Routing}, and \textit{Geo Search} modules. \textit{Quick Route}
+    delegates to \textit{Routing}, which in turn calls ORS for non-transit
+    modes and Google Directions for transit legs. The \textit{Planner}
+    consults the \textit{Opening Hours Parser}, a local utility that
+    validates time intervals against OSM opening-hours strings supplied by
+    Nominatim via \textit{Geo Search}. Authentication
+    middleware enforces session management, rate-limiting, and Content Security
+    Policy headers across all routes. Server route handlers fetch weather
+    forecasts from Open-Meteo and travel alerts from GNews. All persistent
+    state is stored in a SQLite database.}
+  \label{fig:architecture}
+\end{figure}
+
+\section{Data Model and Repository Semantics}
+GiTrip's database schema includes the following core tables:
+\begin{itemize}
+  \item \textbf{repos:} repository metadata (title, owner, visibility, current
+        branch, fork source).
+  \item \textbf{branches:} named pointers to commits (head commit).
+  \item \textbf{commits:} commit metadata and full snapshot storage.
+\end{itemize}
+
+Additional tables support authentication (\textbf{users}, \textbf{sessions}) and
+social/collaboration (\textbf{repo\_collaborators}, \textbf{repo\_stars}).
+Supporting planning features are stored in \textbf{travel\_alerts} and
+\textbf{packing\_checklists}. Database indexes are defined on all foreign-key
+columns (e.g., \texttt{commits.repo\_id}, \texttt{branches.repo\_id},
+\texttt{repo\_stars.repo\_id}) to ensure query performance scales with data
+growth.
+
+Figure~\ref{fig:erd} shows the entity relationship diagram for GiTrip's data
+model. The core version-control triad (Repo, Branch, Commit) mirrors Git
+semantics, while the embedded Snapshot structure captures itinerary-specific data
+as JSON within each commit row.
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+    >=Stealth,
+    every node/.style={font=\footnotesize, outer sep=0pt},
+    entityname/.style={
+      rectangle, draw=black, fill=gray!15,
+      minimum height=7mm,
+      font=\footnotesize\bfseries,
+      align=center, inner sep=2pt
+    },
+    attrs/.style={
+      rectangle, draw=black, fill=white,
+      text width=3.2cm,
+      font=\footnotesize\ttfamily,
+      align=left, inner sep=4pt
+    },
+    wideattrs/.style={
+      rectangle, draw=black, fill=white,
+      text width=4.6cm,
+      font=\footnotesize\ttfamily,
+      align=left, inner sep=4pt
+    },
+    narrowattrs/.style={
+      rectangle, draw=black, fill=white,
+      text width=2.8cm,
+      font=\footnotesize\ttfamily,
+      align=left, inner sep=4pt
+    },
+    jsonname/.style={
+      rectangle, draw=black, dashed, fill=white,
+      minimum height=7mm,
+      font=\footnotesize\bfseries,
+      align=center, inner sep=2pt
+    },
+    jsonattrs/.style={
+      rectangle, draw=black, dashed, fill=white,
+      text width=3.2cm,
+      font=\footnotesize\ttfamily,
+      align=left, inner sep=4pt
+    },
+    % ── Crow's foot ERD notation ──────────────────────────────────────
+    %   || = exactly one   o| = zero or one
+    %   |< = one or many   o< = zero or many
+    rlabel/.style={font=\scriptsize, fill=white, inner sep=1pt},
+    one to zeromany/.style={semithick,
+      {Bar[width=8pt,length=2pt] Bar[width=8pt]}-{Straight Barb[width=8pt,length=5pt] Circle[open,length=3pt,width=5pt]}},
+    one to many/.style={semithick,
+      {Bar[width=8pt,length=2pt] Bar[width=8pt]}-{Straight Barb[width=8pt,length=5pt] Bar[width=8pt]}},
+    one to zeroone/.style={semithick,
+      {Bar[width=8pt,length=2pt] Bar[width=8pt]}-{Bar[width=8pt,length=3pt] Circle[open,length=3pt,width=5pt]}},
+    one to one/.style={semithick,
+      {Bar[width=8pt,length=2pt] Bar[width=8pt]}-{Bar[width=8pt,length=2pt] Bar[width=8pt]}},
+    zeroone to zeromany/.style={semithick,
+      {Bar[width=8pt,length=3pt] Circle[open,length=3pt,width=5pt]}-{Straight Barb[width=8pt,length=5pt] Circle[open,length=3pt,width=5pt]}}
+  ]
+
+    % ----------- CLASSES -----------
+
+    % User
+    \node[entityname, minimum width=3.7cm] (UserName) at (0,0) {User};
+    \node[attrs, anchor=north] (UserAttrs) at (UserName.south) {
+      \underline{id} : TEXT (UUID)\\
+      email : TEXT (email) \{unique\}\\
+      name : TEXT\\
+      password\_hash : TEXT (bcrypt)\\
+      profile\_image\_url : TEXT (URL)\\
+      created\_at : TEXT (ISO 8601)
+    };
+    \node[fit=(UserName)(UserAttrs), inner sep=0pt] (User) {};
+
+    % Repo
+    \node[entityname, minimum width=4.9cm] (RepoName) at (8.2,0) {Repo};
+    \node[wideattrs, anchor=north] (RepoAttrs) at (RepoName.south) {
+      \underline{id} : TEXT (UUID)\\
+      title : TEXT\\
+      owner\_user\_id : TEXT (UUID)\\
+      visibility : TEXT (enum) = 'private'\\
+      current\_branch : TEXT = 'main'\\
+      forked\_from\_repo\_id : TEXT (UUID)\\
+      created\_at : TEXT (ISO 8601)
+    };
+    \node[fit=(RepoName)(RepoAttrs), inner sep=0pt] (Repo) {};
+
+    % Branch
+    \node[entityname, minimum width=3.7cm] (BranchName) at (16.1,0) {Branch};
+    \node[attrs, anchor=north] (BranchAttrs) at (BranchName.south) {
+      \underline{id} : TEXT (UUID)\\
+      repo\_id : TEXT (UUID)\\
+      name : TEXT\\
+      head\_commit\_id : TEXT (UUID)\\
+      created\_at : TEXT (ISO 8601)
+    };
+    \node[fit=(BranchName)(BranchAttrs), inner sep=0pt] (Branch) {};
+
+    % Session
+    \node[entityname, minimum width=3.7cm] (SessionName) at (-6.2,-6.5) {Session};
+    \node[attrs, anchor=north] (SessionAttrs) at (SessionName.south) {
+      \underline{id} : TEXT (UUID)\\
+      user\_id : TEXT (UUID)\\
+      created\_at : TEXT (ISO 8601)
+    };
+    \node[fit=(SessionName)(SessionAttrs), inner sep=0pt] (Session) {};
+
+    % RepoStar
+    \node[entityname, minimum width=3.7cm] (StarName) at (-1.2,-6.5) {RepoStar};
+    \node[attrs, anchor=north] (StarAttrs) at (StarName.south) {
+      \underline{id} : TEXT (UUID)\\
+      repo\_id : TEXT (UUID)\\
+      user\_id : TEXT (UUID)\\
+      created\_at : TEXT (ISO 8601)\\[2pt]
+      \{unique: repo\_id, user\_id\}
+    };
+    \node[fit=(StarName)(StarAttrs), inner sep=0pt] (RepoStar) {};
+
+    % RepoCollaborator
+    \node[entityname, minimum width=3.9cm] (CollabName) at (3.7,-6.5) {RepoCollaborator};
+    \node[attrs, anchor=north] (CollabAttrs) at (CollabName.south) {
+      \underline{id} : TEXT (UUID)\\
+      repo\_id : TEXT (UUID)\\
+      user\_id : TEXT (UUID)\\
+      role : TEXT (enum)\\
+      created\_at : TEXT (ISO 8601)
+    };
+    \node[fit=(CollabName)(CollabAttrs), inner sep=0pt] (RepoCollaborator) {};
+
+    % TravelAlert
+    \node[entityname, minimum width=3.0cm] (AlertName) at (8.2,-6.5) {TravelAlert};
+    \node[narrowattrs, anchor=north] (AlertAttrs) at (AlertName.south) {
+      \underline{repo\_id} : TEXT (UUID)\\
+      notes : TEXT\\
+      updated\_at : TEXT (ISO 8601)
+    };
+    \node[fit=(AlertName)(AlertAttrs), inner sep=0pt] (TravelAlert) {};
+
+    % PackingChecklist
+    \node[entityname, minimum width=3.4cm] (PackName) at (8.2,-10.1) {PackingChecklist};
+    \node[narrowattrs, anchor=north] (PackAttrs) at (PackName.south) {
+      \underline{repo\_id} : TEXT (UUID)\\
+      items : TEXT (JSON)\\
+      updated\_at : TEXT (ISO 8601)
+    };
+    \node[fit=(PackName)(PackAttrs), inner sep=0pt] (PackingChecklist) {};
+
+    % Commit
+    \node[entityname, minimum width=4.9cm] (CommitName) at (16.1,-6.8) {Commit};
+    \node[wideattrs, anchor=north] (CommitAttrs) at (CommitName.south) {
+      \underline{id} : TEXT (UUID)\\
+      repo\_id : TEXT (UUID)\\
+      author : TEXT\\
+      message : TEXT\\
+      parents : TEXT (JSON array)\\
+      snapshot : TEXT (JSON object)\\
+      key\_change\_score : INT\\
+      key\_change\_auto : INT (0/1 bool)\\
+      key\_change\_manual : INT (0/1 bool)\\
+      key\_change\_reason : TEXT\\
+      created\_at : TEXT (ISO 8601)
+    };
+    \node[fit=(CommitName)(CommitAttrs), inner sep=0pt] (Commit) {};
+
+    % Stop (JSON)
+    \node[jsonname, minimum width=3.8cm] (StopName) at (-2.0,-16.2) {Stop (JSON)};
+    \node[jsonattrs, anchor=north] (StopAttrs) at (StopName.south) {
+      id : String\\
+      name : String\\
+      lat, lng : Number\\
+      arrive : String\\
+      depart : String\\
+      stayMin : Number\\
+      routeMode : String\\
+      openingHours : String\\
+      prevTravelMin : Number\\
+      \_\_nudged : String
+    };
+    \node[fit=(StopName)(StopAttrs), inner sep=0pt] (Stop) {};
+
+    % Day (JSON)
+    \node[jsonname, minimum width=3.8cm] (DayName) at (4.0,-16.2) {Day (JSON)};
+    \node[jsonattrs, anchor=north] (DayAttrs) at (DayName.south) {
+      id : String\\
+      date : String\\
+      stops : Stop[]
+    };
+    \node[fit=(DayName)(DayAttrs), inner sep=0pt] (Day) {};
+
+    % Plan (JSON)
+    \node[jsonname, minimum width=3.8cm] (PlanName) at (10.0,-16.2) {Plan (JSON)};
+    \node[jsonattrs, anchor=north] (PlanAttrs) at (PlanName.south) {
+      transport : String\\
+      days : Day[]\\
+      overflow : Stop[]
+    };
+    \node[fit=(PlanName)(PlanAttrs), inner sep=0pt] (Plan) {};
+
+    % Snapshot (JSON)
+    \node[jsonname, minimum width=3.8cm] (SnapName) at (16.0,-16.2) {Snapshot (JSON)};
+    \node[jsonattrs, anchor=north] (SnapAttrs) at (SnapName.south) {
+      plan : Plan\\
+      planInput : Object\\
+      files : Map (\{description : String, \ldots\})
+    };
+    \node[fit=(SnapName)(SnapAttrs), inner sep=0pt] (Snapshot) {};
+
+    % ----------- RELATIONSHIPS (Crow's foot) -----------
+
+    % User ||──o< Repo  (owns)
+    \draw[one to zeromany] (UserName.east) -- (RepoName.west);
+    \node[rlabel] at ($(User.east)!0.50!(Repo.west)+(0,0.28)$) {owns};
+
+    % User ||──o< Session  (has)
+    \draw[one to zeromany] ($(User.south west)+(0.50,0)$) |- (Session.north);
+    \node[rlabel] at ($(User.south west)+(0.15,-0.35)$) {has};
+
+    % User ||──o< RepoStar  (stars)
+    \draw[one to zeromany] (User.south) |- (RepoStar.north);
+    \node[rlabel] at ($(User.south)+(0.35,-0.35)$) {stars};
+
+    % User ||──o< RepoCollaborator  (collaborates)
+    \draw[one to zeromany] ($(User.south east)+(-0.50,0)$) |- (RepoCollaborator.north);
+    \node[rlabel] at ($(User.south east)+(-0.15,-0.35)$) {collaborates};
+
+    % Repo ||──|< Branch  (has)
+    \draw[one to many] (RepoName.east) -- (BranchName.west);
+    \node[rlabel] at ($(Repo.east)!0.50!(Branch.west)+(0,0.28)$) {has};
+
+    % Branch ||──o| Commit  (head)
+    \draw[one to zeroone] (Branch.south) -- (Commit.north);
+    \node[rlabel] at ($(Branch.south)!0.45!(Commit.north)+(0.55,0)$) {points to};
+
+    % Repo ||──|< Commit  (stores)
+    \coordinate (RepoCommitElbow) at ($(Repo.east)+(1.2,0)$);
+    \draw[one to many] (Repo.east) -- (RepoCommitElbow) |- (Commit.west);
+    \node[rlabel] at ($(Commit.west)+(-0.50,0.25)$) {stores};
+
+    % Repo ||──o< RepoCollaborator  (has)
+    \draw[one to zeromany] ($(Repo.south west)+(0.35,0)$) |- (RepoCollaborator.north);
+
+    % Repo ||──o< RepoStar  (has)
+    \draw[one to zeromany] ($(Repo.south west)+(-0.35,0)$) |- (RepoStar.north);
+
+    % Repo ||──o| TravelAlert  (has)
+    \draw[one to zeroone] ($(Repo.south)+(-0.45,0)$) -- ($(AlertName.north)+(0,0.02)$);
+    \node[rlabel] at ($(Repo.south)+(-1.05,-0.40)$) {has};
+
+    % Repo ||──o| PackingChecklist  (has)
+    \draw[one to zeroone] ($(Repo.south)+(0.55,0)$) |- (PackingChecklist.north);
+    \node[rlabel] at ($(Repo.south)+(1.10,-0.40)$) {has};
+
+    % Commit ||──|| Snapshot  (contains, embedded JSON)
+    \draw[one to one, dashed] (Commit.south) -- (Snapshot.north);
+    \node[rlabel] at ($(Commit.south)!0.5!(Snapshot.north)+(0.8,0)$) {contains};
+
+    % Snapshot ||──|| Plan  (embeds)
+    \draw[one to one, dashed] (SnapName.west) -- (PlanName.east);
+    \node[rlabel] at ($(Plan.east)!0.5!(Snapshot.west)+(0,0.28)$) {embeds};
+
+    % Plan ||──|< Day  (has)
+    \draw[one to many, dashed] (PlanName.west) -- (DayName.east);
+    \node[rlabel] at ($(Day.east)!0.5!(Plan.west)+(0,0.28)$) {has};
+
+    % Day ||──o< Stop  (contains)
+    \draw[one to zeromany, dashed] (DayName.west) -- (StopName.east);
+    \node[rlabel] at ($(Stop.east)!0.5!(Day.west)+(0,0.28)$) {contains};
+
+    % Repo self-relationship: forked_from  (o|──o<)
+    \draw[zeroone to zeromany, dashed]
+      ($(Repo.north west)+(0.7,0)$)
+      .. controls +(0,1.6) and +(0,1.6) ..
+      ($(Repo.north east)+(-0.7,0)$);
+    \node[rlabel] at ($(Repo.north)+(0,1.00)$) {forked\_from};
+
+  \end{tikzpicture}%
+  }
+  \caption{Entity relationship diagram for GiTrip's data model using
+           Crow's foot notation. Primary keys are \underline{underlined}.
+           Solid-bordered entities are persisted as SQLite tables; dashed-bordered
+           entities represent JSON structures embedded within the
+           \texttt{snapshot} column of each Commit. Crow's foot endpoints:
+           double bar = exactly one, circle--bar = zero or one,
+           fork--bar = one or many, fork--circle = zero or many.}
+  \label{fig:erd}
+\end{figure}
+
+\subsection{Snapshot Storage}
+Each commit stores a complete snapshot rather than a delta. This aligns with
+Git's conceptual model of snapshots \cite{ref_progit_snapshots}. In GiTrip, the
+snapshot contains:
+\begin{itemize}
+  \item \texttt{snapshot.plan}: the itinerary (days and stops).
+  \item \texttt{snapshot.planInput}: planner inputs for reproducibility and UI
+        defaults.
+  \item \texttt{snapshot.files}: a key-value map for branch-level metadata.
+        Currently stores the trip description
+        (\texttt{files.description}), which collaborators can edit
+        independently on separate branches. The merge engine performs
+        per-key three-way merging on this map, detecting conflicts when
+        both sides change the same key.
+\end{itemize}
+
+Snapshot storage simplifies branch switching and merging at the cost of increased
+storage size. This trade-off is appropriate for itinerary data, which is small
+compared to typical binary files in software repositories.
+
+\subsection{Plan Schema}
+A plan includes:
+\begin{itemize}
+  \item \texttt{transport} mode (driving/walking/cycling/transit),
+  \item \texttt{days[]} each with \texttt{id}, \texttt{date}, and
+        \texttt{stops[]},
+  \item each stop includes identity, location, scheduling, and routing metadata.
+\end{itemize}
+
+Stops also carry planner constraint fields such as strict ordering, time windows,
+fixed-time flags, and opening-hours strings. A \texttt{\_\_nudged} marker records
+explainable adjustments made by the scheduler (e.g., nudged due to opening
+hours).
+
+\subsection{Module Structure}
+Figure~\ref{fig:uml_class} shows the UML class diagram for GiTrip's server-side
+modules. Each module is represented as a class with its exported functions as
+public operations (\texttt{+}) and internal helper functions as private
+operations (\texttt{-}). The \texttt{Server} module acts as the central
+orchestrator, delegating to specialised modules for planning, merging, routing,
+and geocoding. \texttt{TTLCache} is the only formal JavaScript class in the
+codebase; all other modules use the CommonJS \texttt{module.exports} pattern.
+
+\begin{figure}[H]
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+    >=Stealth,
+    every node/.style={font=\footnotesize, outer sep=0pt},
+    classname/.style={
+      rectangle, draw=black, fill=gray!15,
+      minimum height=7mm,
+      font=\footnotesize\bfseries,
+      align=center, inner sep=2pt
+    },
+    attrs/.style={
+      rectangle, draw=black, fill=white,
+      text width=5.0cm,
+      font=\footnotesize\ttfamily,
+      align=left, inner sep=4pt
+    },
+    narrowattrs/.style={
+      rectangle, draw=black, fill=white,
+      text width=4.0cm,
+      font=\footnotesize\ttfamily,
+      align=left, inner sep=4pt
+    },
+    % ── UML relationship styles ──────────────────────────────────────
+    dep/.style={-{Stealth[open, length=8pt, width=6pt]}, dashed, semithick, black!60},
+    comp/.style={{Diamond[fill=black, length=8pt, width=6pt]}-, semithick},
+    multlabel/.style={font=\scriptsize, fill=white, inner sep=1pt}
+  ]
+
+    % ----------- CLASSES -----------
+
+    % Server (centre top)
+    \node[classname, minimum width=5.5cm] (ServerName) at (0,0)
+      {{\scriptsize\textnormal{$\langle\!\langle$module$\rangle\!\rangle$}}\\Server};
+    \node[attrs, anchor=north] (ServerAttrs) at (ServerName.south) {
+      \textnormal{\textit{-- attributes --}}\\
+      - app : Express\\
+      - db : Database\\
+      - geoCache : TTLCache\\
+      - weatherCache : TTLCache\\[2pt]
+      \textnormal{\textit{-- operations --}}\\
+      + baseUrl(req) : String\\
+      + canonical(req, path?) : String\\
+      + nowISO() : String\\
+      - ensureAnonIdentity(req, res)\\
+      - requireWriteAccess(repo, user)
+    };
+    \node[fit=(ServerName)(ServerAttrs), inner sep=0pt] (Server) {};
+
+    % TTLCache (right of Server)
+    \node[classname, minimum width=4.5cm] (CacheName) at (8.5,0)
+      {{\scriptsize\textnormal{$\langle\!\langle$class$\rangle\!\rangle$}}\\TTLCache};
+    \node[narrowattrs, anchor=north] (CacheAttrs) at (CacheName.south) {
+      \textnormal{\textit{-- attributes --}}\\
+      - map : Map\\
+      - ttl : Number\\
+      - max : Number\\[2pt]
+      \textnormal{\textit{-- operations --}}\\
+      + get(key) : any\\
+      + set(key, value) : void
+    };
+    \node[fit=(CacheName)(CacheAttrs), inner sep=0pt] (Cache) {};
+
+    % DB (left of Server)
+    \node[classname, minimum width=4.5cm] (DBName) at (-8.5,0)
+      {{\scriptsize\textnormal{$\langle\!\langle$module$\rangle\!\rangle$}}\\DB};
+    \node[narrowattrs, anchor=north] (DBAttrs) at (DBName.south) {
+      \textnormal{\textit{-- attributes --}}\\
+      - db : Database\\[2pt]
+      \textnormal{\textit{-- operations --}}\\
+      + migrate() : void\\
+      + rowToCommit(row) : Object
+    };
+    \node[fit=(DBName)(DBAttrs), inner sep=0pt] (DB) {};
+
+    % Planner (bottom left area)
+    \node[classname, minimum width=5.5cm] (PlannerName) at (-5.5,-7)
+      {{\scriptsize\textnormal{$\langle\!\langle$module$\rangle\!\rangle$}}\\Planner};
+    \node[attrs, anchor=north] (PlannerAttrs) at (PlannerName.south) {
+      \textnormal{\textit{-- operations --}}\\
+      + autoPlan(config) : Plan\\
+      + toMin(hhmm) : Number\\
+      + toHHMM(min) : String\\
+      + applyOpeningHours(place, ...) : Object\\
+      - buildDurationMatrix(places, transport)\\
+      - orderPlaces(places, M, transport, mode)\\
+      - heldKarpPath(matrix, startIdx) : int[]
+    };
+    \node[fit=(PlannerName)(PlannerAttrs), inner sep=0pt] (Planner) {};
+
+    % Merge (bottom centre-left)
+    \node[classname, minimum width=5.5cm] (MergeName) at (2.0,-7)
+      {{\scriptsize\textnormal{$\langle\!\langle$module$\rangle\!\rangle$}}\\Merge};
+    \node[attrs, anchor=north] (MergeAttrs) at (MergeName.south) {
+      \textnormal{\textit{-- operations --}}\\
+      + mergeSnapshots(base, ours, theirs)\\
+      + diffMaps(base, left, right)\\
+      - deepEqual(a, b) : Boolean\\
+      - planKeySet(plan) : Set\\
+      - jaccard(a, b) : Number\\
+      - byKey(arr, fallbackDayId) : Map
+    };
+    \node[fit=(MergeName)(MergeAttrs), inner sep=0pt] (Merge) {};
+
+    % Routing (bottom right area)
+    \node[classname, minimum width=5.5cm] (RoutingName) at (9.5,-7)
+      {{\scriptsize\textnormal{$\langle\!\langle$module$\rangle\!\rangle$}}\\Routing};
+    \node[attrs, anchor=north] (RoutingAttrs) at (RoutingName.south) {
+      \textnormal{\textit{-- attributes --}}\\
+      - ORS\_KEY : String\\
+      - GMAPS\_KEY : String\\[2pt]
+      \textnormal{\textit{-- operations --}}\\
+      + orsMatrix(points, mode) : Number[][]\\
+      + orsLegs(points, mode) : Object[]\\
+      + gmapsTransitLegs(points, opts)\\
+      + routeLegs(points, mode, opts)\\
+      + haversineMinutes(a, b, mode) : Number\\
+      + constantGap(mode) : Number\\
+      - orsProfile(mode) : String\\
+      - decodePolyline(str) : LatLng[]
+    };
+    \node[fit=(RoutingName)(RoutingAttrs), inner sep=0pt] (Routing) {};
+
+    % QuickRoute (far right)
+    \node[classname, minimum width=5.0cm] (QRName) at (17.0,-3.5)
+      {{\scriptsize\textnormal{$\langle\!\langle$module$\rangle\!\rangle$}}\\QuickRoute};
+    \node[attrs, text width=4.5cm, anchor=north] (QRAttrs) at (QRName.south) {
+      \textnormal{\textit{-- operations --}}\\
+      + optimizeQuickRoute(payload)\\
+      - heldKarpPath(matrix, start)\\
+      - nearestNeighbor(start, matrix)\\
+      - twoOptPath(order, matrix)\\
+      - buildOrsMatrix(points, mode)\\
+      - buildTransitMatrix(points, opts)\\
+      - runPool(fns, limit) : any[]
+    };
+    \node[fit=(QRName)(QRAttrs), inner sep=0pt] (QuickRoute) {};
+
+    % GeoSearch (bottom far left)
+    \node[classname, minimum width=4.5cm] (GeoName) at (-5.5,-14)
+      {{\scriptsize\textnormal{$\langle\!\langle$module$\rangle\!\rangle$}}\\GeoSearch};
+    \node[narrowattrs, anchor=north] (GeoAttrs) at (GeoName.south) {
+      \textnormal{\textit{-- attributes --}}\\
+      - lastCallMs : Number\\
+      - NOMINATIM\_EMAIL : String\\[2pt]
+      \textnormal{\textit{-- operations --}}\\
+      + nominatimSearch(query, limit)\\
+      + nominatimLookup(type, id)
+    };
+    \node[fit=(GeoName)(GeoAttrs), inner sep=0pt] (GeoSearch) {};
+
+    % OpenHours (bottom centre)
+    \node[classname, minimum width=4.5cm] (OHName) at (2.0,-14)
+      {{\scriptsize\textnormal{$\langle\!\langle$module$\rangle\!\rangle$}}\\OpenHours};
+    \node[narrowattrs, anchor=north] (OHAttrs) at (OHName.south) {
+      \textnormal{\textit{-- operations --}}\\
+      + parseOpeningHours(oh) : Schedule\\
+      + validateInterval(sched, date, ...)
+    };
+    \node[fit=(OHName)(OHAttrs), inner sep=0pt] (OpenHours) {};
+
+    % ----------- RELATIONSHIPS -----------
+
+    % Server ──── DB  (association, 1 to 1)
+    \draw[semithick] (ServerName.west) -- (DBName.east);
+    \node[multlabel] at ($(Server.east |- ServerName.west)!0.12!(DB.west |- DBName.east)+(0,0.28)$) {1};
+    \node[multlabel] at ($(Server.east |- ServerName.west)!0.88!(DB.west |- DBName.east)+(0,0.28)$) {1};
+
+    % Server ◆── TTLCache  (composition, 1 to 1..*)
+    \draw[comp] (ServerName.east) -- (CacheName.west);
+    \node[multlabel] at ($(Server.east)!0.12!(Cache.west)+(0,0.28)$) {1};
+    \node[multlabel] at ($(Server.east)!0.88!(Cache.west)+(0,0.28)$) {1..*};
+
+    % Server ──use──> Planner  (dependency)
+    \draw[dep] (Server.south west)
+      -- node[multlabel, left, pos=0.4]{\scriptsize$\langle\!\langle$use$\rangle\!\rangle$}
+      (PlannerName.north);
+
+    % Server ──use──> Merge  (dependency)
+    \draw[dep] (Server.south)
+      -- node[multlabel, right, pos=0.4]{\scriptsize$\langle\!\langle$use$\rangle\!\rangle$}
+      (MergeName.north);
+
+    % Server ──use──> Routing  (dependency)
+    \draw[dep] (Server.south east)
+      -- node[multlabel, right, pos=0.4]{\scriptsize$\langle\!\langle$use$\rangle\!\rangle$}
+      (RoutingName.north);
+
+    % Server ──use──> QuickRoute  (dependency)
+    \draw[dep] ([xshift=10pt]Server.east)
+      -| node[multlabel, above, pos=0.25]{\scriptsize$\langle\!\langle$use$\rangle\!\rangle$}
+      (QuickRoute.north);
+
+    % Server ──use──> GeoSearch  (dependency)
+    \draw[dep] ([xshift=-15pt]Server.south west)
+      -- ++(0,-1)
+      -| node[multlabel, above, pos=0.2]{\scriptsize$\langle\!\langle$use$\rangle\!\rangle$}
+      (GeoSearch.north);
+
+    % Planner ──use──> Routing  (dependency)
+    \draw[dep] ([xshift=8pt]Planner.south)
+      -- ++(0,-0.6)
+      -| node[multlabel, above, pos=0.75]{\scriptsize$\langle\!\langle$use$\rangle\!\rangle$}
+      ([xshift=-8pt]Routing.north);
+
+    % Planner ──use──> OpenHours  (dependency)
+    \draw[dep] (Planner.south)
+      -- node[multlabel, right, pos=0.4]{\scriptsize$\langle\!\langle$use$\rangle\!\rangle$}
+      (OHName.north);
+
+    % QuickRoute ──use──> Routing  (dependency)
+    \draw[dep] (QuickRoute.south)
+      |- node[multlabel, above, pos=0.25]{\scriptsize$\langle\!\langle$use$\rangle\!\rangle$}
+      ([yshift=-5pt]Routing.east);
+
+  \end{tikzpicture}%
+  }
+  \caption{UML class diagram for GiTrip's server-side modules. Each module
+           is shown with public (\texttt{+}) and private (\texttt{-})
+           operations. Dashed open arrows denote
+           $\langle\!\langle$use$\rangle\!\rangle$ dependencies; the
+           filled diamond denotes composition (Server owns TTLCache
+           instances). \texttt{TTLCache} is a formal JavaScript class;
+           all other boxes are CommonJS modules.}
+  \label{fig:uml_class}
+\end{figure}
+
+\section{Routing and Geocoding Design}
+\subsection{Place Search}
+GiTrip proxies Nominatim search/lookup via server endpoints to enable caching and
+rate limiting \cite{ref_nominatim}. Results are re-ranked using approximate
+string matching to prioritise substring matches and reduce diacritic/punctuation
+sensitivity \cite{ref_navaro_string_matching}.
+
+\subsection{Routing Providers and Fallback}
+For non-transit modes, GiTrip requests a travel-time matrix from OpenRouteService
+\cite{ref_ors_matrix}. For transit, GiTrip uses Google Directions API for
+sequential legs \cite{ref_google_directions_api}. When providers fail or are
+unavailable, GiTrip falls back to:
+\begin{itemize}
+  \item Haversine-based time estimates for ordering,
+  \item constant default travel gaps for safety.
+\end{itemize}
+
+This design ensures the planner remains usable even in degraded conditions, which
+is important for evaluation environments and offline/limited-connectivity
+contexts.
+
+\section{Auto-scheduler Design}
+The scheduler must construct a feasible plan that respects constraints. GiTrip's
+scheduler is designed around four stages:
+\begin{enumerate}
+  \item \textbf{Matrix construction:} request pairwise travel durations (when
+        available).
+  \item \textbf{Ordering:} determine visit order using strict order constraints
+        when provided; otherwise apply Nearest Neighbour ordering as a heuristic
+        baseline \cite{ref_nn_tsp}.
+  \item \textbf{Packing into days:} greedily place stops into day windows while
+        maintaining non-overlap and travel gaps.
+  \item \textbf{Constraint enforcement:} apply opening hours, desired windows,
+        and fixed-time constraints; if a stop cannot fit, spill it to a
+        subsequent day or overflow.
+\end{enumerate}
+
+\subsection{Opening Hours Nudging}
+Opening hours are treated as a hard-ish constraint: if the proposed interval
+falls in a closed period, the scheduler nudges to the next open slot where
+feasible; otherwise the stop is rejected for that day. This is crucial for
+feasibility and directly addresses common itinerary failures in real planning.
+
+\subsection{Compact vs Sparse Modes}
+To improve user control over schedule density, the scheduler supports
+``compact'' and ``sparse'' modes. Compact mode packs stops tightly, while sparse
+mode distributes stops across the active window by inserting additional gap time.
+This preference improves perceived usefulness because different trip styles (e.g.,
+city sprint vs relaxed exploration) require different pacing.
+
+\section{Merge Design}
+GiTrip implements a Git-style three-way merge for snapshots. The merge process
+uses:
+\begin{itemize}
+  \item a \textbf{base} snapshot (lowest common ancestor),
+  \item \textbf{ours} and \textbf{theirs} snapshots (branch heads),
+  \item a merge engine producing a merged snapshot plus a list of conflicts.
+\end{itemize}
+
+Figure~\ref{fig:merge_flow} illustrates the decision logic of the merge engine.
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.92\textwidth}{!}{%
+  \begin{tikzpicture}[
+    >=Stealth,
+    every node/.style={font=\small, align=center},
+    startstop/.style={rectangle, rounded corners=8pt, draw=black, fill=red!10,
+                      minimum width=3cm, minimum height=0.8cm},
+    process/.style={rectangle, draw=black, fill=blue!8, minimum width=3.6cm,
+                    minimum height=0.8cm, rounded corners=2pt},
+    decision/.style={diamond, draw=black, fill=yellow!15, minimum width=1.8cm,
+                     minimum height=0.8cm, aspect=2.5, inner sep=2pt},
+    result/.style={rectangle, draw=black, fill=green!10, minimum width=3cm,
+                   minimum height=0.7cm, rounded corners=2pt},
+    conflict/.style={rectangle, draw=black, fill=red!15, minimum width=2.8cm,
+                     minimum height=0.7cm, rounded corners=2pt},
+    arr/.style={->, thick},
+  ]
+
+    \node[startstop] (start) at (0,0) {Merge request:\\ours, theirs, base};
+
+    % ── File-level merge (iterates all keys, collects results) ──
+    \node[process] (filemerge) at (0,-1.6)
+      {For each key in \texttt{snapshot.files}\\{\scriptsize compare base vs ours vs theirs (deep equality)}};
+
+    \node[decision] (fileconflict) at (0,-3.6) {Both sides\\changed this key?};
+
+    \node[conflict] (fileconf) at (5,-3.6) {Record \texttt{file} conflict\\{\scriptsize keep base value}};
+    \node[result] (filetake) at (-5,-3.6) {Take changed side};
+
+    % Rejoin arrows back to loop / continue
+    \node[process] (filecollect) at (0,-5.4)
+      {Collect all file results\\{\scriptsize (loop above repeats per key)}};
+
+    % ── Plan-level ──
+    \node[decision] (planchanged) at (0,-7.4) {Both sides\\changed plan?};
+
+    \node[result] (onesided) at (-5,-7.4) {Take changed side};
+
+    \node[decision] (planident) at (0,-9.6) {Both changed\\to same value?};
+
+    \node[result] (planidenttake) at (-5,-9.6) {Take either\\(identical)};
+
+    \node[decision] (structdiv) at (0,-11.8) {Both changed\\stop structure?};
+
+    \node[decision] (jaccard) at (0,-14) {Jaccard similarity\\of stop keys $\geq 0.4$?};
+
+    \node[conflict] (wholeplan) at (5.5,-14) {\texttt{plan-whole}\\conflict};
+
+    % ── Per-stop merge ──
+    \node[process] (perstop) at (0,-16.2)
+      {Per-day, per-stop merge\\{\scriptsize match stops by stable ID}};
+
+    \node[decision] (bothdeleted) at (0,-18.4) {Both sides\\deleted stop?};
+
+    \node[result] (silentdrop) at (5.5,-18.4) {Omit stop\\{\scriptsize (silent agreement)}};
+
+    \node[decision] (onedeleted) at (0,-20.6) {Deleted on one side,\\modified on other?};
+
+    \node[conflict] (delc) at (5.5,-20.6) {\texttt{plan-stop-delete}\\conflict};
+
+    \node[decision] (timediff) at (0,-22.8) {Times differ\\(arrive / depart)?};
+
+    \node[conflict] (timec) at (5.5,-22.8) {\texttt{plan-stop-time}\\conflict};
+
+    \node[decision] (fielddiff) at (0,-25) {Other fields\\differ?};
+
+    \node[conflict] (fieldc) at (5.5,-25) {\texttt{plan-stop-field}\\conflict};
+
+    \node[result] (clean) at (5.5,-27) {Clean merge\\{\scriptsize apply non-conflicting changes}};
+
+    \node[process] (stabilise) at (0,-28.6)
+      {Stabilise ordering\\{\scriptsize sort days by date, stops by arrival}};
+
+    \node[startstop] (output) at (0,-30.2)
+      {Output: merged snapshot\\+ conflict list};
+
+    % ══════ Arrows ══════
+
+    % Start → file merge
+    \draw[arr] (start) -- (filemerge);
+    \draw[arr] (filemerge) -- (fileconflict);
+
+    % File decision (2 exits)
+    \draw[arr] (fileconflict) -- node[above]{\scriptsize Yes} (fileconf);
+    \draw[arr] (fileconflict) -- node[above]{\scriptsize No} (filetake);
+
+    % Both rejoin into collect
+    \draw[arr] (fileconf) |- (filecollect);
+    \draw[arr] (filetake) |- (filecollect);
+
+    % File collect → plan changed?
+    \draw[arr] (filecollect) -- (planchanged);
+
+    % Plan changed? (2 exits)
+    \draw[arr] (planchanged) -- node[above]{\scriptsize No} (onesided);
+    \draw[arr] (planchanged) -- node[right]{\scriptsize Yes} (planident);
+
+    % Both identical? (2 exits)
+    \draw[arr] (planident) -- node[above]{\scriptsize Yes} (planidenttake);
+    \draw[arr] (planident) -- node[right]{\scriptsize No} (structdiv);
+
+    % Structural divergence? (2 exits)
+    \draw[arr] (structdiv) -- node[right]{\scriptsize Yes} (jaccard);
+    \draw[arr] (structdiv.east) -| ++(2.5,0) |- node[right, pos=0.25]{\scriptsize No} (perstop.east);
+
+    % Jaccard (2 exits)
+    \draw[arr] (jaccard) -- node[above]{\scriptsize $< 0.4$} (wholeplan);
+    \draw[arr] (jaccard) -- node[right]{\scriptsize $\geq 0.4$} (perstop);
+
+    % Per-stop → chain of 2-exit decisions
+    \draw[arr] (perstop) -- (bothdeleted);
+
+    % Both deleted? (2 exits)
+    \draw[arr] (bothdeleted) -- node[above]{\scriptsize Yes} (silentdrop);
+    \draw[arr] (bothdeleted) -- node[right]{\scriptsize No} (onedeleted);
+
+    % One deleted? (2 exits)
+    \draw[arr] (onedeleted) -- node[above]{\scriptsize Yes} (delc);
+    \draw[arr] (onedeleted) -- node[right]{\scriptsize No} (timediff);
+
+    % Times differ? (2 exits)
+    \draw[arr] (timediff) -- node[above]{\scriptsize Yes} (timec);
+    \draw[arr] (timediff) -- node[right]{\scriptsize No} (fielddiff);
+
+    % Fields differ? (2 exits)
+    \draw[arr] (fielddiff) -- node[above]{\scriptsize Yes} (fieldc);
+    \draw[arr] (fielddiff) -- node[right]{\scriptsize No} (clean);
+
+    % All conflict/result nodes rejoin into stabilise
+    \draw[arr] (onesided) |- (stabilise);
+    \draw[arr] (planidenttake) |- (stabilise);
+    \draw[arr] (wholeplan) |- (stabilise);
+    \draw[arr] (silentdrop) |- (stabilise);
+    \draw[arr] (delc) |- (stabilise);
+    \draw[arr] (timec) |- (stabilise);
+    \draw[arr] (fieldc) |- (stabilise);
+    \draw[arr] (clean) |- (stabilise);
+
+    \draw[arr] (stabilise) -- (output);
+
+  \end{tikzpicture}%
+  }%
+  \caption{Three-way merge decision flowchart. The engine iterates all
+           file keys, recording conflicts or taking the changed side,
+           then checks plan divergence. If both sides changed the plan
+           identically, either is taken. If both changed the plan
+           structure and their stop-key Jaccard similarity is below~0.4,
+           a whole-plan conflict is raised. Otherwise, per-stop merging
+           chains through deletion, time, and field checks. The result
+           is stabilised by deterministic ordering before output.}
+  \label{fig:merge_flow}
+\end{figure}
+
+\subsection{Equality and Stability}
+Early merge implementations that relied on \texttt{JSON.stringify} can be brittle
+because key insertion order may differ and \texttt{undefined} values are dropped.
+The final implementation uses deep structural equality, making comparisons
+key-order independent.
+
+Additionally, merged ordering is stabilised by sorting days by ISO date and
+sorting stops by arrival time (then name). This reduces surprising reordering
+after merges.
+
+\subsection{Conflict Types}
+Conflicts surfaced include:
+\begin{itemize}
+  \item \textbf{file:} both sides changed the same key in
+        \texttt{snapshot.files} (e.g.\ the trip description).
+  \item \textbf{plan-stop-time:} both sides changed arrival/departure times
+        differently for the same stop.
+  \item \textbf{plan-stop-delete:} one side deleted a stop while the other
+        modified it.
+  \item \textbf{plan-stop-field:} times agree but both sides changed selected
+        fields differently (e.g., name, lat/lng, notes, stayMin, routeMode).
+  \item \textbf{plan-whole:} plans diverged heavily (Jaccard similarity of
+        stop-key sets below 0.4), requiring whole-plan selection.
+\end{itemize}
+
+This set is intentionally constrained to keep the UI manageable for non-experts
+while still preventing silent data loss.
+
+\section{User Interface Design}
+GiTrip uses server-rendered pages enhanced by client-side JavaScript. Two
+interactive surfaces support editing:
+\begin{itemize}
+  \item \textbf{Timeline editor:} draggable blocks and handles adjust
+        arrival/departure times with snapping and constraint clamping.
+  \item \textbf{Map editor:} draggable numbered markers adjust stop coordinates
+        and update route geometry.
+\end{itemize}
+
+\subsection{Easy Mode vs Git Mode}
+Survey feedback during development indicated Git concepts are confusing for
+non-technical users. GiTrip therefore includes a mode toggle:
+\begin{itemize}
+  \item \textbf{Easy mode:} hides branches/commits/merge; offers ``Save trip''
+        with non-fast-forward friendly behaviour.
+  \item \textbf{Git mode:} exposes full repository semantics and merge UI.
+\end{itemize}
+
+This design supports two user personas without splitting the product into
+separate applications.
+
+\section{Security, Privacy, and Accessibility Design}
+GiTrip includes several practical web security measures:
+\begin{itemize}
+  \item session cookies are HttpOnly and SameSite=Lax,
+  \item security headers include CSP, frame blocking, and HSTS in production,
+  \item rate limiting is applied globally and more strictly on sensitive
+        endpoints (four tiers: global, API, geo search, and authentication),
+  \item prepared statements are used for SQLite queries to reduce SQL injection
+        risk,
+  \item error responses return generic messages to users while logging full
+        details server-side, preventing information leakage of internal paths
+        or stack traces.
+\end{itemize}
+
+Accessibility is guided by WCAG 2.2 \cite{ref_wcag22}. The UI uses labelled
+controls and avoids information conveyed only by colour; however, interactive
+map/timeline controls remain a known accessibility challenge and are discussed as
+a limitation.

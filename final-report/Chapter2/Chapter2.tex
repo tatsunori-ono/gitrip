@@ -1,0 +1,137 @@
+% !TEX root = ../Report.tex
+% ======================================================================
+\chapter{Background and Related Work}
+% ======================================================================
+
+This chapter positions GiTrip within existing trip-planning and collaboration
+tooling, and introduces foundational techniques used in the system: version
+control semantics, scheduling heuristics, string matching, accessibility
+heuristics, and relevant web standards.
+
+\section{Trip Planning and Routing Tools}
+Most users plan trips using mapping and routing tools such as Google Maps and
+Apple Maps \cite{ref_google_maps,ref_apple_maps}. These applications provide
+high-quality route computation and support multiple transport modes, but their
+data model is fundamentally \textit{single-plan centric}. Users can create lists
+and saved routes, but they cannot easily branch into alternative itineraries,
+compare versions, and merge parallel edits with structured conflict handling.
+
+Public-transport-focused tools such as Citymapper offer strong transit routing
+and navigation \cite{ref_citymapper}, but similarly treat the itinerary as an
+output rather than a version-controlled artefact. Trip planning products such as
+Wanderlog, Furkot, Roadtrippers, and TripIt provide itinerary management
+features and collaboration to varying degrees
+\cite{ref_wanderlog,ref_furkot,ref_roadtrippers,ref_tripit}, yet they generally
+emphasise itinerary presentation and booking integration rather than explicit
+version control semantics. Google Travel aggregates trip components and
+suggestions but does not provide Git-style change management
+\cite{ref_google_travel}.
+
+GiTrip's differentiation is therefore not \textit{better routing} than these
+tools; instead, it provides structured change management and alternative
+exploration, paired with sufficient routing and scheduling integration to keep
+plans feasible.
+
+\section{Generic Collaboration Tools}
+When collaboration is required, users commonly use documents and spreadsheets to
+manage itineraries: Google Docs/Sheets, Microsoft Word/Excel, and increasingly
+general workspaces like Notion
+\cite{ref_google_docs,ref_google_sheets,ref_ms_word,ref_ms_excel,ref_notion}.
+These platforms have excellent collaboration features but treat an itinerary as
+unstructured text or loosely structured tables. As a result, they cannot
+automatically recompute travel times after edits, offer interactive map or
+timeline visualisation, detect domain-specific conflicts such as overlapping
+times, or provide branching semantics for exploring alternatives.
+
+GiTrip's objective is to bring the strengths of version control
+(branching/merging/history) into a domain-specific planner where plans are
+first-class structured data.
+
+\section{Version Control Concepts and Applicability}
+Git is the dominant distributed version control system in software development
+\cite{ref_git}. Its key semantics include commits (immutable versions), branches
+(named pointers to commits), and merges (reconciling divergent commit histories).
+Git's internal model stores snapshots rather than deltas: each commit represents
+a complete view of the repository state \cite{ref_progit_snapshots}. This is
+particularly relevant for GiTrip because a trip plan can be represented naturally
+as a JSON document. Snapshot storage enables instant branch switching (render the
+head snapshot), version restoring (create a new commit from an older snapshot),
+and three-way merges (compare a base snapshot against two branch snapshots).
+
+However, applying Git semantics to structured itinerary data introduces
+challenges: traditional line-based diff/merge strategies (e.g., \texttt{diff3})
+are designed for text and can produce poor results for structured JSON. The
+fundamental three-way merge idea remains useful: derive changes in two branches
+relative to a common ancestor and combine them, surfacing conflicts when both
+sides change the same part incompatibly. Formal work on \texttt{diff3} analyses
+its behaviour as a widely used three-way merge algorithm \cite{ref_diff3_paper}.
+
+GiTrip therefore adapts the three-way merge concept to structured itinerary
+objects rather than line-based text.
+
+\section{Scheduling and Route Optimisation}
+A key sub-problem in trip planning is ordering stops efficiently. This relates to
+the Travelling Salesman Problem (TSP), which is computationally hard in general
+and commonly addressed with heuristics
+\cite{ref_tsp_study,ref_tsp_local_search}. GiTrip uses heuristics that provide
+good-enough results for interactive planning rather than exact optimal solutions,
+which aligns with practical timetabling and scheduling approaches discussed in
+the automated timetabling literature \cite{ref_patat}.
+
+For example, the Nearest Neighbour (NN) heuristic greedily selects the closest
+next stop and is a common baseline; it is known to be simple and fast while not
+always optimal \cite{ref_nn_tsp}. GiTrip also includes an educational algorithm
+visualisation that demonstrates NN, NN + 2-opt improvement, and Held-Karp
+dynamic programming for small instances, helping explain why the production
+scheduler uses heuristics.
+
+\section{Approximate String Matching for Place Search}
+Place search relies on external geocoding and search services (e.g., Nominatim).
+Returned results can be noisy or differently formatted across user inputs. GiTrip
+improves usability by re-ranking candidates using approximate string matching,
+normalising input strings and applying edit distance techniques
+\cite{ref_navaro_string_matching}. This improves the ``easy add'' flow where
+users paste free-form place names and expect robust matching.
+
+\section{Structured Data Merge and JSON Patch Formats}
+JSON-based systems frequently represent updates using patch formats. RFC 7396
+(JSON Merge Patch) defines a merge-based approach for describing modifications
+to JSON objects \cite{ref_rfc7396}. However, general-purpose patch formats do
+not provide domain-specific semantics for itineraries: for example, they do not
+encode constraints such as time overlaps or opening-hours validity. GiTrip
+therefore uses a domain-aware merge strategy:
+\begin{itemize}
+  \item file-like maps (\texttt{snapshot.files}) are merged per-key using deep
+        equality,
+  \item trip plans (\texttt{snapshot.plan}) are merged per-day and per-stop with
+        explicit conflict detection for semantic fields.
+\end{itemize}
+
+\section{Usability and Accessibility Frameworks}
+GiTrip must balance power-user semantics (branches, merges) with novice
+usability. Nielsen's usability engineering framework provides well-established
+heuristics for evaluating interfaces and diagnosing common usability problems
+\cite{ref_nielsen}. Nielsen's heuristics were preferred over heavier frameworks
+because they are practical for small teams, support rapid iteration, and directly
+map to UI design decisions such as visibility of system state, consistency, error
+prevention, and recognition over recall.
+
+Accessibility was guided by WCAG 2.2 principles \cite{ref_wcag22}, particularly
+around keyboard navigation, contrast, and clear labelling. GiTrip's use of
+interactive map and timeline components introduces accessibility challenges; this
+report therefore discusses mitigations and remaining limitations.
+
+For evaluation, GiTrip used a survey instrument that included the System
+Usability Scale (SUS) and Likert-style questions aligned with constructs from the
+Technology Acceptance Model (TAM), notably perceived usefulness and perceived
+ease of use \cite{ref_tam_davis}. TAM was not used as a strict statistical model
+due to limited sample size, but its constructs informed question design and
+interpretation.
+
+\section{Summary: Gap in Existing Approaches}
+In summary, existing trip planning tools provide routing and itinerary management
+but lack robust version control semantics. Existing collaboration tools provide
+sharing but lack domain structure. Version control systems provide branching and
+merging but do not operate on itinerary semantics. GiTrip's novelty is that it
+combines these approaches into a coherent system: a version-controlled,
+constraint-aware, user-editable itinerary planner.

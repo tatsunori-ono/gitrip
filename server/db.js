@@ -157,6 +157,18 @@ export function migrate() {
     if (!/duplicate column name/i.test(String(e.message))) throw e;
   }
 
+  // ---------- Indexes on foreign-key columns ----------
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_sessions_user_id       ON sessions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_branches_repo_id       ON branches(repo_id);
+    CREATE INDEX IF NOT EXISTS idx_commits_repo_id        ON commits(repo_id);
+    CREATE INDEX IF NOT EXISTS idx_repos_owner_user_id    ON repos(owner_user_id);
+    CREATE INDEX IF NOT EXISTS idx_collab_repo_id         ON repo_collaborators(repo_id);
+    CREATE INDEX IF NOT EXISTS idx_collab_user_id         ON repo_collaborators(user_id);
+    CREATE INDEX IF NOT EXISTS idx_stars_repo_id          ON repo_stars(repo_id);
+    CREATE INDEX IF NOT EXISTS idx_stars_user_id          ON repo_stars(user_id);
+  `);
+
   // Backfill defaults
   db.exec(`
     UPDATE repos

@@ -1,0 +1,77 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\@writefile{toc}{\contentsline {chapter}{\numberline {5}System Design}{13}{chapter.5}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\@writefile{toc}{\contentsline {section}{\numberline {5.1}High-level Architecture}{13}{section.5.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5.1}{\ignorespaces GiTrip high-level architecture. The browser communicates with the Express server over HTTP/JSON. \textit  {UI Routes} render pages while \textit  {API Routes} delegate to the \textit  {Planner}, \textit  {Merge}, \textit  {Routing}, and \textit  {Geo Search} modules. \textit  {Quick Route} delegates to \textit  {Routing}, which in turn calls ORS for non-transit modes and Google Directions for transit legs. The \textit  {Planner} consults the \textit  {Opening Hours Parser}, a local utility that validates time intervals against OSM opening-hours strings supplied by Nominatim via \textit  {Geo Search}. Authentication middleware enforces session management, rate-limiting, and Content Security Policy headers across all routes. Server route handlers fetch weather forecasts from Open-Meteo and travel alerts from GNews. All persistent state is stored in a SQLite database.}}{14}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:architecture}{{5.1}{14}{GiTrip high-level architecture. The browser communicates with the Express server over HTTP/JSON. \textit {UI Routes} render pages while \textit {API Routes} delegate to the \textit {Planner}, \textit {Merge}, \textit {Routing}, and \textit {Geo Search} modules. \textit {Quick Route} delegates to \textit {Routing}, which in turn calls ORS for non-transit modes and Google Directions for transit legs. The \textit {Planner} consults the \textit {Opening Hours Parser}, a local utility that validates time intervals against OSM opening-hours strings supplied by Nominatim via \textit {Geo Search}. Authentication middleware enforces session management, rate-limiting, and Content Security Policy headers across all routes. Server route handlers fetch weather forecasts from Open-Meteo and travel alerts from GNews. All persistent state is stored in a SQLite database}{figure.caption.8}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.2}Data Model and Repository Semantics}{14}{section.5.2}\protected@file@percent }
+\citation{ref_progit_snapshots}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.2}{\ignorespaces Entity relationship diagram for GiTrip's data model using Crow's foot notation. Primary keys are \underline  {underlined}. Solid-bordered entities are persisted as SQLite tables; dashed-bordered entities represent JSON structures embedded within the \texttt  {snapshot} column of each Commit. Crow's foot endpoints: double bar = exactly one, circle--bar = zero or one, fork--bar = one or many, fork--circle = zero or many.}}{15}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:erd}{{5.2}{15}{Entity relationship diagram for GiTrip's data model using Crow's foot notation. Primary keys are \underline {underlined}. Solid-bordered entities are persisted as SQLite tables; dashed-bordered entities represent JSON structures embedded within the \texttt {snapshot} column of each Commit. Crow's foot endpoints: double bar = exactly one, circle--bar = zero or one, fork--bar = one or many, fork--circle = zero or many}{figure.caption.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2.1}Snapshot Storage}{15}{subsection.5.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2.2}Plan Schema}{16}{subsection.5.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2.3}Module Structure}{16}{subsection.5.2.3}\protected@file@percent }
+\citation{ref_nominatim}
+\citation{ref_navaro_string_matching}
+\citation{ref_ors_matrix}
+\citation{ref_google_directions_api}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.3}{\ignorespaces UML class diagram for GiTrip's server-side modules. Each module is shown with public (\texttt  {+}) and private (\texttt  {-}) operations. Dashed open arrows denote $\langle \!\langle $use$\rangle \!\rangle $ dependencies; the filled diamond denotes composition (Server owns TTLCache instances). \texttt  {TTLCache} is a formal JavaScript class; all other boxes are CommonJS modules.}}{17}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:uml_class}{{5.3}{17}{UML class diagram for GiTrip's server-side modules. Each module is shown with public (\texttt {+}) and private (\texttt {-}) operations. Dashed open arrows denote $\langle \!\langle $use$\rangle \!\rangle $ dependencies; the filled diamond denotes composition (Server owns TTLCache instances). \texttt {TTLCache} is a formal JavaScript class; all other boxes are CommonJS modules}{figure.caption.10}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.3}Routing and Geocoding Design}{17}{section.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3.1}Place Search}{17}{subsection.5.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3.2}Routing Providers and Fallback}{17}{subsection.5.3.2}\protected@file@percent }
+\citation{ref_nn_tsp}
+\@writefile{toc}{\contentsline {section}{\numberline {5.4}Auto-scheduler Design}{18}{section.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4.1}Opening Hours Nudging}{18}{subsection.5.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4.2}Compact vs Sparse Modes}{18}{subsection.5.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5.5}Merge Design}{18}{section.5.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5.4}{\ignorespaces Three-way merge decision flowchart. The engine iterates all file keys, recording conflicts or taking the changed side, then checks plan divergence. If both sides changed the plan identically, either is taken. If both changed the plan structure and their stop-key Jaccard similarity is below~0.4, a whole-plan conflict is raised. Otherwise, per-stop merging chains through deletion, time, and field checks. The result is stabilised by deterministic ordering before output.}}{19}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:merge_flow}{{5.4}{19}{Three-way merge decision flowchart. The engine iterates all file keys, recording conflicts or taking the changed side, then checks plan divergence. If both sides changed the plan identically, either is taken. If both changed the plan structure and their stop-key Jaccard similarity is below~0.4, a whole-plan conflict is raised. Otherwise, per-stop merging chains through deletion, time, and field checks. The result is stabilised by deterministic ordering before output}{figure.caption.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5.1}Equality and Stability}{20}{subsection.5.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5.2}Conflict Types}{20}{subsection.5.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5.6}User Interface Design}{20}{section.5.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6.1}Easy Mode vs Git Mode}{20}{subsection.5.6.1}\protected@file@percent }
+\citation{ref_wcag22}
+\@writefile{toc}{\contentsline {section}{\numberline {5.7}Security, Privacy, and Accessibility Design}{21}{section.5.7}\protected@file@percent }
+\@setckpt{Chapter5/Chapter5}{
+\setcounter{page}{22}
+\setcounter{equation}{0}
+\setcounter{enumi}{4}
+\setcounter{enumii}{0}
+\setcounter{enumiii}{0}
+\setcounter{enumiv}{0}
+\setcounter{footnote}{0}
+\setcounter{mpfootnote}{0}
+\setcounter{part}{0}
+\setcounter{chapter}{5}
+\setcounter{section}{7}
+\setcounter{subsection}{0}
+\setcounter{subsubsection}{0}
+\setcounter{paragraph}{0}
+\setcounter{subparagraph}{0}
+\setcounter{figure}{4}
+\setcounter{table}{0}
+\setcounter{parentequation}{0}
+\setcounter{float@type}{8}
+\setcounter{algorithm}{0}
+\setcounter{ALC@unique}{0}
+\setcounter{ALC@line}{0}
+\setcounter{ALC@rem}{0}
+\setcounter{ALC@depth}{0}
+\setcounter{@pps}{0}
+\setcounter{@ppsavesec}{0}
+\setcounter{@ppsaveapp}{0}
+\setcounter{caption@flags}{2}
+\setcounter{continuedfloat}{0}
+\setcounter{subfigure}{0}
+\setcounter{subtable}{0}
+\setcounter{LT@tables}{1}
+\setcounter{LT@chunks}{1}
+\setcounter{AM@survey}{0}
+\setcounter{section@level}{1}
+\setcounter{Item}{4}
+\setcounter{Hfootnote}{0}
+\setcounter{bookmark@seq@number}{53}
+}

@@ -9,7 +9,37 @@
       "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/gitrip.db \"SELECT s.id, s.user_id, u.email FROM sessions s JOIN users u ON s.user_id = u.id;\")",
       "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/gitrip.db \"SELECT r.id, r.title, r.owner_user_id, u.email FROM repos r LEFT JOIN users u ON r.owner_user_id = u.id WHERE u.email LIKE ''anon%'';\")",
       "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/gitrip.db \"SELECT rc.repo_id, rc.user_id, rc.role, u.email FROM repo_collaborators rc JOIN users u ON rc.user_id = u.id WHERE u.email LIKE ''anon%'';\")",
-      "Bash(npm test)"
+      "Bash(npm test)",
+      "Read(//Users/astroid/Downloads/**)",
+      "Bash(npm run dev)",
+      "Bash(npx vite build)",
+      "Bash(python3 -c \":*)",
+      "Bash(ls -la /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/final-report*)",
+      "Bash(node --test test/*.test.js)",
+      "Bash(python3 -m json.tool)",
+      "Bash(ls data/*.sqlite)",
+      "Bash(sqlite3 data/gitrip.sqlite \"SELECT id, title FROM repos LIMIT 5;\")",
+      "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/server/gitrip.db \"SELECT b.name, b.head_commit_id FROM branches b JOIN repos r ON b.repo_id = r.id WHERE r.title = ''London Trip'' LIMIT 5;\")",
+      "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/server/gitrip.db \"SELECT substr\\(snapshot, 1, 500\\) FROM commits WHERE id = ''6b55235f-0626-4710-b8fe-737cad5cdeba'';\")",
+      "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/server/gitrip.db \"SELECT substr\\(c.snapshot, 1, 1000\\) FROM commits c JOIN branches b ON b.head_commit_id = c.id WHERE b.repo_id = ''fb69edd9-a472-4397-9e6a-e494920df678'' AND b.name = ''main'';\")",
+      "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/server/gitrip.db \"SELECT r.title, b.name, substr\\(c.snapshot, 1, 500\\) FROM commits c JOIN branches b ON b.head_commit_id = c.id JOIN repos r ON b.repo_id = r.id WHERE c.snapshot NOT LIKE ''%\"\"days\"\":[]%'' LIMIT 5;\")",
+      "Bash(node --test test/)",
+      "Read(//Users/astroid/**)",
+      "Bash(open /Users/astroid/sketchorb.html)",
+      "Bash(node -e \":*)",
+      "Bash(pdflatex -interaction=nonstopmode Report.tex)",
+      "Bash(pdflatex -interaction=nonstopmode -halt-on-error Report.tex)",
+      "Bash(ls -la /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/server/*.js)",
+      "Bash(pdflatex -interaction=nonstopmode -output-directory=. Chapter5/Chapter5.tex)",
+      "Bash(node server/server.js)",
+      "Bash(sqlite3 server/data/gitrip.sqlite \"SELECT id, title FROM repos LIMIT 5;\")",
+      "Bash(sqlite3 /Users/astroid/Desktop/academics/university-of-warwick/computer-science/3rd-year-modules/cs310-computer-science-project/FINAL/gitrip-mvp/gitrip.db \"SELECT id, title FROM repos LIMIT 3;\")",
+      "Bash(node -c server/views/repo.ejs)",
+      "Bash(echo \"exit: $?\")"
+    ],
+    "additionalDirectories": [
+      "/Users/astroid/Downloads",
+      "/Users/astroid"
     ]
   }
 }

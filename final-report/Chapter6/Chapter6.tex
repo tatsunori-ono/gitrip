@@ -1,0 +1,526 @@
+% !TEX root = ../Report.tex
+% ======================================================================
+\chapter{Implementation}
+% ======================================================================
+
+This chapter documents how the design was realised in code, covering major
+implementation modules and the reasoning behind key decisions.
+
+\section{Backend Structure}
+The backend is a Node.js + Express application \cite{ref_node_about,ref_express}.
+The main server file configures:
+\begin{itemize}
+  \item EJS templating for UI routes,
+  \item JSON body limits for planner payloads,
+  \item authentication sessions (\texttt{gitrip\_sid}),
+  \item security headers and rate limiting,
+  \item caching for external API calls (geocoding and weather).
+\end{itemize}
+
+\subsection{Database Layer}
+The database layer uses \texttt{better-sqlite3} and maintains schema migrations
+in a single module. Commit rows store JSON fields (\texttt{parents},
+\texttt{snapshot}) as strings and are deserialised on load. The schema
+intentionally does not enforce foreign keys at the SQLite level; relationships
+are handled logically by the application. Indexes are created on all
+foreign-key columns (e.g., \texttt{commits.repo\_id},
+\texttt{branches.repo\_id}, \texttt{repo\_stars.repo\_id/user\_id}) to
+maintain query performance as the number of repositories and commits grows.
+
+\subsection{Error Handling}
+All error responses sent to users use generic messages (e.g., ``Planner error.
+Please try again.'') rather than exposing internal error details. Full error
+information is logged server-side via \texttt{console.error} for debugging.
+This prevents information leakage of internal paths, stack traces, or
+dependency details that could aid reconnaissance.
+
+\section{Planner Implementation}
+The auto-scheduler is implemented in \texttt{server/planner.js}. Key components
+include:
+\begin{itemize}
+  \item \textbf{Time helpers:} \texttt{toMin} and \texttt{toHHMM}.
+  \item \textbf{Matrix building:} ORS matrix for non-transit; null for transit.
+  \item \textbf{Ordering logic:} strict order handling (absolute or relative),
+        plus Nearest Neighbour when no strict orders exist.
+  \item \textbf{Constraint fit check:} \texttt{applyOpeningHours} integrates
+        active hours, desired windows, fixed-time behaviour, and opening-hours
+        nudging.
+  \item \textbf{Packing loop:} schedules preferred-day buckets first, then
+        unassigned stops, spilling to later days or overflow when necessary.
+\end{itemize}
+
+The planner records travel minutes (\texttt{prevTravelMin}) and effective route
+mode per leg, including detection of transit vs walking in cases where the
+transit provider returns walking-only legs.
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.92\textwidth}{!}{%
+  \begin{tikzpicture}[
+    >=Stealth,
+    every node/.style={font=\small, align=center},
+    startstop/.style={rectangle, rounded corners=8pt, draw=black, fill=red!10,
+                      minimum width=3cm, minimum height=0.8cm},
+    process/.style={rectangle, draw=black, fill=blue!8, minimum width=4.2cm,
+                    minimum height=0.8cm, rounded corners=2pt},
+    decision/.style={diamond, draw=black, fill=yellow!15, minimum width=2cm,
+                     minimum height=1cm, aspect=2.2, inner sep=2pt},
+    result/.style={rectangle, draw=black, fill=green!10, minimum width=3cm,
+                   minimum height=0.7cm, rounded corners=2pt},
+    arr/.style={->, thick},
+  ]
+
+    \node[startstop] (start) at (0,0) {Start: places, dates, mode,\\preferences};
+
+    \node[process] (matrix) at (0,-1.8)
+      {Build travel-time matrix\\{\scriptsize ORS matrix; Haversine fallback}\\{\scriptsize (skipped for transit mode)}};
+
+    \node[decision] (strict) at (0,-4) {Strict order\\constraints?};
+
+    \node[process] (applystrict) at (-4,-5.8) {Apply strict ordering\\{\scriptsize absolute + relative}};
+    \node[process] (nn) at (4,-5.8) {Nearest Neighbour\\ordering};
+
+    \node[process] (partition) at (0,-7.6)
+      {Partition stops:\\{\scriptsize preferred-day buckets vs unassigned pool}};
+
+    % ── Phase 1: preferred-day buckets ──
+    \node[process, fill=blue!15] (phase1) at (0,-9.4)
+      {\textbf{Phase 1}: schedule preferred-day stops\\{\scriptsize order within each day bucket}};
+
+    \node[process] (initpref) at (0,-11.2)
+      {Initialise day cursor\\{\scriptsize at active-hours start + focus shift}};
+
+    \node[decision] (prefremain) at (0,-13.2) {Preferred stops\\remain in bucket?};
+
+    \node[process] (preffit) at (0,-15.4)
+      {Try fit stop on its preferred day:\\{\scriptsize travel gap, opening hours,}\\{\scriptsize desired window, fixed-time}};
+
+    \node[decision] (preffits) at (0,-17.8) {Stop fits\\in day?};
+
+    \node[result] (prefplace) at (-4.5,-19.5) {Place stop;\\advance cursor};
+    \node[process] (prefover) at (4.5,-19.5) {Add to overflow\\{\scriptsize (no day spilling)}};
+
+    % ── Phase 2: unassigned stops ──
+    \node[process, fill=blue!15] (phase2) at (0,-21.6)
+      {\textbf{Phase 2}: schedule unassigned stops\\{\scriptsize order by NN or strict order}};
+
+    \node[process] (initunassign) at (0,-23.4)
+      {Initialise cursor on current day\\{\scriptsize at active-hours start + focus shift}};
+
+    \node[decision] (morestops) at (0,-25.4) {Unassigned\\stops remain?};
+
+    \node[process] (fitstop) at (0,-27.6)
+      {Try fit next stop on current day:\\{\scriptsize travel gap, opening hours,}\\{\scriptsize desired window, fixed-time}};
+
+    \node[decision] (fits) at (0,-30) {Stop fits\\in day?};
+
+    \node[result] (place) at (-4.5,-31.8) {Place stop;\\advance cursor};
+    \node[decision] (nextday) at (4.5,-31.8) {More days\\available?};
+
+    \node[process] (spill) at (4.5,-33.8) {Advance to next day;\\reset cursor};
+    \node[process] (overflow) at (8.5,-31.8) {Add to overflow\\{\scriptsize with rejection reason}};
+
+    \node[startstop] (done) at (0,-36)
+      {Return scheduled plan\\+ overflow list};
+
+    % ══════ Arrows ══════
+
+    % Start → matrix → ordering
+    \draw[arr] (start) -- (matrix);
+    \draw[arr] (matrix) -- (strict);
+    \draw[arr] (strict) -| node[above, pos=0.25]{\scriptsize Yes} (applystrict);
+    \draw[arr] (strict) -| node[above, pos=0.25]{\scriptsize No} (nn);
+    \draw[arr] (applystrict) |- (partition);
+    \draw[arr] (nn) |- (partition);
+
+    % Partition → Phase 1
+    \draw[arr] (partition) -- (phase1);
+    \draw[arr] (phase1) -- (initpref);
+    \draw[arr] (initpref) -- (prefremain);
+
+    % Phase 1 loop
+    \draw[arr] (prefremain) -- node[right]{\scriptsize Yes} (preffit);
+    \draw[arr] (preffit) -- (preffits);
+    \draw[arr] (preffits) -| node[above, pos=0.25]{\scriptsize Yes} (prefplace);
+    \draw[arr] (preffits) -| node[above, pos=0.25]{\scriptsize No} (prefover);
+    \draw[arr] (prefplace.west) -- ++(-2.5,0) |- (prefremain.west);
+    \draw[arr] (prefover.east) -- ++(2.5,0) |- (prefremain.east);
+
+    % Phase 1 done → Phase 2
+    \draw[arr] (prefremain.south) ++(0,-0.1) -- ++(-8,0)
+      |- node[above, pos=0.08]{\scriptsize No} (phase2.west);
+
+    % Phase 2
+    \draw[arr] (phase2) -- (initunassign);
+    \draw[arr] (initunassign) -- (morestops);
+
+    % Phase 2 loop
+    \draw[arr] (morestops) -- node[right]{\scriptsize Yes} (fitstop);
+    \draw[arr] (fitstop) -- (fits);
+    \draw[arr] (fits) -| node[above, pos=0.25]{\scriptsize Yes} (place);
+    \draw[arr] (fits) -| node[above, pos=0.25]{\scriptsize No} (nextday);
+
+    % Place → back to morestops
+    \draw[arr] (place.west) -- ++(-2.5,0) |- (morestops.west);
+
+    % Spill: retry SAME stop on next day (arrow goes back to fitstop, not morestops)
+    \draw[arr] (nextday) -- node[right]{\scriptsize Yes} (spill);
+    \draw[arr] (nextday) -- node[above]{\scriptsize No} (overflow);
+    \draw[arr] (spill.east) -- ++(3,0) |- (fitstop.east);
+
+    % Overflow → back to morestops (move to next stop)
+    \draw[arr] (overflow) |- ([yshift=5pt]morestops.east);
+
+    % No more stops → done
+    \draw[arr] (morestops.south) ++(0,-0.1) -- ++(-8,0)
+      |- node[above, pos=0.1]{\scriptsize No} (done.west);
+
+  \end{tikzpicture}%
+  }%
+  \caption{Auto-scheduler flowchart. The algorithm builds an ORS
+           travel-time matrix (with Haversine fallback), orders stops
+           (strict constraints or Nearest Neighbour), then partitions
+           them into preferred-day buckets and an unassigned pool.
+           Phase~1 schedules preferred-day stops on their assigned day,
+           sending unfitting stops directly to overflow.  Phase~2
+           schedules unassigned stops greedily, spilling to subsequent
+           days (retrying the same stop) or overflow when no days remain.
+           The cursor is initialised with a focus-dependent shift
+           (morning, midday, or afternoon).}
+  \label{fig:planner_flow}
+\end{figure}
+
+\begin{algorithm}[H]
+  \caption{Auto-scheduler pseudocode.  The full implementation
+           (\texttt{server/planner.js}, 783~lines) handles additional
+           concerns---transit leg queries, sparse spacing gaps,
+           fixed-time constraints, and opening-hour nudging---that are
+           omitted here for clarity.}
+  \label{alg:planner}
+  \begin{algorithmic}[1]
+    \Require $\mathit{places}$, $\mathit{days}$, $\mathit{activeStart}$, $\mathit{activeEnd}$, $\mathit{focus}$, $\mathit{transport}$
+    \Ensure  $\mathit{days}$ (each with scheduled stops), $\mathit{overflow}$
+
+    \Statex \Comment{--- Initialisation ---}
+    \State $M \gets \Call{BuildTravelMatrix}{\mathit{places},\;\mathit{transport}}$
+      \Comment{ORS or Haversine fallback}
+    \State $\mathit{ordered} \gets \Call{NearestNeighbour}{\mathit{places},\;M}$
+    \State partition $\mathit{ordered}$ into $\mathit{assignedByDay}$ and $\mathit{unassigned}$
+    \State $\mathit{focusShift} \gets$ offset from $\mathit{focus}$
+      \Comment{0, $\lfloor\mathit{span}/3\rfloor$, or $\lfloor\mathit{span}/1.8\rfloor$}
+
+    \Statex
+    \Statex \Comment{--- Phase 1: preferred-day stops ---}
+    \For{each $\mathit{day}$ in $\mathit{days}$}
+      \State $\mathit{cursor} \gets \mathit{activeStart} + \mathit{focusShift}$
+      \For{each $\mathit{stop}$ in $\mathit{assignedByDay}[\mathit{day}]$}
+        \State $\mathit{travel} \gets M[\mathit{last},\;\mathit{stop}]$
+        \State $\mathit{propose} \gets \mathit{cursor} + \mathit{travel}$
+        \State $(a, b, \mathit{fits}) \gets \Call{ApplyOpeningHours}{\mathit{stop},\;\mathit{propose},\;\mathit{activeEnd}}$
+        \If{$\mathit{fits}$}
+          \State schedule $\mathit{stop}$ at $[a, b]$; \; $\mathit{cursor} \gets b$
+        \Else
+          \State append $\mathit{stop}$ to $\mathit{overflow}$
+        \EndIf
+      \EndFor
+    \EndFor
+
+    \Statex
+    \Statex \Comment{--- Phase 2: unassigned stops (greedy with spill) ---}
+    \State $d \gets 0$; \; $\mathit{cursor} \gets \mathit{activeStart} + \mathit{focusShift}$
+    \For{each $\mathit{stop}$ in $\mathit{unassigned}$}
+      \State $\mathit{travel} \gets M[\mathit{last},\;\mathit{stop}]$
+      \State $\mathit{propose} \gets \mathit{cursor} + \mathit{travel}$
+      \State $(a, b, \mathit{fits}) \gets \Call{ApplyOpeningHours}{\mathit{stop},\;\mathit{propose},\;\mathit{activeEnd}}$
+      \If{$\mathit{fits}$}
+        \State schedule $\mathit{stop}$ on day $d$ at $[a, b]$; \; $\mathit{cursor} \gets b$
+      \Else
+        \While{$\lnot\mathit{fits}$ \textbf{and} $d < |\mathit{days}|$}
+          \State $d \gets d + 1$; \; $\mathit{cursor} \gets \mathit{activeStart} + \mathit{focusShift}$
+          \State $(a, b, \mathit{fits}) \gets \Call{ApplyOpeningHours}{\mathit{stop},\;\mathit{cursor},\;\mathit{activeEnd}}$
+        \EndWhile
+        \If{$\mathit{fits}$}
+          \State schedule $\mathit{stop}$ on day $d$ at $[a, b]$; \; $\mathit{cursor} \gets b$
+        \Else
+          \State append $\mathit{stop}$ to $\mathit{overflow}$
+        \EndIf
+      \EndIf
+    \EndFor
+
+    \Statex
+    \State \Return $(\mathit{days},\;\mathit{overflow})$
+  \end{algorithmic}
+\end{algorithm}
+
+\section{Merge Implementation}
+The merge engine is implemented in \texttt{server/merge.js}. Improvements made
+after the Progress Report address known risks:
+\begin{itemize}
+  \item \textbf{Deep structural equality:} avoids \texttt{JSON.stringify}
+        brittleness.
+  \item \textbf{Robust stop identifiers:} if stops lack IDs, stable IDs are
+        generated from name + coordinates + day context, reducing merge
+        drop-outs.
+  \item \textbf{Deterministic ordering:} days sorted by date; stops sorted by
+        arrival time.
+  \item \textbf{Deletion semantics:} explicit \texttt{plan-stop-delete} conflict
+        for delete-vs-modify.
+  \item \textbf{Field-level conflicts:} six selected fields (\texttt{name},
+        \texttt{lat}, \texttt{lng}, \texttt{notes}, \texttt{stayMin},
+        \texttt{routeMode}) produce \texttt{plan-stop-field} conflicts when both
+        sides diverge.
+\end{itemize}
+
+Structural divergence is detected using a Jaccard similarity heuristic over
+stop-key sets; if the Jaccard index falls below 0.4, a \texttt{plan-whole}
+conflict is produced and the UI requires choosing an entire plan.
+Without this guard, per-stop merging would attempt to align two largely
+unrelated itineraries---for example, one collaborator replacing the plan with
+stops in Tokyo while the other replaces it with stops in Paris---producing a
+nonsensical hybrid plan with no meaningful correspondence between stops.
+
+\begin{figure}[H]
+\begin{lstlisting}[language=JavaScript,
+  caption={Jaccard similarity function used to detect structural divergence
+           between two plan branches (\texttt{server/merge.js}, lines 112--120).
+           A threshold of 0.4 was chosen empirically to balance between
+           flagging genuinely unrelated plans and allowing minor structural edits
+           to proceed to per-stop merging.},
+  label={lst:jaccard}]
+function jaccard(a, b) {
+  if (!a.size && !b.size) return 1;
+  let inter = 0;
+  for (const v of a) {
+    if (b.has(v)) inter++;
+  }
+  const union = a.size + b.size - inter;
+  return union ? inter / union : 0;
+}
+\end{lstlisting}
+\end{figure}
+
+\section{Routing Implementation}
+Routing integration is implemented in \texttt{server/routing.js}:
+\begin{itemize}
+  \item ORS matrix requests use the matrix endpoint and return durations in
+        minutes \cite{ref_ors_matrix}.
+  \item ORS directions requests fetch per-leg geometry for map rendering.
+  \item Google Directions transit routes provide detailed per-step segments,
+        including polylines decoded via the standard polyline algorithm
+        \cite{ref_google_directions_api}.
+  \item Fallback estimates use Haversine distance.
+\end{itemize}
+
+\section{Quick Explore Mode}
+Quick explore mode provides a Google-Maps-like workflow where users quickly enter
+destinations, optimise an order, and optionally start a repository from the
+result. This is implemented via \texttt{server/quickroute.js}:
+\begin{itemize}
+  \item for small instances (N $\leq$ 12), an exact Held-Karp dynamic programming
+        solver is used \cite{ref_tsp_study,ref_tsp_local_search};
+  \item for larger instances, NN is used with 2-opt refinement.
+\end{itemize}
+
+The quick route engine builds a travel-time matrix using ORS, transit pairwise
+calls for small transit sets (limited to N~$\leq$~7 to control API cost), or
+Haversine fallback. Concurrency is bounded to a pool of four simultaneous
+requests to reduce API burst risk.
+
+\begin{algorithm}[H]
+  \caption{Nearest Neighbour heuristic (\texttt{server/quickroute.js},
+           lines 212--247).  Greedy $O(N^2)$ path construction starting from
+           a fixed origin; if no finite edge exists from the current node,
+           remaining stops are appended in their original input order.}
+  \label{alg:nn}
+  \begin{algorithmic}[1]
+    \Require travel-time matrix $M$, start index $s$
+    \Ensure  visit order $\mathit{order}$
+    \State $\mathit{order} \gets [s]$; \; $\mathit{used}[s] \gets \textbf{true}$
+    \While{$|\mathit{order}| < N$}
+      \State $\mathit{cur} \gets \mathit{order}.\mathrm{last}$
+      \State $\mathit{best} \gets \arg\min_{j \notin \mathit{used}} M[\mathit{cur}][j]$
+      \If{$\mathit{best}$ exists}
+        \State $\mathit{used}[\mathit{best}] \gets \textbf{true}$; \;
+               append $\mathit{best}$ to $\mathit{order}$
+      \Else
+        \State append all remaining unvisited nodes in original index order
+        \State \textbf{break}
+      \EndIf
+    \EndWhile
+    \State \Return $\mathit{order}$
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+  \caption{2-opt local search refinement (\texttt{server/quickroute.js},
+           lines 254--285).  Iteratively reverses sub-segments of the path
+           to reduce total cost.  The first node (origin) is kept fixed.
+           Runs up to 4 full sweeps or until no improvement is found.}
+  \label{alg:twoopt}
+  \begin{algorithmic}[1]
+    \Require visit order $\mathit{order}$, travel-time matrix $M$
+    \Ensure  improved visit order $\mathit{best}$
+    \State $\mathit{best} \gets \mathit{order}$; \;
+           $\mathit{bestCost} \gets \Call{PathCost}{\mathit{best}, M}$
+    \For{$\mathit{pass} \gets 1$ \textbf{to} $4$}
+      \State $\mathit{improved} \gets \textbf{false}$
+      \For{$i \gets 1$ \textbf{to} $N - 3$}
+        \Comment{skip index 0 to fix origin}
+        \For{$k \gets i + 1$ \textbf{to} $N - 2$}
+          \State $\mathit{cand} \gets \mathit{best}$ with segment $[i \ldots k]$ reversed
+          \If{$\Call{PathCost}{\mathit{cand}, M} < \mathit{bestCost}$}
+            \State $\mathit{best} \gets \mathit{cand}$; \;
+                   $\mathit{bestCost} \gets \Call{PathCost}{\mathit{cand}, M}$; \;
+                   $\mathit{improved} \gets \textbf{true}$
+          \EndIf
+        \EndFor
+      \EndFor
+      \If{$\lnot\mathit{improved}$} \textbf{break} \EndIf
+    \EndFor
+    \State \Return $\mathit{best}$
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+  \caption{Held-Karp exact solver (\texttt{server/quickroute.js},
+           lines 131--196).  Bitmask dynamic programming in
+           $O(2^N \cdot N^2)$ time and space; used only for $N \leq 12$.
+           Unlike the classic TSP formulation this solves for the shortest
+           \emph{path} (open tour), not a cycle.}
+  \label{alg:heldkarp}
+  \begin{algorithmic}[1]
+    \Require travel-time matrix $M$, start index $s$
+    \Ensure  optimal visit order $\mathit{order}$, cost
+    \State $N \gets |M|$; \; $\mathit{FULL} \gets 2^N - 1$
+    \State $\mathit{dp}[\mathit{mask}][j] \gets \infty$ for all $(\mathit{mask}, j)$
+    \State $\mathit{parent}[\mathit{mask}][j] \gets -1$ for all $(\mathit{mask}, j)$
+    \State $\mathit{dp}[2^s][s] \gets 0$
+      \Comment{base case: start at $s$}
+
+    \Statex
+    \For{$\mathit{mask} \gets 0$ \textbf{to} $\mathit{FULL}$}
+      \If{bit $s$ not set in $\mathit{mask}$} \textbf{continue} \EndIf
+      \For{$j \gets 0$ \textbf{to} $N-1$ where bit $j$ set in $\mathit{mask}$}
+        \For{$k \gets 0$ \textbf{to} $N-1$ where bit $k$ \emph{not} set in $\mathit{mask}$}
+          \State $\mathit{nm} \gets \mathit{mask} \;\mathbin{|}\; 2^k$
+          \If{$\mathit{dp}[\mathit{mask}][j] + M[j][k] < \mathit{dp}[\mathit{nm}][k]$}
+            \State $\mathit{dp}[\mathit{nm}][k] \gets \mathit{dp}[\mathit{mask}][j] + M[j][k]$
+            \State $\mathit{parent}[\mathit{nm}][k] \gets j$
+          \EndIf
+        \EndFor
+      \EndFor
+    \EndFor
+
+    \Statex \Comment{--- Reconstruct optimal path ---}
+    \State $\mathit{bestEnd} \gets \arg\min_j \mathit{dp}[\mathit{FULL}][j]$
+    \State $\mathit{order} \gets []$; \; $\mathit{mask} \gets \mathit{FULL}$; \;
+           $\mathit{cur} \gets \mathit{bestEnd}$
+    \While{$\mathit{cur} \neq -1$}
+      \State prepend $\mathit{cur}$ to $\mathit{order}$
+      \State $\mathit{prev} \gets \mathit{parent}[\mathit{mask}][\mathit{cur}]$; \;
+             clear bit $\mathit{cur}$ from $\mathit{mask}$; \;
+             $\mathit{cur} \gets \mathit{prev}$
+    \EndWhile
+    \State \Return $(\mathit{order},\;\mathit{dp}[\mathit{FULL}][\mathit{bestEnd}])$
+  \end{algorithmic}
+\end{algorithm}
+
+\section{Algorithm Visualisation}
+GiTrip includes an educational algorithm visualisation page
+(\texttt{server/public/algorithm.js}) that demonstrates three route-ordering
+algorithms with step-by-step animation on a Leaflet map:
+\begin{enumerate}
+  \item \textbf{Nearest Neighbour (NN):} greedy selection of the closest
+        unvisited stop; $O(N^2)$ time.
+  \item \textbf{NN + 2-opt:} starts from an NN solution and iteratively reverses
+        sub-segments to shorten the route; used for instances with more than 12
+        stops.
+  \item \textbf{Held-Karp dynamic programming:} exact bitmask DP solver in
+        $O(2^N \cdot N^2)$ time; guarantees optimality but is limited to
+        N~$\leq$~12 stops due to exponential growth.
+\end{enumerate}
+
+The visualisation fetches real routing geometry from the server
+(\texttt{/api/algo-matrix} and \texttt{/api/algo-geometry}), supports multiple
+transport modes, and includes playback controls (play, pause, step, reset, speed
+slider), synchronised pseudocode highlighting, animated scan lines showing which
+edges are being evaluated, and a cost comparison panel.
+
+\section{Frontend Implementation}
+GiTrip's pages are server-rendered with EJS templates and enhanced with
+client-side JavaScript:
+\begin{itemize}
+  \item \textbf{Repo UI:} displays trip plan, map, timeline, branches, commits,
+        settings, and exports.
+  \item \textbf{Merge UI:} presents conflicts and resolution controls, then
+        submits a resolution payload to create a merge commit.
+  \item \textbf{Planner UI:} collects inputs and submits to the planner endpoint
+        to generate a new commit on a planner branch.
+\end{itemize}
+
+\subsection{Timeline and Map Editing}
+The timeline editor uses draggable SVG elements with snapping to 5-minute
+increments. It clamps edits based on travel constraints:
+\begin{itemize}
+  \item a stop cannot start before the previous stop's departure plus travel
+        time,
+  \item a stop cannot extend beyond the next stop's arrival,
+  \item minimum stop duration is enforced.
+\end{itemize}
+
+The map editor uses Leaflet markers with numbered pins \cite{ref_leaflet}. In
+edit mode, markers are draggable and route polylines are updated. Transit legs
+display additional stop markers and per-leg mode styling (e.g., dashed walking
+segments).
+
+\section{Exports and PWA Features}
+\subsection{PDF Export}
+PDF export is implemented using browser printing (\texttt{window.print()}),
+which is robust and avoids server-side rendering complexity.
+
+\subsection{iCalendar Export}
+GiTrip generates \texttt{text/calendar} content in iCalendar format and serves
+it as an \texttt{.ics} download. The iCalendar format is defined by RFC 5545
+\cite{ref_rfc5545}.
+
+\subsection{PWA and Offline}
+GiTrip includes PWA support through a web application manifest and a service
+worker. The manifest standard is specified by W3C \cite{ref_appmanifest}, and
+service workers are defined by W3C as an event-driven background worker model
+enabling offline caching \cite{ref_service_workers}. Offline behaviour focuses
+on caching core assets and recently accessed pages; limitations include the
+inability to guarantee offline routing responses.
+
+\section{Supporting Features}
+\subsection{Weather Integration}
+Each day in a plan displays a weather forecast retrieved from the Open-Meteo
+API. The server fetches daily forecasts (temperature range, precipitation
+probability, and weather code) using the first stop's coordinates for each day,
+with a 30-minute TTL cache to reduce external requests. Historical data is
+fetched for past dates and forecast data for future dates.
+
+\subsection{Travel Alerts}
+GiTrip retrieves travel disruption news via the GNews API. City names are
+extracted from stop names in the plan, and a search query combining those
+cities with disruption keywords (strike, closure, protest, etc.) is issued.
+Because articles about upcoming disruptions are typically published before
+the affected dates, the search window extends from seven days before the
+first trip date through the last trip date, and each article is assigned to the
+nearest matching trip date. Results are displayed per day with badge counts.
+Users can also add manual alert notes stored in the \texttt{travel\_alerts}
+table.
+
+\subsection{Public Gallery with Pagination}
+The public gallery (\texttt{/ui/public}) displays trips that owners have
+marked as public. The listing supports sorting by recency or star count and
+is paginated at 12 trips per page using SQL \texttt{LIMIT}/\texttt{OFFSET}
+queries, preventing unbounded response sizes as the number of public trips
+grows.
+
+\section{Deployment and Operations}
+GiTrip supports deployment via containerisation with a persistent volume for the
+SQLite database file (\texttt{gitrip.db}). The server starts on \texttt{PORT}
+(default 4000) and automatically increments if the port is in use. Environment
+variables provide routing API keys. The system was deployed for Evaluation Day to
+allow participants to access the application from multiple machines and personal
+devices.

@@ -1,7 +1,7 @@
 /**
  * algorithm.js — Multi-algorithm route optimisation visualisation.
  *
- * Three tabs: Nearest Neighbour, NN + 2-opt, Held-Karp DP.
+ * Three tabs: Nearest Neighbour, NN and 2-opt, Held-Karp DP.
  * Each runs an animated, step-by-step demonstration on London landmarks
  * with synchronised pseudocode highlighting.
  */
@@ -235,7 +235,7 @@
     return steps;
   }
 
-  /* --- NN + 2-opt --- */
+  /* --- NN and 2-opt --- */
   function generateTwoOptSteps(startIdx, matrix) {
     var steps = [];
     var n = matrix.length;
@@ -342,7 +342,7 @@
     },
     hk: {
       pseudo: PSEUDO_HK, generate: generateHKSteps,
-      desc: 'An exact dynamic-programming algorithm that evaluates every possible route via bitmask subsets. Guarantees the shortest path but is O(2\u207f\u00b7n\u00b2) \u2014 at 12 stops that\u2019s 4,096 subsets, which is still fast; at 13 it doubles to 8,192 and grows rapidly, so GiTrip caps it at 12.',
+      desc: 'An exact dynamic-programming algorithm that evaluates every possible route via bitmask subsets. Guarantees the shortest path but is O(2\u207f\u00b7n\u00b2). At 12 stops that\'s 4,096 subsets, which is still fast; at 13 it doubles to 8,192 and grows rapidly, so GiTrip caps it at 12.',
     },
   };
   var currentAlgo = 'nn';
@@ -749,36 +749,36 @@
 
     switch (step.type) {
       /* NN */
-      case 'init': msg = 'Placing destinations\u2026'; break;
+      case 'init': msg = 'Placing destinations...'; break;
       case 'select_start': msg = 'Selecting start node'; break;
-      case 'begin_search': msg = 'Searching for nearest unvisited\u2026'; break;
+      case 'begin_search': msg = 'Searching for nearest unvisited...'; break;
       case 'scan_node':
         var edgeCost = state.matrix ? state.matrix[step.current][step.candidate] : 0;
         msg = 'Checking ' + LANDMARKS[step.candidate].name + ' (' + formatCost(edgeCost) + ')';
         break;
       case 'found_better': msg = 'Closer neighbour found!'; break;
       case 'choose_best': msg = LANDMARKS[step.from].name + ' \u2192 ' + LANDMARKS[step.to].name; break;
-      case 'mark_visited': msg = 'Arrived \u2014 marking visited'; break;
+      case 'mark_visited': msg = 'Arrived; marking visited'; break;
       case 'complete': msg = 'Route complete!'; break;
 
       /* 2-opt */
       case 'twoopt_show_nn': msg = 'Initial route from Nearest Neighbour'; break;
-      case 'twoopt_begin': msg = 'Starting 2-opt local search\u2026'; break;
+      case 'twoopt_begin': msg = 'Starting 2-opt local search...'; break;
       case 'twoopt_consider':
-        msg = 'Try reversing positions ' + step.i + '\u2013' + step.k;
+        msg = 'Try reversing positions ' + step.i + ';' + step.k;
         break;
       case 'twoopt_improve':
         msg = 'Improved! ' + formatCost(computeRouteCost(step.oldOrder)) + ' \u2192 ' + formatCost(computeRouteCost(step.newOrder));
         break;
-      case 'twoopt_no_change': msg = 'No improving swaps \u2014 locally optimal'; break;
+      case 'twoopt_no_change': msg = 'No improving swaps; locally optimal'; break;
       case 'twoopt_complete': msg = '2-opt refinement complete!'; break;
 
       /* HK */
-      case 'hk_init': msg = 'Placing destinations\u2026'; break;
+      case 'hk_init': msg = 'Placing destinations...'; break;
       case 'hk_start': msg = 'Initialising DP from start node'; break;
       case 'hk_explore_edge': msg = 'Evaluating edge to ' + LANDMARKS[step.to].name; break;
-      case 'hk_computing': msg = 'Computing all subsets via DP\u2026'; break;
-      case 'hk_find_best': msg = 'Finding optimal endpoint\u2026'; break;
+      case 'hk_computing': msg = 'Computing all subsets via DP...'; break;
+      case 'hk_find_best': msg = 'Finding optimal endpoint...'; break;
       case 'hk_mark_node': msg = 'Optimal path visits ' + LANDMARKS[step.nodeIndex].name; break;
       case 'hk_reconstruct_edge': msg = LANDMARKS[step.from].name + ' \u2192 ' + LANDMARKS[step.to].name; break;
       case 'hk_complete': msg = 'Optimal route found!'; break;
@@ -847,9 +847,9 @@
     resetBtn.addEventListener('click', resetAnimation);
 
     slider.addEventListener('input', function () {
-      state.speed = Number(slider.value);
-      var label = state.speed % 1 === 0 ? state.speed.toFixed(0) : state.speed.toFixed(2).replace(/0$/, '');
-      speedVal.textContent = label + '\u00d7';
+      state.speed = Math.max(0.5, Number(slider.value));
+      var label = state.speed % 1 === 0 ? state.speed.toFixed(0) : state.speed.toFixed(1);
+      speedVal.textContent = label + 'x';
     });
 
     var startSelect = document.getElementById('algoStartSelect');
@@ -964,7 +964,7 @@
     var points = LANDMARKS.map(function (l) { return { lat: l.lat, lng: l.lng }; });
     var mode = getMode();
     var phase = document.getElementById('algoPhase');
-    if (phase) phase.textContent = 'Fetching ' + mode + ' travel times\u2026';
+    if (phase) phase.textContent = 'Fetching ' + mode + ' travel times...';
 
     fetch('/api/algo-matrix', {
       method: 'POST',
@@ -1026,7 +1026,7 @@
     var routes = collectRoutes(steps);
     if (!routes.length) { if (callback) callback(); return; }
     var phase = document.getElementById('algoPhase');
-    if (phase) phase.textContent = 'Loading route paths\u2026';
+    if (phase) phase.textContent = 'Loading route paths...';
 
     // Collect unique edges across all routes (skip already-cached ones)
     var edgeList = [];

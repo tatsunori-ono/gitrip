@@ -1,0 +1,39 @@
+% !TEX root = ../Report.tex
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Trip planning becomes significantly more complex when multiple people collaborate,
+because itineraries evolve through parallel edits, last-minute changes, and
+disagreements about priorities. Existing tools typically optimise a single
+itinerary (e.g., mapping and routing applications) or support generic
+collaboration (e.g., shared documents), but they do not provide robust
+change-management semantics tailored to itineraries. This project presents
+\textit{GiTrip}, a server-rendered web application that applies Git-style
+version control concepts to trip planning: a trip is modelled as a repository,
+alternative itineraries are branches, each saved version is a commit containing
+a complete snapshot, and divergent branches can be merged using a three-way
+merge with an explicit conflict-resolution user interface.
+
+GiTrip integrates routing, scheduling constraints, and usability-focused
+interaction. An automatic scheduler produces feasible multi-day itineraries
+based on user inputs such as active hours, stay durations, ordering constraints,
+desired time windows, public transit selection, and opening hours. Users can
+then refine plans using two interactive surfaces: a timeline editor for
+adjusting arrival/departure times and a map editor for repositioning locations.
+To address the usability barrier of Git concepts for non-technical users, GiTrip
+includes an ``Easy mode'' that hides advanced controls while preserving version
+safety.
+
+The completed system was evaluated through an in-person Evaluation Day
+demonstration and user acceptance testing. Objective task results show high
+completion rates for auto-scheduling feasibility and merge conflict resolution,
+with qualitative feedback highlighting the novelty and usefulness of
+version-controlled planning. The report details the requirements, system design,
+implementation, testing strategy, and evaluation outcomes, and concludes with
+limitations and future work (including optional machine learning extensions
+beyond the original project scope).
+
+\vspace{0.6em}
+\textbf{Keywords:} trip planning; version control; branching and merging;
+scheduling constraints; routing; usability; progressive web app; conflict
+resolution

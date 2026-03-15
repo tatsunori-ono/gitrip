@@ -1,0 +1,109 @@
+\contentsline {chapter}{Abstract}{ii}{chapter*.1}%
+\contentsline {chapter}{Acknowledgements}{iii}{chapter*.2}%
+\contentsline {chapter}{Abbreviations}{iv}{chapter*.3}%
+\contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Problem Context and Motivation}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Project Overview}{1}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Objectives and Significance}{2}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Contributions}{2}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Report Structure}{3}{section.1.5}%
+\contentsline {chapter}{\numberline {2}Background and Related Work}{4}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Trip Planning and Routing Tools}{4}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Generic Collaboration Tools}{4}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Version Control Concepts and Applicability}{5}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Scheduling and Route Optimisation}{5}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Approximate String Matching for Place Search}{5}{section.2.5}%
+\contentsline {section}{\numberline {2.6}Structured Data Merge and JSON Patch Formats}{6}{section.2.6}%
+\contentsline {section}{\numberline {2.7}Usability and Accessibility Frameworks}{6}{section.2.7}%
+\contentsline {section}{\numberline {2.8}Summary: Gap in Existing Approaches}{6}{section.2.8}%
+\contentsline {chapter}{\numberline {3}Requirements and Project Specification}{7}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Requirements Elicitation}{7}{section.3.1}%
+\contentsline {section}{\numberline {3.2}MoSCoW Objectives}{7}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Success Criteria}{8}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Non-functional Requirements}{8}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Scope Boundary: Why AI Was Excluded from the MVP}{9}{section.3.5}%
+\contentsline {chapter}{\numberline {4}Methodology}{10}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Development Approach}{10}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Choice of Tools and Technologies}{10}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}Node.js and Express}{10}{subsection.4.2.1}%
+\contentsline {subsection}{\numberline {4.2.2}SQLite for Persistent Storage}{11}{subsection.4.2.2}%
+\contentsline {subsection}{\numberline {4.2.3}Mapping and Geocoding}{11}{subsection.4.2.3}%
+\contentsline {subsection}{\numberline {4.2.4}Routing Providers}{11}{subsection.4.2.4}%
+\contentsline {subsection}{\numberline {4.2.5}Usability Frameworks}{11}{subsection.4.2.5}%
+\contentsline {section}{\numberline {4.3}Testing Strategy}{11}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Evaluation Design}{12}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Ethics and Data Handling}{12}{section.4.5}%
+\contentsline {chapter}{\numberline {5}System Design}{13}{chapter.5}%
+\contentsline {section}{\numberline {5.1}High-level Architecture}{13}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Data Model and Repository Semantics}{14}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Snapshot Storage}{15}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Plan Schema}{16}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}Module Structure}{16}{subsection.5.2.3}%
+\contentsline {section}{\numberline {5.3}Routing and Geocoding Design}{17}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Place Search}{17}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Routing Providers and Fallback}{17}{subsection.5.3.2}%
+\contentsline {section}{\numberline {5.4}Auto-scheduler Design}{18}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}Opening Hours Nudging}{18}{subsection.5.4.1}%
+\contentsline {subsection}{\numberline {5.4.2}Compact vs Sparse Modes}{18}{subsection.5.4.2}%
+\contentsline {section}{\numberline {5.5}Merge Design}{18}{section.5.5}%
+\contentsline {subsection}{\numberline {5.5.1}Equality and Stability}{20}{subsection.5.5.1}%
+\contentsline {subsection}{\numberline {5.5.2}Conflict Types}{20}{subsection.5.5.2}%
+\contentsline {section}{\numberline {5.6}User Interface Design}{20}{section.5.6}%
+\contentsline {subsection}{\numberline {5.6.1}Easy Mode vs Git Mode}{20}{subsection.5.6.1}%
+\contentsline {section}{\numberline {5.7}Security, Privacy, and Accessibility Design}{21}{section.5.7}%
+\contentsline {chapter}{\numberline {6}Implementation}{22}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Backend Structure}{22}{section.6.1}%
+\contentsline {subsection}{\numberline {6.1.1}Database Layer}{22}{subsection.6.1.1}%
+\contentsline {subsection}{\numberline {6.1.2}Error Handling}{22}{subsection.6.1.2}%
+\contentsline {section}{\numberline {6.2}Planner Implementation}{23}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Merge Implementation}{25}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Routing Implementation}{25}{section.6.4}%
+\contentsline {section}{\numberline {6.5}Quick Explore Mode}{25}{section.6.5}%
+\contentsline {section}{\numberline {6.6}Algorithm Visualisation}{26}{section.6.6}%
+\contentsline {section}{\numberline {6.7}Frontend Implementation}{26}{section.6.7}%
+\contentsline {subsection}{\numberline {6.7.1}Timeline and Map Editing}{26}{subsection.6.7.1}%
+\contentsline {section}{\numberline {6.8}Exports and PWA Features}{27}{section.6.8}%
+\contentsline {subsection}{\numberline {6.8.1}PDF Export}{27}{subsection.6.8.1}%
+\contentsline {subsection}{\numberline {6.8.2}iCalendar Export}{27}{subsection.6.8.2}%
+\contentsline {subsection}{\numberline {6.8.3}PWA and Offline}{27}{subsection.6.8.3}%
+\contentsline {section}{\numberline {6.9}Supporting Features}{27}{section.6.9}%
+\contentsline {subsection}{\numberline {6.9.1}Weather Integration}{27}{subsection.6.9.1}%
+\contentsline {subsection}{\numberline {6.9.2}Travel Alerts}{27}{subsection.6.9.2}%
+\contentsline {subsection}{\numberline {6.9.3}Public Gallery with Pagination}{27}{subsection.6.9.3}%
+\contentsline {section}{\numberline {6.10}Deployment and Operations}{28}{section.6.10}%
+\contentsline {chapter}{\numberline {7}Testing}{29}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Unit Testing}{29}{section.7.1}%
+\contentsline {subsection}{\numberline {7.1.1}Opening Hours Parsing and Validation}{29}{subsection.7.1.1}%
+\contentsline {subsection}{\numberline {7.1.2}Merge Conflict Detection}{30}{subsection.7.1.2}%
+\contentsline {subsection}{\numberline {7.1.3}Planner Time Utilities and Scheduling Logic}{30}{subsection.7.1.3}%
+\contentsline {subsection}{\numberline {7.1.4}Routing Fallback Logic}{30}{subsection.7.1.4}%
+\contentsline {subsection}{\numberline {7.1.5}External API Connectivity}{31}{subsection.7.1.5}%
+\contentsline {section}{\numberline {7.2}Functional Testing}{31}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Non-functional Testing and Checks}{32}{section.7.3}%
+\contentsline {subsection}{\numberline {7.3.1}Security Checks}{32}{subsection.7.3.1}%
+\contentsline {subsection}{\numberline {7.3.2}Accessibility Checks}{32}{subsection.7.3.2}%
+\contentsline {subsection}{\numberline {7.3.3}Resilience to External API Failures}{33}{subsection.7.3.3}%
+\contentsline {section}{\numberline {7.4}Testing Summary}{33}{section.7.4}%
+\contentsline {chapter}{\numberline {8}Evaluation}{34}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Evaluation Day Setup}{34}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Participants}{34}{section.8.2}%
+\contentsline {section}{\numberline {8.3}User Acceptance Testing Tasks}{34}{section.8.3}%
+\contentsline {subsection}{\numberline {8.3.1}Task T1: Auto-schedule Feasibility}{35}{subsection.8.3.1}%
+\contentsline {subsection}{\numberline {8.3.2}Task T2: Merge Conflict Resolution}{35}{subsection.8.3.2}%
+\contentsline {subsection}{\numberline {8.3.3}Task T3: Quick Edit + Save Without Git Explanation}{36}{subsection.8.3.3}%
+\contentsline {section}{\numberline {8.4}Survey Results}{36}{section.8.4}%
+\contentsline {subsection}{\numberline {8.4.1}Qualitative Feedback}{36}{subsection.8.4.1}%
+\contentsline {section}{\numberline {8.5}Discussion Against Success Criteria}{37}{section.8.5}%
+\contentsline {section}{\numberline {8.6}Threats to Validity}{37}{section.8.6}%
+\contentsline {chapter}{\numberline {9}Conclusions and Future Work}{38}{chapter.9}%
+\contentsline {section}{\numberline {9.1}Conclusions}{38}{section.9.1}%
+\contentsline {section}{\numberline {9.2}Critical Reflection and Lessons Learned}{38}{section.9.2}%
+\contentsline {section}{\numberline {9.3}Limitations}{39}{section.9.3}%
+\contentsline {section}{\numberline {9.4}Future Work}{39}{section.9.4}%
+\contentsline {chapter}{Author's Assessment of the Project}{41}{chapter*.18}%
+\contentsline {chapter}{\numberline {A}Evaluation Day Survey Instrument and Results}{42}{appendix.A}%
+\contentsline {section}{\numberline {A.1}Survey Questions (Summary)}{42}{section.A.1}%
+\contentsline {section}{\numberline {A.2}Full Survey Export PDF}{42}{section.A.2}%
+\contentsline {chapter}{\numberline {B}User Acceptance Test Results (Full Tables)}{43}{appendix.B}%
+\contentsline {chapter}{\numberline {C}Additional Diagrams and Screenshots}{44}{appendix.C}%
+\contentsline {chapter}{\numberline {D}Project Schedule}{45}{appendix.D}%

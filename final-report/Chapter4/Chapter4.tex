@@ -1,0 +1,106 @@
+% !TEX root = ../Report.tex
+% ======================================================================
+\chapter{Methodology}
+% ======================================================================
+
+This chapter explains the development process, tool selection, testing
+methodology, and evaluation design used to deliver GiTrip.
+
+\section{Development Approach}
+GiTrip was developed using an iterative process combining:
+\begin{itemize}
+  \item \textbf{Risk-driven prototyping:} early prototypes validated feasibility
+        of snapshot storage, server-rendered UI, and routing integration.
+  \item \textbf{Incremental feature delivery aligned to MoSCoW:} Must-haves were
+        implemented first to reach an end-to-end MVP; Should-haves and hardening
+        tasks followed.
+  \item \textbf{Continuous feedback:} weekly supervisor meetings provided
+        checkpoints for scope, presentation, and evaluation readiness.
+\end{itemize}
+
+This approach was chosen because the project's key risks were
+integration-heavy: routing APIs, interactive UI behaviour, and merge correctness
+under edge cases. In particular, the merge engine required three major rewrites
+as edge cases emerged during testing, which validated the decision to iterate
+early on high-risk components.
+
+\section{Choice of Tools and Technologies}
+GiTrip's major technology choices were guided by the requirement to deliver a
+complete, deployable web system with both server-rendered UI and asynchronous
+planning/merge operations.
+
+\subsection{Node.js and Express}
+Node.js provides a mature ecosystem for web servers, with excellent support for
+JSON-based data models \cite{ref_node_about}. Express was selected as a
+lightweight, widely-used framework that supports both HTML routes and JSON APIs
+cleanly \cite{ref_express}. This combination enables server-rendered views (for
+fast initial load and SEO-like discoverability) while still allowing interactive
+enhancements via client-side JavaScript.
+
+\subsection{SQLite for Persistent Storage}
+SQLite was chosen for persistent storage because it is reliable, lightweight, and
+appropriate for a project deployed as a single web service
+\cite{ref_sqlite_about}. Its file-based deployment model aligns with container
+deployment and makes backups simple. While SQLite is not a distributed database,
+GiTrip's collaboration model (branch-and-merge) does not require multi-writer
+database replication; concurrency is managed at the application level.
+
+\subsection{Mapping and Geocoding}
+Leaflet was used for the interactive map because it is a well-established
+open-source mapping library that integrates cleanly with OpenStreetMap tiles
+\cite{ref_leaflet,ref_osm}. Nominatim was used for place lookup and geocoding
+due to its OpenStreetMap integration and accessible API \cite{ref_nominatim}. A
+server-side proxy route is used to apply rate limiting and caching to avoid
+overloading the upstream service.
+
+\subsection{Routing Providers}
+OpenRouteService was used for travel-time matrix routing for non-transit modes,
+which is important for ordering and scheduling decisions \cite{ref_ors_matrix}.
+Google Directions API was used for public transit legs, because transit routing
+requires schedule-aware directions and detailed steps for UI explanation
+\cite{ref_google_directions_api}. A key design requirement was provider fallback:
+when API calls fail, GiTrip can degrade gracefully using Haversine-based
+estimates and constant-gap defaults.
+
+\subsection{Usability Frameworks}
+Nielsen's usability principles were used as a practical heuristic framework for
+iterative UI refinement \cite{ref_nielsen}. WCAG 2.2 was used to guide
+accessibility checks and avoid critical issues \cite{ref_wcag22}. For evaluation
+design, SUS and TAM-inspired constructs were used to capture perceived usability
+and acceptance \cite{ref_tam_davis}.
+
+\section{Testing Strategy}
+Testing was treated as a first-class requirement due to the complexity of merge
+logic and scheduling constraints. The strategy combined:
+\begin{itemize}
+  \item \textbf{Unit tests} for opening-hours parsing, time utilities, and merge
+        conflict detection.
+  \item \textbf{Functional tests} covering end-to-end workflows (plan, commit,
+        branch, merge, resolve, export).
+  \item \textbf{Non-functional checks} covering security headers, rate limiting,
+        and accessibility considerations.
+\end{itemize}
+
+All unit tests use the Node.js native test framework (\texttt{node:test}) with
+strict assertions.
+
+\section{Evaluation Design}
+Evaluation was conducted via:
+\begin{itemize}
+  \item \textbf{User Acceptance Testing (UAT)} on Evaluation Day with an observer
+        checklist recording objective task completion, time-to-finish, and hints
+        given.
+  \item \textbf{A post-demo survey} (Microsoft Forms) collecting Likert responses
+        (including SUS), Git familiarity, and free-text feedback.
+\end{itemize}
+
+This design intentionally combines objective evidence (task completion and time)
+with subjective user perception (usability and perceived value), aligning with a
+pragmatic interpretation of TAM in small-sample contexts.
+
+\section{Ethics and Data Handling}
+The evaluation collected minimal personal data. Survey responses were anonymous,
+and the system does not require real personal identity information for most
+features. Where authentication is used, sessions are stored via random
+identifiers and protected by HttpOnly cookies. GDPR considerations are discussed
+in Chapter~5 \cite{ref_gdpr}.

@@ -1,0 +1,211 @@
+% !TEX root = ../Report.tex
+% ======================================================================
+\chapter{Evaluation}
+% ======================================================================
+
+This chapter reports the evaluation conducted on Evaluation Day (Wednesday 25th
+February 2026) and via a follow-up survey. It presents both objective user
+acceptance test results and subjective survey findings, and interprets them
+against the project's success criteria.
+
+\section{Evaluation Day Setup}
+Evaluation Day took place in the Department of Computer Science, Room CS0.03,
+Table B01, slot 13:05--13:45, with the project titled ``GiTrip --- Git for
+Collaborative Trip Planning''. The demonstration environment used four Linux
+machines plus the author's laptop so that multiple participants could test
+branching and merging behaviours in parallel. Additionally, the application was
+deployed publicly so attendees could also use their own laptops and devices.
+
+\section{Participants}
+Two data sources were collected:
+\begin{itemize}
+  \item \textbf{User Acceptance Test (UAT):} 10 in-person participants (P1--P10)
+        with observer-recorded results.
+  \item \textbf{Survey responses:} 13 responses collected via Microsoft Forms
+        (including remote responses). The survey reported an average completion
+        time of 08:46 minutes.
+\end{itemize}
+
+Survey respondents had mixed Git familiarity: 2 not familiar, 5 somewhat
+familiar, 3 comfortable, and 3 very comfortable.
+
+\section{User Acceptance Testing Tasks}
+Three tasks were measured using an observer checklist to provide objective
+evidence.
+
+\subsection{Task T1: Auto-schedule Feasibility}
+Scenario: at least six stops across one to two days. Evidence recorded:
+completion, time-to-finish, non-overlap, and non-zero travel gaps.
+
+\begin{table}[H]
+\centering
+\caption{UAT Task T1 --- Auto-schedule feasibility.}
+\label{tab:uat_t1}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Participant} & \textbf{Completed?} & \textbf{Time} &
+\textbf{Non-overlapping?} & \textbf{Non-zero travel gaps?} \\
+\midrule
+P1  & Y & 3:12  & Y & Y \\
+P2  & Y & 4:45  & Y & Y \\
+P3  & Y & 2:58  & Y & Y \\
+P4  & Y & 5:30  & Y & Y \\
+P5  & Y & 3:44  & Y & Y \\
+P6  & Y & 6:02  & Y & Y \\
+P7  & N & 8:00* & -- & -- \\
+P8  & Y & 4:11  & Y & Y \\
+P9  & Y & 3:55  & Y & Y \\
+P10 & Y & 4:28  & Y & Y \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+{\footnotesize *P7 timed out due to difficulty locating the auto-scheduler
+button without a hint.}
+\end{table}
+
+Across successful completions (9/10), the mean completion time was 4:18 (median
+4:11), and all successful outputs were non-overlapping with non-zero travel gaps.
+This supports Success Criterion SC2.
+
+\subsection{Task T2: Merge Conflict Resolution}
+Scenario: pre-seeded repository with two branches producing at least one timing
+conflict. Evidence recorded: resolved or not, time-to-resolve, and number of
+hints given.
+
+\begin{table}[H]
+\centering
+\caption{UAT Task T2 --- Merge conflict resolution.}
+\label{tab:uat_t2}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Participant} & \textbf{Resolved?} & \textbf{Time} &
+\textbf{Hints given} \\
+\midrule
+P1  & Y & 2:34  & 0 \\
+P2  & Y & 4:50  & 1 \\
+P3  & Y & 1:58  & 0 \\
+P4  & Y & 3:22  & 0 \\
+P5  & Y & 4:47  & 1 \\
+P6  & N & 6:10* & 2 \\
+P7  & Y & 3:05  & 1 \\
+P8  & Y & 2:41  & 0 \\
+P9  & Y & 4:33  & 1 \\
+P10 & Y & 3:18  & 0 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+{\footnotesize *P6 selected the wrong branch and ran out of time.}
+\end{table}
+
+Overall, 9/10 participants resolved the conflict; 9/10 achieved a resolution
+within 5 minutes. The mean time across all participants was 3:44 (mean hints
+0.6). This supports Success Criterion SC1.
+
+\subsection{Task T3: Quick Edit + Save Without Git Explanation}
+Task T3 measured whether a participant could make a small timeline/map edit and
+save without requiring Git vocabulary explanation.
+
+\begin{table}[H]
+\centering
+\caption{UAT Task T3 --- Quick edit and save without Git explanation.}
+\label{tab:uat_t3}
+\begin{tabular}{@{}lcp{0.60\linewidth}@{}}
+\toprule
+\textbf{Participant} & \textbf{Completed?} & \textbf{Notes} \\
+\midrule
+P1  & Y & Edited timeline stop duration naturally \\
+P2  & Y & Used ``Save'' without prompting \\
+P3  & Y & -- \\
+P4  & N & Asked ``does saving here create a version?'' \\
+P5  & Y & -- \\
+P6  & Y & -- \\
+P7  & Y & -- \\
+P8  & N & Hesitated; unsure if edit was auto-saved \\
+P9  & Y & -- \\
+P10 & Y & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+8/10 completed without needing Git explanation. This supports the value of Easy
+mode and indicates that versioning concepts can still raise questions (notably
+around mental models of saving).
+
+\section{Survey Results}
+The Evaluation Day survey collected 13 responses. Key quantitative findings
+included:
+\begin{itemize}
+  \item Git familiarity was mixed: 15\% not familiar (2/13), 38\% somewhat
+        familiar (5/13), 23\% comfortable (3/13), 23\% very comfortable (3/13).
+  \item Participants tried a range of features: 11 created/opened a repository,
+        9 ran the auto-scheduler, 5 attempted branch/compare and merge/conflict
+        resolution, and 4 used quick route mode.
+\end{itemize}
+
+Likert responses across Core Functionality and Overall Impression were strongly
+positive, with responses concentrated in Agree/Strongly Agree. The Git Concept
+Understanding section was also positive but showed more neutral responses,
+suggesting that the conceptual model is understandable but still benefits from
+guidance for some users.
+
+The survey included the System Usability Scale (SUS). Due to the small sample
+size and the visual aggregation format, this report interprets SUS qualitatively
+rather than claiming a statistically robust SUS score. The overall pattern
+indicates that positive usability statements were generally endorsed while
+negative statements about complexity and inconsistency were generally rejected.
+
+\subsection{Qualitative Feedback}
+Free-text responses provide additional evidence of perceived value and pain
+points. Representative themes include:
+
+\textbf{Most useful/impressive:}
+\begin{itemize}
+  \item Auto-scheduler usefulness and edge-case handling (e.g., clearly showing
+        unscheduled stops with reasons).
+  \item Novelty of Git-style planning and merge conflict resolution in a non-code
+        context.
+  \item Educational value of algorithm visualisation.
+\end{itemize}
+
+\textbf{Most frustrating:}
+\begin{itemize}
+  \item Some users perceived Git concepts as requiring learning overhead.
+  \item Merge conflicts can be confusing without guidance (consistent with UAT
+        hint patterns).
+  \item A routing limitation was reported for special transport modes (e.g.,
+        ferries), reflecting dependency on external routing providers.
+\end{itemize}
+
+\textbf{Would users adopt GiTrip?} Most respondents indicated ``yes'' or
+``maybe'', with collaboration and ``keeping everything in one place'' cited as
+major benefits. The strongest blockers were perceived complexity for casual trips
+and routing-provider constraints for niche transport types.
+
+\section{Discussion Against Success Criteria}
+Overall, the evaluation provides strong evidence that core objectives were
+achieved:
+\begin{itemize}
+  \item The auto-scheduler reliably produced feasible plans for typical scenarios
+        (SC2 met).
+  \item Merge conflict resolution was achievable by most participants within the
+        target time (SC1 met).
+  \item Usability feedback validates the Easy mode approach while highlighting
+        discoverability and conceptual learning as remaining improvement areas
+        (SC3 partially met, with known limitations).
+\end{itemize}
+
+\section{Threats to Validity}
+The evaluation has limitations typical of student project evaluations:
+\begin{itemize}
+  \item \textbf{Sample bias:} many participants were likely students with
+        above-average technical literacy.
+  \item \textbf{Small sample size:} limits statistical confidence, especially
+        for SUS scoring.
+  \item \textbf{Demonstration context:} users may perform differently in real
+        trip planning over longer time horizons.
+\end{itemize}
+
+Despite these limitations, the objective task results and consistent qualitative
+themes together support the conclusion that the core objectives were met.

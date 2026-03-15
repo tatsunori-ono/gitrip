@@ -1,5 +1,5 @@
 <section class="container">
-  <h1>Auto-Schedule for <%= repo.title %>
+  <h1><i class="fa-solid fa-route" aria-hidden="true"></i> Auto-Schedule for <%= repo.title %>
   </h1>
 
   <!-- Light local styles for this page -->
@@ -181,7 +181,7 @@
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <!-- Dates -->
     <div class="card">
-      <h2 title="Leave blank to use today.">Dates</h2>
+      <h2 title="Leave blank to use today."><i class="fa-solid fa-calendar" aria-hidden="true"></i> Dates</h2>
       <div class="row quiet">
         <label style="flex:1">Start date
           <input type="date" name="startDate" id="startDate" />
@@ -194,7 +194,7 @@
 
     <!-- Active hours & prefs (still visible, but quiet) -->
     <div class="card thin">
-      <h2>Active hours & preferences</h2>
+      <h2><i class="fa-solid fa-clock" aria-hidden="true"></i> Active hours & preferences</h2>
       <div class="row quiet">
         <label>Active start
           <input type="time" name="activeStart" placeholder="08:00" />
@@ -255,7 +255,7 @@
 
     <!-- Places -->
     <div class="card thin">
-      <h2>Places</h2>
+      <h2><i class="fa-solid fa-location-dot"></i> Places</h2>
       <p class="time">
         Only a name is required. Use
         <span class="icon-inline" aria-hidden="true">
@@ -277,7 +277,7 @@
       </div>
 
       <div class="more">
-        <button class="btn" type="button" onclick="addRow()">+ Add place</button>
+        <button class="btn" type="button" onclick="addRow()"><i class="fa-solid fa-plus"></i> Add place</button>
         <button class="btn" type="button" onclick="addSample()">Add sample (demo)</button>
       </div>
     </div>
@@ -286,7 +286,7 @@
     <input type="hidden" name="payload" id="payload" />
 
     <div class="section-actions">
-      <button class="btn btn-primary" type="submit">Run Auto Plan & Commit</button>
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-route"></i> Run Auto Plan & Commit</button>
     </div>
   </form>
 </section>

@@ -5,36 +5,130 @@
     Trips that owners have marked as public. Anyone with the link can open them.
   </p>
   <div class="row" style="margin:8px 0 16px">
-    <a class="btn <%= sort === 'recent' ? 'btn-primary' : '' %>"
-       href="/ui/public?sort=recent">Recent</a>
-    <a class="btn <%= sort === 'stars' ? 'btn-primary' : '' %>"
-       href="/ui/public?sort=stars">Most stars</a>
+    <button id="sortRecent" class="btn btn-primary" type="button">Recent</button>
+    <button id="sortStars" class="btn" type="button">Most stars</button>
   </div>
 
-  <% if (!repos || !repos.length) { %>
-    <div class="card">
-      <p class="time">No public trips yet.</p>
-    </div>
-  <% } else { %>
-    <div class="gallery-grid">
-      <% repos.forEach(r => { %>
-        <div class="card">
-          <h2 style="margin:0 0 4px"><%= r.title %></h2>
-          <p class="time">
-            Owner:
-            <%= r.owner_name || r.owner_email || 'anonymous' %>
-            • created <%= r.created_at %>
-          </p>
-          <p class="time">
-            <i class="fa-solid fa-star" aria-hidden="true" style="color:#f59e0b"></i>
-            <%= Number(r.star_count || 0) %> stars
-          </p>
-          <a class="btn btn-primary"
-             href="/ui/repos/<%= r.id %>">
-            Open trip
-          </a>
-        </div>
-      <% }); %>
-    </div>
-  <% } %>
+  <div id="galleryGrid" class="gallery-grid"></div>
+  <div id="galleryEmpty" class="card" hidden>
+    <p class="time">No public trips yet.</p>
+  </div>
+
+  <div id="galleryPager" class="row" style="margin:20px 0 0; justify-content:center; gap:6px; flex-wrap:wrap"></div>
 </section>
+
+<script>
+(function () {
+  const grid = document.getElementById('galleryGrid');
+  const empty = document.getElementById('galleryEmpty');
+  const pager = document.getElementById('galleryPager');
+  const btnRecent = document.getElementById('sortRecent');
+  const btnStars = document.getElementById('sortStars');
+
+  let currentSort = '<%= sort %>';
+  let currentPage = <%= page %>;
+
+  function fmtDate(iso) {
+    try {
+      return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch { return iso; }
+  }
+
+  function renderCards(repos) {
+    grid.innerHTML = '';
+    if (!repos.length) {
+      empty.hidden = false;
+      return;
+    }
+    empty.hidden = true;
+    repos.forEach(function (r) {
+      var card = document.createElement('a');
+      card.className = 'card';
+      card.href = '/ui/repos/' + encodeURIComponent(r.id);
+      card.style.textDecoration = 'none';
+      card.style.color = 'inherit';
+      card.style.display = 'block';
+      card.innerHTML =
+        '<h2 style="margin:0 0 4px">' + escHtml(r.title) + '</h2>' +
+        '<p class="time">Owner: ' + escHtml(r.owner_name || r.owner_email || 'anonymous') +
+        ' | created ' + fmtDate(r.created_at) + '</p>' +
+        '<p class="time"><i class="fa-solid fa-star" aria-hidden="true" style="color:#f59e0b"></i> ' +
+        Number(r.star_count || 0) + ' stars</p>';
+      grid.appendChild(card);
+    });
+  }
+
+  function renderPager(page, totalPages) {
+    pager.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    if (page > 1) {
+      pager.appendChild(makePageBtn('« Prev', page - 1));
+    }
+    for (var p = 1; p <= totalPages; p++) {
+      var btn = makePageBtn(String(p), p);
+      if (p === page) btn.classList.add('btn-primary');
+      pager.appendChild(btn);
+    }
+    if (page < totalPages) {
+      pager.appendChild(makePageBtn('Next »', page + 1));
+    }
+  }
+
+  function makePageBtn(label, page) {
+    var btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.type = 'button';
+    btn.textContent = label;
+    btn.addEventListener('click', function () { loadPage(currentSort, page); });
+    return btn;
+  }
+
+  function updateSortButtons() {
+    btnRecent.classList.toggle('btn-primary', currentSort === 'recent');
+    btnRecent.classList.toggle('btn', true);
+    btnStars.classList.toggle('btn-primary', currentSort === 'stars');
+    btnStars.classList.toggle('btn', true);
+  }
+
+  function escHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+  }
+
+  function loadPage(sort, page) {
+    currentSort = sort;
+    currentPage = page;
+    updateSortButtons();
+
+    // Update URL without reload
+    var url = new URL(window.location.href);
+    url.searchParams.set('sort', sort);
+    url.searchParams.set('page', String(page));
+    window.history.replaceState({}, '', url.toString());
+
+    fetch('/api/public-repos?sort=' + encodeURIComponent(sort) + '&page=' + page)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) return;
+        renderCards(data.repos || []);
+        renderPager(data.page, data.totalPages);
+        // scroll to top of grid
+        grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      })
+      .catch(function () {
+        grid.innerHTML = '<div class="card"><p class="time">Failed to load trips.</p></div>';
+      });
+  }
+
+  btnRecent.addEventListener('click', function () { loadPage('recent', 1); });
+  btnStars.addEventListener('click', function () { loadPage('stars', 1); });
+
+  // Initial render from server data
+  var initialRepos = <%- JSON.stringify(repos) %>;
+  renderCards(initialRepos);
+  renderPager(<%= page %>, <%= totalPages %>);
+  updateSortButtons();
+})();
+</script>

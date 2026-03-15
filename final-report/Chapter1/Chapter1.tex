@@ -1,0 +1,101 @@
+% !TEX root = ../Report.tex
+% ======================================================================
+\chapter{Introduction}
+% ======================================================================
+
+This report presents the design, implementation, testing, and evaluation of
+\textit{GiTrip}, a web application for collaborative trip planning with
+Git-like version control semantics. The core premise is that itineraries change
+in ways similar to software artefacts: multiple contributors propose
+alternatives, edits happen in parallel, and the history of decisions matters.
+In conventional trip-planning workflows, these properties are handled informally
+through screenshots, chat messages, and manual copy-pasting across documents,
+which makes the process fragile and difficult to audit.
+
+\section{Problem Context and Motivation}
+Trip planning is inherently multi-constraint: a feasible itinerary must account
+for travel time between destinations, opening hours, stay durations, and daily
+activity limits. For group trips, coordination adds an additional dimension:
+multiple people make edits simultaneously, propose alternatives, or revise plans
+after new information emerges. The absence of a robust change-management model
+leads to common failure modes, such as overwritten edits, confusion about what
+changed and why, and difficulty exploring alternatives without destabilising the
+``main'' plan.
+
+Mapping and routing tools such as Google Maps support route optimisation but
+largely focus on a single itinerary at a time and do not provide structured
+collaborative versioning for itinerary artefacts \cite{ref_google_maps}. Generic
+collaboration tools such as Google Docs can support co-authoring, but they
+provide limited structure for route and schedule constraints, and they do not
+provide domain-specific merge semantics for itineraries \cite{ref_google_docs}.
+GiTrip addresses this gap by combining: (i) itinerary-aware scheduling and
+routing; (ii) Git-inspired branching and merging; and (iii) an interaction model
+that remains accessible to users who do not know Git.
+
+\section{Project Overview}
+GiTrip is a server-rendered web application (Node.js + Express) that models a
+trip as a repository and stores each saved version as a commit containing a full
+snapshot of the trip plan. Users can create branches to explore alternate
+itineraries, compare versions, and merge changes with a three-way merge. When
+conflicts occur, GiTrip provides a dedicated merge user interface that allows
+users to choose resolutions rather than silently overwriting information.
+
+The system additionally includes:
+\begin{itemize}
+  \item An automatic scheduler that generates a feasible multi-day itinerary
+        using routing durations and user constraints.
+  \item Interactive plan editing via a timeline editor (arrival/departure times)
+        and a map editor (coordinates).
+  \item ``Easy mode'' UX that hides Git-specific vocabulary and advanced controls
+        for non-technical users.
+  \item A public gallery and star mechanism for browsing and lightweight social
+        interaction.
+  \item Export features (PDF via browser print, iCalendar export).
+  \item Progressive Web App (PWA) capabilities and offline support.
+\end{itemize}
+
+\section{Objectives and Significance}
+The project objectives were initially formalised using a MoSCoW prioritisation
+in the Project Specification (Must/Should/Could/Won't). The Must-have objectives
+included repository history, an optimised automatic scheduler, routing
+integration, interactive visualisation, and merging with conflict resolution.
+These objectives were chosen because they jointly define GiTrip's distinctive
+contribution: no single competitor product simultaneously provides (a) itinerary
+scheduling with constraints, (b) collaborative change history, and (c) Git-style
+branching and merging semantics in the trip-planning domain
+\cite{ref_wanderlog,ref_furkot,ref_roadtrippers,ref_tripit,ref_google_travel}.
+
+A key boundary condition is that the original scope intentionally excluded
+AI-powered itinerary generation from natural language. This decision was stated
+as a Won't-have requirement to prioritise deterministic, inspectable scheduling
+behaviour, and to avoid expanding scope into content recommendation and personal
+preference modelling. The second assessor's Progress Report feedback suggested
+investigating machine learning to strengthen the project; this report therefore
+discusses AI as future work while justifying why it was not appropriate for the
+Minimum Viable Product (MVP) scope.
+
+\section{Contributions}
+The technical contributions of this project are:
+\begin{itemize}
+  \item A repository and snapshot-based storage model for itinerary versions,
+        enabling fast branch switching and reproducible restores.
+  \item A three-way merge engine for itinerary snapshots, including conflict
+        detection for time clashes, deletions, and selected non-time fields, plus
+        a corresponding conflict-resolution UI.
+  \item A constraint-aware auto-scheduler that integrates travel-time estimation,
+        opening-hours nudging, desired windows, and spillover across days.
+  \item A dual-path user interface (Easy mode vs Git mode) supporting both novice
+        and power-user workflows.
+  \item A deployed web system with practical security measures (sessions, CSP,
+        rate limiting) and supporting features (weather, travel alerts,
+        checklists).
+\end{itemize}
+
+\section{Report Structure}
+Chapter 2 reviews related tools and foundational concepts. Chapter 3 describes
+requirements and the rationale for the MoSCoW objectives. Chapter 4 outlines the
+development methodology and evaluation strategy. Chapters 5 and 6 present the
+system design and implementation. Chapter 7 summarises the testing strategy and
+evidence. Chapter 8 reports Evaluation Day results and survey findings. Chapter 9
+concludes with limitations and future work, followed by appendices containing
+supporting evidence.

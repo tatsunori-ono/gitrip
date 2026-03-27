@@ -123,7 +123,7 @@ repositories, branches, commits, and social/collaboration metadata.
   % ════════════════════════════════════════════════════════════════════
   % EXTERNAL SERVICES – RIGHT
   % ════════════════════════════════════════════════════════════════════
-  \node[extbox] (nominatim) at (10.5,-5.5) {Nominatim\\{\small Geocoding + Opening Hours}};
+  \node[extbox] (nominatim) at (10.5,-5.5) {Nominatim (and Photon)\\{\small Geocoding and Opening Hours (and Fuzzy Fallback)}};
   \node[extbox] (weather)   at (10.5,-7.5) {Open-Meteo\\{\small Weather Forecasts}};
   \node[extbox] (gnews)     at (10.5,-9.3) {GNews\\{\small Travel Alerts}};
 
@@ -254,7 +254,8 @@ repositories, branches, commits, and social/collaboration metadata.
     modes and Google Directions for transit legs. The \textit{Planner}
     consults the \textit{Opening Hours Parser}, a local utility that
     validates time intervals against OSM opening-hours strings supplied by
-    Nominatim via \textit{Geo Search}. Authentication
+    Nominatim via \textit{Geo Search}. When Nominatim returns no results,
+    \textit{Geo Search} falls back to Photon for fuzzy matching. Authentication
     middleware enforces session management, rate-limiting, and Content Security
     Policy headers across all routes. Server route handlers fetch weather
     forecasts from Open-Meteo and travel alerts from GNews. All persistent
@@ -760,7 +761,8 @@ codebase; all other modules use the CommonJS \texttt{module.exports} pattern.
       - NOMINATIM\_EMAIL : String\\[2pt]
       \textnormal{\textit{-- operations --}}\\
       + nominatimSearch(query, limit)\\
-      + nominatimLookup(type, id)
+      + nominatimLookup(type, id)\\
+      + photonSearch(query, limit)
     };
     \node[fit=(GeoName)(GeoAttrs), inner sep=0pt] (GeoSearch) {};
 
@@ -845,7 +847,15 @@ codebase; all other modules use the CommonJS \texttt{module.exports} pattern.
 GiTrip proxies Nominatim search/lookup via server endpoints to enable caching and
 rate limiting \cite{ref_nominatim}. Results are re-ranked using approximate
 string matching to prioritise substring matches and reduce diacritic/punctuation
-sensitivity \cite{ref_navaro_string_matching}.
+sensitivity \cite{ref_navaro_string_matching}. Because Nominatim performs exact
+matching against its index, near-miss queries (e.g.\ ``stick n sushi'' for
+``Sticks'n'Sushi'') can return zero results. To address this, GiTrip falls back
+to Photon when Nominatim returns no matches \cite{ref_photon}. Photon is an open-source geocoder
+built on Elasticsearch that indexes the same OpenStreetMap data with n-gram
+tokenisation and typo tolerance, providing fuzzy search without requiring a
+separate dataset. The fallback is transparent: Photon results are returned in the
+same shape, with \texttt{opening\_hours} set to null since Photon does not
+expose that field.
 
 \subsection{Routing Providers and Fallback}
 For non-transit modes, GiTrip requests a travel-time matrix from OpenRouteService
@@ -924,16 +934,16 @@ Figure~\ref{fig:merge_flow} illustrates the decision logic of the merge engine.
 
     % ── File-level merge (iterates all keys, collects results) ──
     \node[process] (filemerge) at (0,-1.6)
-      {For each key in \texttt{snapshot.files}\\{\scriptsize compare base vs ours vs theirs (deep equality)}};
+      {For each key in \texttt{snapshot.files},\\deep-compare base, ours, and theirs};
 
     \node[decision] (fileconflict) at (0,-3.6) {Both sides\\changed this key?};
 
-    \node[conflict] (fileconf) at (5,-3.6) {Record \texttt{file} conflict\\{\scriptsize keep base value}};
+    \node[conflict] (fileconf) at (5,-3.6) {Record \texttt{file} conflict,\\keep base value};
     \node[result] (filetake) at (-5,-3.6) {Take changed side};
 
     % Rejoin arrows back to loop / continue
     \node[process] (filecollect) at (0,-5.4)
-      {Collect all file results\\{\scriptsize (loop above repeats per key)}};
+      {Collect all file-key results};
 
     % ── Plan-level ──
     \node[decision] (planchanged) at (0,-7.4) {Both sides\\changed plan?};
@@ -952,11 +962,11 @@ Figure~\ref{fig:merge_flow} illustrates the decision logic of the merge engine.
 
     % ── Per-stop merge ──
     \node[process] (perstop) at (0,-16.2)
-      {Per-day, per-stop merge\\{\scriptsize match stops by stable ID}};
+      {Match stops by stable ID,\\merge per-day, per-stop};
 
     \node[decision] (bothdeleted) at (0,-18.4) {Both sides\\deleted stop?};
 
-    \node[result] (silentdrop) at (5.5,-18.4) {Omit stop\\{\scriptsize (silent agreement)}};
+    \node[result] (silentdrop) at (5.5,-18.4) {Omit stop\\(both agreed to delete)};
 
     \node[decision] (onedeleted) at (0,-20.6) {Deleted on one side,\\modified on other?};
 
@@ -970,10 +980,10 @@ Figure~\ref{fig:merge_flow} illustrates the decision logic of the merge engine.
 
     \node[conflict] (fieldc) at (5.5,-25) {\texttt{plan-stop-field}\\conflict};
 
-    \node[result] (clean) at (5.5,-27) {Clean merge\\{\scriptsize apply non-conflicting changes}};
+    \node[result] (clean) at (5.5,-27) {Apply non-conflicting\\changes (clean merge)};
 
     \node[process] (stabilise) at (0,-28.6)
-      {Stabilise ordering\\{\scriptsize sort days by date, stops by arrival}};
+      {Sort days by date,\\stops by arrival time};
 
     \node[startstop] (output) at (0,-30.2)
       {Output: merged snapshot\\+ conflict list};

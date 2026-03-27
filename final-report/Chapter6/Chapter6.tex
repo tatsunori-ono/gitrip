@@ -73,44 +73,44 @@ transit provider returns walking-only legs.
     \node[startstop] (start) at (0,0) {Start: places, dates, mode,\\preferences};
 
     \node[process] (matrix) at (0,-1.8)
-      {Build travel-time matrix\\{\scriptsize ORS matrix; Haversine fallback}\\{\scriptsize (skipped for transit mode)}};
+      {Build travel-time matrix\\(ORS or Haversine fallback)};
 
     \node[decision] (strict) at (0,-4) {Strict order\\constraints?};
 
-    \node[process] (applystrict) at (-4,-5.8) {Apply strict ordering\\{\scriptsize absolute + relative}};
+    \node[process] (applystrict) at (-4,-5.8) {Apply strict ordering\\(absolute + relative)};
     \node[process] (nn) at (4,-5.8) {Nearest Neighbour\\ordering};
 
     \node[process] (partition) at (0,-7.6)
-      {Partition stops:\\{\scriptsize preferred-day buckets vs unassigned pool}};
+      {Partition stops into\\preferred-day buckets and unassigned pool};
 
     % ── Phase 1: preferred-day buckets ──
     \node[process, fill=blue!15] (phase1) at (0,-9.4)
-      {\textbf{Phase 1}: schedule preferred-day stops\\{\scriptsize order within each day bucket}};
+      {\textbf{Phase 1}: schedule preferred-day stops,\\order within each day bucket};
 
     \node[process] (initpref) at (0,-11.2)
-      {Initialise day cursor\\{\scriptsize at active-hours start + focus shift}};
+      {Initialise day cursor at\\active-hours start + focus shift};
 
     \node[decision] (prefremain) at (0,-13.2) {Preferred stops\\remain in bucket?};
 
     \node[process] (preffit) at (0,-15.4)
-      {Try fit stop on its preferred day:\\{\scriptsize travel gap, opening hours,}\\{\scriptsize desired window, fixed-time}};
+      {Try fit stop on its preferred day\\(travel gap + opening hours)};
 
     \node[decision] (preffits) at (0,-17.8) {Stop fits\\in day?};
 
     \node[result] (prefplace) at (-4.5,-19.5) {Place stop;\\advance cursor};
-    \node[process] (prefover) at (4.5,-19.5) {Add to overflow\\{\scriptsize (no day spilling)}};
+    \node[process] (prefover) at (4.5,-19.5) {Add to overflow\\(no day spilling)};
 
     % ── Phase 2: unassigned stops ──
     \node[process, fill=blue!15] (phase2) at (0,-21.6)
-      {\textbf{Phase 2}: schedule unassigned stops\\{\scriptsize order by NN or strict order}};
+      {\textbf{Phase 2}: schedule unassigned stops,\\order by NN or strict order};
 
     \node[process] (initunassign) at (0,-23.4)
-      {Initialise cursor on current day\\{\scriptsize at active-hours start + focus shift}};
+      {Initialise cursor on current day at\\active-hours start + focus shift};
 
     \node[decision] (morestops) at (0,-25.4) {Unassigned\\stops remain?};
 
     \node[process] (fitstop) at (0,-27.6)
-      {Try fit next stop on current day:\\{\scriptsize travel gap, opening hours,}\\{\scriptsize desired window, fixed-time}};
+      {Try fit next stop on current day\\(travel gap + opening hours)};
 
     \node[decision] (fits) at (0,-30) {Stop fits\\in day?};
 
@@ -118,7 +118,7 @@ transit provider returns walking-only legs.
     \node[decision] (nextday) at (4.5,-31.8) {More days\\available?};
 
     \node[process] (spill) at (4.5,-33.8) {Advance to next day;\\reset cursor};
-    \node[process] (overflow) at (8.5,-31.8) {Add to overflow\\{\scriptsize with rejection reason}};
+    \node[process] (overflow) at (8.5,-31.8) {Add to overflow};
 
     \node[startstop] (done) at (0,-36)
       {Return scheduled plan\\+ overflow list};
@@ -256,8 +256,10 @@ transit provider returns walking-only legs.
 The merge engine is implemented in \texttt{server/merge.js}. Improvements made
 after the Progress Report address known risks:
 \begin{itemize}
-  \item \textbf{Deep structural equality:} avoids \texttt{JSON.stringify}
-        brittleness.
+  \item \textbf{Deep structural equality:} recursive comparison of nested
+        objects, arrays, and primitives rather than reference equality
+        (\texttt{===}) or \texttt{JSON.stringify}, which is sensitive to
+        key ordering.
   \item \textbf{Robust stop identifiers:} if stops lack IDs, stable IDs are
         generated from name + coordinates + day context, reducing merge
         drop-outs.

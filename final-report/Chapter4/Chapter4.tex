@@ -48,10 +48,13 @@ database replication; concurrency is managed at the application level.
 \subsection{Mapping and Geocoding}
 Leaflet was used for the interactive map because it is a well-established
 open-source mapping library that integrates cleanly with OpenStreetMap tiles
-\cite{ref_leaflet,ref_osm}. Nominatim was used for place lookup and geocoding
-due to its OpenStreetMap integration and accessible API \cite{ref_nominatim}. A
-server-side proxy route is used to apply rate limiting and caching to avoid
-overloading the upstream service.
+\cite{ref_leaflet,ref_osm}. Nominatim was used as the primary place lookup and geocoding provider
+due to its OpenStreetMap integration and accessible API \cite{ref_nominatim}.
+Photon (komoot) was added as a fuzzy-search fallback \cite{ref_photon}: when Nominatim returns no
+results for a query, Photon's Elasticsearch-based index over the same OSM data
+handles typos and punctuation variants that Nominatim's exact matching misses.
+A server-side proxy route is used to apply rate limiting and caching to avoid
+overloading the upstream services.
 
 \subsection{Routing Providers}
 OpenRouteService was used for travel-time matrix routing for non-transit modes,

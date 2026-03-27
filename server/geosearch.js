@@ -1,12 +1,13 @@
 /**
- * server/geosearch.js — Geocoding via Nominatim with rate-limiting.
+ * server/geosearch.js — Geocoding via Nominatim with Photon fuzzy fallback.
  *
  * Searches OpenStreetMap's Nominatim API for place names, enforcing a minimum
- * 1-second gap between calls (Nominatim usage policy).  If the API is
- * unreachable or returns no results, falls back to a small canned set of
- * London landmarks so the UI never completely breaks.
+ * 1-second gap between calls (Nominatim usage policy).  When Nominatim returns
+ * zero results, falls back to Photon (komoot) which has built-in fuzzy/typo-
+ * tolerant search over the same OSM data.  If both fail, returns a small canned
+ * set of London landmarks so the UI never completely breaks.
  *
- * Exported: searchGeo
+ * Exported: nominatimSearch, nominatimLookup, photonSearch
  */
 import 'dotenv/config';
 
@@ -105,6 +106,53 @@ export async function nominatimSearch(query, limit = 6) {
     console.error('nominatimSearch error:', e);
     // Network / provider issues → safe fallback
     return cannedResults(q, limit);
+  }
+}
+
+/**
+ * Fuzzy-search fallback via Photon (komoot).
+ * Uses the same OSM data as Nominatim but with Elasticsearch-based fuzzy matching.
+ * Returns results in the same { name, lat, lng, opening_hours } shape.
+ */
+export async function photonSearch(query, limit = 6) {
+  const q = String(query || '').trim();
+  if (!q) return [];
+
+  const url =
+    'https://photon.komoot.io/api?' +
+    `q=${encodeURIComponent(q)}&limit=${limit}`;
+
+  try {
+    const resp = await fetch(url, {
+      headers: {
+        'User-Agent': 'GiTrip/0.1',
+        Accept: 'application/json',
+      },
+    });
+
+    if (!resp.ok) {
+      console.warn('photonSearch non-OK status:', resp.status);
+      return [];
+    }
+
+    const data = await resp.json();
+    const features = (data && Array.isArray(data.features)) ? data.features : [];
+
+    return features.map((f) => {
+      const props = f.properties || {};
+      const coords = (f.geometry && f.geometry.coordinates) || [0, 0];
+      // Build a display name from available fields
+      const parts = [props.name, props.city, props.state, props.country].filter(Boolean);
+      return {
+        name: parts.join(', ') || 'Unknown',
+        lat: Number(coords[1]),
+        lng: Number(coords[0]),
+        opening_hours: null, // Photon does not return opening_hours
+      };
+    });
+  } catch (e) {
+    console.error('photonSearch error:', e);
+    return [];
   }
 }
 

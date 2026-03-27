@@ -23,7 +23,7 @@ import rateLimit from 'express-rate-limit';
 import { db, migrate, rowToCommit } from './db.js';
 import { mergeSnapshots } from './merge.js';
 import { autoPlan } from './planner.js';
-import { nominatimSearch, nominatimLookup } from './geosearch.js';
+import { nominatimSearch, nominatimLookup, photonSearch } from './geosearch.js';
 import { routeLegs, orsMatrix, orsLegs, gmapsTransitLegs, haversineMinutes } from './routing.js';
 import { optimizeQuickRoute } from './quickroute.js';
 
@@ -1218,15 +1218,23 @@ function rankPlacesBySimilarity(query, results) {
 }
 
 /**
- * Wrapper around nominatimSearch that:
+ * Wrapper around nominatimSearch with Photon fuzzy fallback.
  *  - asks Nominatim for a few more items than we need
- *  - sorts them by string similarity to the query
+ *  - if Nominatim returns nothing, falls back to Photon (fuzzy search)
+ *  - sorts all results by string similarity to the query
  *  - returns only the best `limit` matches
  */
 async function fuzzySearchPlaces(q, limit) {
   const safeLimit = Math.max(Number(limit) || 6, 1);
-  const upstreamLimit = Math.max(safeLimit * 2, 6); // grab a few extra to rank
-  const raw = await nominatimSearch(q, upstreamLimit);
+  const upstreamLimit = Math.max(safeLimit * 2, 6);
+
+  let raw = await nominatimSearch(q, upstreamLimit);
+
+  // Photon fallback: if Nominatim found nothing, try Photon's fuzzy search
+  if (!raw.length) {
+    raw = await photonSearch(q, upstreamLimit);
+  }
+
   const ranked = rankPlacesBySimilarity(q, raw);
   return ranked.slice(0, safeLimit);
 }

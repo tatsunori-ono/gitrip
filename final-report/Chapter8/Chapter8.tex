@@ -150,11 +150,69 @@ Understanding section was also positive but showed more neutral responses,
 suggesting that the conceptual model is understandable but still benefits from
 guidance for some users.
 
-The survey included the System Usability Scale (SUS). Due to the small sample
-size and the visual aggregation format, this report interprets SUS qualitatively
-rather than claiming a statistically robust SUS score. The overall pattern
-indicates that positive usability statements were generally endorsed while
-negative statements about complexity and inconsistency were generally rejected.
+\subsection{System Usability Scale (SUS)}
+The survey included the ten standard SUS items introduced by
+Brooke~\cite{ref_brooke_sus}. SUS is a widely used post-test questionnaire that
+yields a single score between 0 and 100, with higher scores indicating better
+perceived usability. Although only 13 responses were collected (constrained by
+the 40-minute Evaluation Day slot), Sauro and Lewis demonstrate in their
+large-scale benchmarking study that SUS produces usable estimates with as few as
+8--12 respondents~\cite{ref_sauro_lewis_sus}.
+
+\begin{table}[H]
+\centering
+\caption{Individual SUS scores ($n = 13$).}
+\label{tab:sus_scores}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Respondent} & \textbf{SUS Score} \\
+\midrule
+R1  & 62.5 \\
+R2  & 60.0 \\
+R3  & 72.5 \\
+R4  & 90.0 \\
+R5  & 87.5 \\
+R6  & 90.0 \\
+R7  & 82.5 \\
+R8  & 82.5 \\
+R9  & 90.0 \\
+R10 & 77.5 \\
+R11 & 85.0 \\
+R12 & 95.0 \\
+R13 & 90.0 \\
+\midrule
+\textbf{Mean} & \textbf{81.9} \\
+\textbf{Median} & \textbf{85.0} \\
+\textbf{SD} & \textbf{10.5} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The mean SUS score of \textbf{81.9} (SD~=~10.5) corresponds to an
+\textbf{Excellent} adjective rating and a \textbf{Grade~A} on the curved grading
+scale proposed by Bangor et~al.~\cite{ref_bangor_sus}, placing GiTrip in
+approximately the top~10\% of products benchmarked using SUS and well above the
+industry average of~68~\cite{ref_sauro_lewis_sus}.
+
+Per-question contribution scores (0--4 scale) reveal that the strongest items
+were Q5 \textit{``Functions were well integrated''} (3.62/4, 90\%) and Q3
+\textit{``Easy to use''} (3.54/4, 88\%), indicating that users perceive the
+system as coherent and learnable. Q1 \textit{``Would use frequently''} and Q9
+\textit{``Felt confident''} both scored 3.46/4 (87\%), suggesting strong
+engagement and self-efficacy.
+
+The weakest items were Q6 \textit{``Too much inconsistency''} and Q10
+\textit{``Needed to learn a lot''}, both at 2.92/4 (73\%), alongside Q4
+\textit{``Would need technical support''} at 3.00/4 (75\%). These suggest that
+while overall usability is excellent, there is some perceived inconsistency in
+the interface and a moderate onboarding learning curve --- consistent with the
+qualitative feedback about Git concepts requiring learning overhead.
+
+Eleven of thirteen respondents scored at or above 72.5 (above the benchmark
+average). Two respondents (R1 and R2) scored below~68, suggesting a minority of
+users had a notably different experience; this may correlate with lower Git
+familiarity or specific task difficulties, though the sample size prevents
+definitive subgroup analysis.
 
 \subsection{Qualitative Feedback}
 Free-text responses provide additional evidence of perceived value and pain
@@ -191,8 +249,9 @@ achieved:
         (SC2 met).
   \item Merge conflict resolution was achievable by most participants within the
         target time (SC1 met).
-  \item Usability feedback validates the Easy mode approach while highlighting
-        discoverability and conceptual learning as remaining improvement areas
+  \item The SUS score of 81.9 (Grade~A, Excellent) validates the Easy mode
+        approach and overall usability, while per-question analysis highlights
+        interface consistency and onboarding as remaining improvement areas
         (SC3 partially met, with known limitations).
 \end{itemize}
 
@@ -200,9 +259,13 @@ achieved:
 The evaluation has limitations typical of student project evaluations:
 \begin{itemize}
   \item \textbf{Sample bias:} many participants were likely students with
-        above-average technical literacy.
-  \item \textbf{Small sample size:} limits statistical confidence, especially
-        for SUS scoring.
+        above-average technical literacy, which may inflate usability scores
+        relative to the general population.
+  \item \textbf{Small sample size:} only 13 survey responses were collected due
+        to the time restriction of the 40-minute Evaluation Day slot. While
+        Sauro and Lewis~\cite{ref_sauro_lewis_sus} show SUS is reliable at this
+        size, the sample prevents confident subgroup analysis (e.g.\ comparing
+        scores by Git familiarity level).
   \item \textbf{Demonstration context:} users may perform differently in real
         trip planning over longer time horizons.
 \end{itemize}

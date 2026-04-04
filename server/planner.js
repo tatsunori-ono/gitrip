@@ -122,6 +122,111 @@ function resolveActualLegMode(requestedMode, legResult) {
   return 'walking';
 }
 
+// ---------- Held-Karp exact solver (for small N) ----------
+/**
+ * Held-Karp dynamic programming for exact shortest Hamiltonian path.
+ * Exponential in N — only used when N <= 12.
+ */
+function heldKarpPath(matrix, startIdx) {
+  const n = matrix.length;
+  const FULL = (1 << n) - 1;
+
+  const dp = Array.from({ length: 1 << n }, () => Array(n).fill(Infinity));
+  const parent = Array.from({ length: 1 << n }, () => Array(n).fill(-1));
+
+  dp[1 << startIdx][startIdx] = 0;
+
+  for (let mask = 0; mask <= FULL; mask++) {
+    if ((mask & (1 << startIdx)) === 0) continue;
+    for (let j = 0; j < n; j++) {
+      const cur = dp[mask][j];
+      if (!Number.isFinite(cur)) continue;
+      if ((mask & (1 << j)) === 0) continue;
+      for (let k = 0; k < n; k++) {
+        if (mask & (1 << k)) continue;
+        const w = matrix[j]?.[k];
+        if (!Number.isFinite(w)) continue;
+        const nm = mask | (1 << k);
+        const cand = cur + w;
+        if (cand < dp[nm][k]) {
+          dp[nm][k] = cand;
+          parent[nm][k] = j;
+        }
+      }
+    }
+  }
+
+  let bestEnd = -1;
+  let bestCost = Infinity;
+  for (let j = 0; j < n; j++) {
+    if (dp[FULL][j] < bestCost) {
+      bestCost = dp[FULL][j];
+      bestEnd = j;
+    }
+  }
+  if (!Number.isFinite(bestCost) || bestEnd < 0) {
+    return null;
+  }
+
+  const order = [];
+  let mask = FULL;
+  let cur = bestEnd;
+  while (cur !== -1) {
+    order.push(cur);
+    const prev = parent[mask][cur];
+    mask = mask & ~(1 << cur);
+    cur = prev;
+  }
+  order.reverse();
+
+  if (order[0] !== startIdx) return null;
+  return order;
+}
+
+// ---------- 2-opt refinement ----------
+/** Sum of edge weights along a given index-based visit order. */
+function pathCost(order, matrix) {
+  let sum = 0;
+  for (let i = 0; i < order.length - 1; i++) {
+    const w = matrix[order[i]]?.[order[i + 1]];
+    if (!Number.isFinite(w)) return Infinity;
+    sum += w;
+  }
+  return sum;
+}
+
+/**
+ * 2-opt local search: keeps the first node fixed, then repeatedly reverses
+ * sub-segments to reduce total path cost.  Runs up to 4 full sweeps.
+ */
+function twoOptRefine(order, matrix, maxPasses = 4) {
+  const n = order.length;
+  if (n <= 3) return order;
+
+  let best = order.slice();
+  let bestCost = pathCost(best, matrix);
+  if (!Number.isFinite(bestCost)) return best;
+
+  for (let pass = 0; pass < maxPasses; pass++) {
+    let improved = false;
+    for (let i = 1; i < n - 2; i++) {
+      for (let k = i + 1; k < n - 1; k++) {
+        const cand = best.slice();
+        const seg = cand.slice(i, k + 1).reverse();
+        cand.splice(i, k - i + 1, ...seg);
+        const cCost = pathCost(cand, matrix);
+        if (cCost + 1e-9 < bestCost) {
+          best = cand;
+          bestCost = cCost;
+          improved = true;
+        }
+      }
+    }
+    if (!improved) break;
+  }
+  return best;
+}
+
 // ---------- Ordering (strict order + start here) ----------
 /**
  * Determine visit order for places.
@@ -244,10 +349,18 @@ function orderPlaces(places, M, transport, orderingMode = 'relative') {
     return places.slice();
   }
 
-  // Nearest-neighbour: repeatedly pick the closest unvisited place.
+  // Exact (Held-Karp) for small N, NN + 2-opt for larger N.
   const n = places.length;
+  const startIdx = startIdxFlag >= 0 ? startIdxFlag : 0;
+
+  if (n <= 12) {
+    const exact = heldKarpPath(matrix, startIdx);
+    if (exact) return exact.map((i) => places[i]);
+  }
+
+  // Nearest-neighbour: repeatedly pick the closest unvisited place.
   const used = Array(n).fill(false);
-  let cur = startIdxFlag >= 0 ? startIdxFlag : 0;
+  let cur = startIdx;
   used[cur] = true;
   const seq = [cur];
 
@@ -267,7 +380,9 @@ function orderPlaces(places, M, transport, orderingMode = 'relative') {
     cur = best;
   }
 
-  return seq.map((i) => places[i]);
+  // 2-opt refinement: reverse sub-segments to reduce total travel time.
+  const refined = twoOptRefine(seq, matrix);
+  return refined.map((i) => places[i]);
 }
 
 function defaultActiveHours(activeHours) {

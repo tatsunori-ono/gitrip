@@ -17,6 +17,19 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{listings}
+\lstdefinelanguage{JavaScript}{
+  keywords={break, case, catch, const, continue, debugger, default, delete,
+            do, else, export, extends, finally, for, function, if, import,
+            in, instanceof, let, new, of, return, switch, this, throw, try,
+            typeof, var, void, while, with, yield, async, await, class,
+            static, get, set},
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]',
+  morestring=[b]",
+  morestring=[b]`,
+  sensitive=true,
+}
 \lstset{
   basicstyle=\ttfamily\small,
   keywordstyle=\bfseries,
@@ -44,7 +57,7 @@
 \usetikzlibrary{positioning, arrows.meta, calc, fit, shapes.geometric}
 
 % -- Additional packages for GiTrip content -------------------------------
-\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage[a4paper,margin=2.5cm,headheight=14pt]{geometry}
 \usepackage{microtype}
 \usepackage{lmodern}
 \usepackage{float}

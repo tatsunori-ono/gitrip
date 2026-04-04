@@ -40,8 +40,10 @@ include:
 \begin{itemize}
   \item \textbf{Time helpers:} \texttt{toMin} and \texttt{toHHMM}.
   \item \textbf{Matrix building:} ORS matrix for non-transit; null for transit.
-  \item \textbf{Ordering logic:} strict order handling (absolute or relative),
-        plus Nearest Neighbour when no strict orders exist.
+  \item \textbf{Ordering logic:} strict order handling (absolute or relative);
+        when no strict orders exist, Held-Karp exact solver for $N \leq 12$
+        \cite{ref_tsp_study}, otherwise Nearest Neighbour with 2-opt refinement
+        \cite{ref_nn_tsp,ref_nn_2opt_hybrid}.
   \item \textbf{Constraint fit check:} \texttt{applyOpeningHours} integrates
         active hours, desired windows, fixed-time behaviour, and opening-hours
         nudging.
@@ -78,7 +80,7 @@ transit provider returns walking-only legs.
     \node[decision] (strict) at (0,-4) {Strict order\\constraints?};
 
     \node[process] (applystrict) at (-4,-5.8) {Apply strict ordering\\(absolute + relative)};
-    \node[process] (nn) at (4,-5.8) {Nearest Neighbour\\ordering};
+    \node[process] (nn) at (4,-5.8) {Held-Karp ($N\!\leq\!12$)\\or NN + 2-opt ($N\!>\!12$)};
 
     \node[process] (partition) at (0,-7.6)
       {Partition stops into\\preferred-day buckets and unassigned pool};
@@ -179,7 +181,8 @@ transit provider returns walking-only legs.
   }%
   \caption{Auto-scheduler flowchart. The algorithm builds an ORS
            travel-time matrix (with Haversine fallback), orders stops
-           (strict constraints or Nearest Neighbour), then partitions
+           (strict constraints, Held-Karp for $N \leq 12$, or NN + 2-opt),
+           then partitions
            them into preferred-day buckets and an unassigned pool.
            Phase~1 schedules preferred-day stops on their assigned day,
            sending unfitting stops directly to overflow.  Phase~2
@@ -204,7 +207,13 @@ transit provider returns walking-only legs.
     \Statex \Comment{--- Initialisation ---}
     \State $M \gets \Call{BuildTravelMatrix}{\mathit{places},\;\mathit{transport}}$
       \Comment{ORS or Haversine fallback}
-    \State $\mathit{ordered} \gets \Call{NearestNeighbour}{\mathit{places},\;M}$
+    \If{$|\mathit{places}| \leq 12$}
+      \State $\mathit{ordered} \gets \Call{HeldKarp}{\mathit{places},\;M}$
+        \Comment{exact optimal order}
+    \Else
+      \State $\mathit{nnOrder} \gets \Call{NearestNeighbour}{\mathit{places},\;M}$
+      \State $\mathit{ordered} \gets \Call{TwoOpt}{\mathit{nnOrder},\;M}$
+    \EndIf
     \State partition $\mathit{ordered}$ into $\mathit{assignedByDay}$ and $\mathit{unassigned}$
     \State $\mathit{focusShift} \gets$ offset from $\mathit{focus}$
       \Comment{0, $\lfloor\mathit{span}/3\rfloor$, or $\lfloor\mathit{span}/1.8\rfloor$}
@@ -320,7 +329,8 @@ result. This is implemented via \texttt{server/quickroute.js}:
 \begin{itemize}
   \item for small instances (N $\leq$ 12), an exact Held-Karp dynamic programming
         solver is used \cite{ref_tsp_study,ref_tsp_local_search};
-  \item for larger instances, NN is used with 2-opt refinement.
+  \item for larger instances, NN is used with 2-opt refinement
+        \cite{ref_nn_2opt_hybrid}.
 \end{itemize}
 
 The quick route engine builds a travel-time matrix using ORS, transit pairwise

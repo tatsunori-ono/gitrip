@@ -724,11 +724,11 @@
     var codeEl = document.querySelector('#algoPseudocode code');
     if (!codeEl) return;
     var pseudo = ALGOS[currentAlgo].pseudo;
-    var html = '';
+    var lines = [];
     for (var i = 0; i < pseudo.length; i++) {
-      html += '<span class="line" data-line="' + i + '">' + escapeHtml(pseudo[i] || ' ') + '</span>\n';
+      lines.push('<span class="line" data-line="' + i + '">' + escapeHtml(pseudo[i] || ' ') + '</span>');
     }
-    codeEl.innerHTML = html;
+    codeEl.innerHTML = lines.join('\n');
   }
 
   function highlightPseudo(lineIdx) {

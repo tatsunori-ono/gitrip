@@ -296,12 +296,157 @@
       }
     }
 
+    /* --- Feature 1: Inline field-level diffs --- */
+    .field-changed {
+      font-weight: 700;
+      border-radius: 3px;
+      padding: 1px 4px;
+    }
+    .field-changed-source {
+      background: #dcfce7;
+    }
+    .field-changed-target {
+      background: #dbeafe;
+    }
+    .field-unchanged {
+      opacity: 0.5;
+    }
+
+    /* --- Feature 2: Unified diff toggle --- */
+    .diff-view-toggle {
+      display: inline-flex;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-left: 12px;
+      vertical-align: middle;
+    }
+    .diff-view-toggle button {
+      padding: 4px 12px;
+      font-size: 12px;
+      border: none;
+      background: #f9fafb;
+      cursor: pointer;
+      color: #374151;
+      transition: background 0.15s, color 0.15s;
+    }
+    .diff-view-toggle button.active {
+      background: #6366f1;
+      color: #fff;
+      font-weight: 600;
+    }
+    .diff-view-toggle button:not(:last-child) {
+      border-right: 1px solid var(--border);
+    }
+    .plan-diff-unified {
+      display: none;
+      margin-top: 8px;
+    }
+    .plan-diff-unified.visible {
+      display: block;
+    }
+    .plan-diff-grid.hidden {
+      display: none;
+    }
+    .unified-stop-label {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .unified-stop-label.source-label {
+      background: #dcfce7;
+      color: #065f46;
+    }
+    .unified-stop-label.target-label {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .unified-day-section {
+      margin-top: 8px;
+    }
+    .unified-day-title {
+      font-weight: 600;
+      font-size: 12px;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+    .unified-stop-row {
+      margin-left: 10px;
+      margin-top: 2px;
+      font-size: 13px;
+    }
+
+    /* --- Feature 3: Conflict count badge --- */
+    .conflict-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 13px;
+      color: #374151;
+      margin-bottom: 10px;
+    }
+    .conflict-badge .badge-count {
+      font-weight: 700;
+      color: #6366f1;
+    }
+    .conflict-badge.all-resolved {
+      background: #ecfdf5;
+      border-color: #bbf7d0;
+    }
+    .conflict-badge.all-resolved .badge-count {
+      color: #16a34a;
+    }
+
+    /* --- Feature 4: Merged plan preview card --- */
+    .merged-preview-card {
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #f9fafb;
+      max-height: 400px;
+      overflow: auto;
+      font-size: 13px;
+    }
+    .merged-preview-heading {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      color: #111827;
+    }
+
+    @media (max-width: 900px) {
+      .diff-view-toggle { margin-left: 0; margin-top: 6px; }
+      .merged-preview-card { max-height: 300px; }
+    }
+    @media (max-width: 640px) {
+      .merged-preview-card { max-height: 220px; }
+    }
+
     /* --- High contrast --- */
     .high-contrast .diff-added { background: #064e3b; color: #f8f8f8; border-color: #16a34a; }
     .high-contrast .diff-removed { background: #450a0a; color: #f8f8f8; border-color: #ef4444; }
     .high-contrast .diff-modified { background: #451a03; color: #f8f8f8; border-color: #f97316; }
     .high-contrast .diff-map-frame { border: 1px solid #f97316; }
     .high-contrast .conflict-compare-card { background: #1a1a2e; border-color: #444; }
+    .high-contrast .field-changed-source { background: #064e3b; color: #f8f8f8; }
+    .high-contrast .field-changed-target { background: #1e3a5f; color: #f8f8f8; }
+    .high-contrast .conflict-badge { background: #1a1a2e; border-color: #444; color: #e0e0e0; }
+    .high-contrast .conflict-badge .badge-count { color: #a5b4fc; }
+    .high-contrast .diff-view-toggle button { background: #1a1a2e; color: #e0e0e0; border-color: #444; }
+    .high-contrast .diff-view-toggle button.active { background: #6366f1; color: #fff; }
+    .high-contrast .merged-preview-card { background: #1a1a2e; border-color: #444; color: #e0e0e0; }
+    .high-contrast .unified-stop-label.source-label { background: #064e3b; color: #f8f8f8; }
+    .high-contrast .unified-stop-label.target-label { background: #1e3a5f; color: #f8f8f8; }
   </style>
 
   <div class="card">
@@ -542,14 +687,16 @@
                     <div class="label">Source</div>
                     <div><%= c.ours?.name || '—' %></div>
                     <% (c.fields || []).forEach(function(f){ %>
-                      <div class="time"><%= f %>: <%= c.ours?.[f] ?? '—' %></div>
+                      <% var srcVal = String(c.ours?.[f] ?? '—'); var baseVal = String(c.base?.[f] ?? '—'); var srcChanged = srcVal !== baseVal; %>
+                      <div class="time <%= srcChanged ? 'field-changed field-changed-source' : 'field-unchanged' %>"><%= f %>: <%= c.ours?.[f] ?? '—' %></div>
                     <% }) %>
                   </div>
                   <div class="conflict-compare-card" style="background:#eff6ff;border-color:#bfdbfe">
                     <div class="label">Target</div>
                     <div><%= c.theirs?.name || '—' %></div>
                     <% (c.fields || []).forEach(function(f){ %>
-                      <div class="time"><%= f %>: <%= c.theirs?.[f] ?? '—' %></div>
+                      <% var tgtVal = String(c.theirs?.[f] ?? '—'); var baseValT = String(c.base?.[f] ?? '—'); var tgtChanged = tgtVal !== baseValT; %>
+                      <div class="time <%= tgtChanged ? 'field-changed field-changed-target' : 'field-unchanged' %>"><%= f %>: <%= c.theirs?.[f] ?? '—' %></div>
                     <% }) %>
                   </div>
                 </div>
@@ -664,7 +811,20 @@
           <% }) %>
         </ul>
 
-        <div class="section-actions">
+        <!-- Feature 4: Merged plan preview -->
+        <div style="margin-top:16px">
+          <h3 class="merged-preview-heading">Merged plan preview</h3>
+          <p class="time">Updates live as you change conflict resolutions and per-stop toggles.</p>
+          <div class="merged-preview-card" id="mergedPlanPreview">
+            <div class="plan-preview-empty">Calculating merged plan...</div>
+          </div>
+        </div>
+
+        <!-- Feature 3: Conflict count badge + merge button -->
+        <div class="section-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div class="conflict-badge" id="conflictBadge">
+            <span class="badge-count" id="conflictBadgeCount">0</span> / <span id="conflictBadgeTotal">0</span> resolved
+          </div>
           <button class="btn btn-primary" type="submit">
             Apply resolutions &amp; Merge
           </button>
@@ -723,7 +883,12 @@
     %>
 
     <% if (basePlan || ourPlan || theirPlan) { %>
-      <h3 style="margin-top:16px">Plan comparison</h3>
+      <h3 style="margin-top:16px">Plan comparison
+        <span class="diff-view-toggle" id="diffViewToggle">
+          <button type="button" data-view="side" class="active">Side-by-side</button>
+          <button type="button" data-view="unified">Unified</button>
+        </span>
+      </h3>
       <p class="time">
         Diff vs the common ancestor (base).
         Source is <strong><%= source %></strong>; Target is <strong><%= target %></strong>.
@@ -850,6 +1015,56 @@
               </div>
             <% }); %>
           <% } %>
+        </div>
+      </div>
+
+      <!-- Unified diff view (hidden by default on desktop) -->
+      <div class="plan-diff-unified" id="planDiffUnified">
+        <div class="plan-preview-col" style="max-height:400px">
+          <%
+            /* Collect all unique day IDs from both plans */
+            var allDayIds = [];
+            var dayDateMap = {};
+            function collectDays(plan) {
+              if (!plan || !Array.isArray(plan.days)) return;
+              plan.days.forEach(function(d) {
+                if (!d) return;
+                if (allDayIds.indexOf(d.id) === -1) allDayIds.push(d.id);
+                if (!dayDateMap[d.id]) dayDateMap[d.id] = d.date || d.id;
+              });
+            }
+            collectDays(ourPlan);
+            collectDays(theirPlan);
+          %>
+          <% allDayIds.forEach(function(dayId) { %>
+            <div class="unified-day-section">
+              <div class="unified-day-title"><%= dayDateMap[dayId] %></div>
+              <%
+                var ourDay = ourPlan && Array.isArray(ourPlan.days) ? ourPlan.days.find(function(d){ return d.id === dayId; }) : null;
+                var theirDay = theirPlan && Array.isArray(theirPlan.days) ? theirPlan.days.find(function(d){ return d.id === dayId; }) : null;
+                var ourStops = (ourDay && Array.isArray(ourDay.stops)) ? ourDay.stops : [];
+                var theirStops = (theirDay && Array.isArray(theirDay.stops)) ? theirDay.stops : [];
+              %>
+              <% ourStops.forEach(function(s) { if (!s) return; %>
+                <div class="unified-stop-row <%= diffClass(ourDiffStatus, dayId, s.id) %>">
+                  <span class="unified-stop-label source-label">Source</span>
+                  <strong><%= s.name || 'Untitled stop' %></strong>
+                  <% if (s.arrive || s.depart) { %>
+                    <span class="time"><%= s.arrive || '??:??' %> &rarr; <%= s.depart || '??:??' %></span>
+                  <% } %>
+                </div>
+              <% }); %>
+              <% theirStops.forEach(function(s) { if (!s) return; %>
+                <div class="unified-stop-row <%= diffClass(theirDiffStatus, dayId, s.id) %>">
+                  <span class="unified-stop-label target-label">Target</span>
+                  <strong><%= s.name || 'Untitled stop' %></strong>
+                  <% if (s.arrive || s.depart) { %>
+                    <span class="time"><%= s.arrive || '??:??' %> &rarr; <%= s.depart || '??:??' %></span>
+                  <% } %>
+                </div>
+              <% }); %>
+            </div>
+          <% }); %>
         </div>
       </div>
 
@@ -1569,4 +1784,124 @@ document.querySelectorAll('input[type="radio"][name^="c"]').forEach((el) => {
 
   setTimeout(function() { diffMap.invalidateSize(); }, 200);
 })();
+
+/* ---- Feature 2: Unified diff view toggle ---- */
+(function initDiffViewToggle() {
+  const toggleContainer = document.getElementById('diffViewToggle');
+  if (!toggleContainer) return;
+  const gridEl = document.querySelector('.plan-diff-grid');
+  const unifiedEl = document.getElementById('planDiffUnified');
+  if (!gridEl || !unifiedEl) return;
+
+  const buttons = toggleContainer.querySelectorAll('button');
+
+  function setView(view) {
+    buttons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === view);
+    });
+    if (view === 'unified') {
+      gridEl.classList.add('hidden');
+      unifiedEl.classList.add('visible');
+    } else {
+      gridEl.classList.remove('hidden');
+      unifiedEl.classList.remove('visible');
+    }
+  }
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => setView(btn.dataset.view));
+  });
+
+  /* Default: unified on mobile, side-by-side on desktop */
+  if (window.innerWidth <= 900) {
+    setView('unified');
+  }
+})();
+
+/* ---- Feature 3: Conflict count badge ---- */
+(function initConflictBadge() {
+  const badge = document.getElementById('conflictBadge');
+  const countEl = document.getElementById('conflictBadgeCount');
+  const totalEl = document.getElementById('conflictBadgeTotal');
+  if (!badge || !countEl || !totalEl) return;
+
+  const metas = document.querySelectorAll('input[id^="meta"]');
+  const total = metas.length;
+  totalEl.textContent = total;
+
+  function updateBadge() {
+    /* Count resolved: any conflict with a checked radio is considered resolved */
+    let resolved = 0;
+    metas.forEach((m, i) => {
+      const checked = document.querySelector('input[name="c' + i + '"]:checked');
+      if (checked) resolved++;
+    });
+    countEl.textContent = resolved;
+    badge.classList.toggle('all-resolved', resolved === total);
+  }
+
+  updateBadge();
+
+  /* Listen for changes on conflict radios */
+  document.querySelectorAll('input[type="radio"][name^="c"]').forEach(el => {
+    el.addEventListener('change', updateBadge);
+  });
+})();
+
+/* ---- Feature 4: Merged plan preview ---- */
+function renderMergedPlanPreview() {
+  const container = document.getElementById('mergedPlanPreview');
+  if (!container) return;
+
+  const merged = buildMergedFromToggles();
+  if (!merged || !Array.isArray(merged.days) || !merged.days.length) {
+    container.innerHTML = '<div class="plan-preview-empty">No plan data available</div>';
+    return;
+  }
+
+  let html = '';
+  merged.days.forEach(d => {
+    if (!d) return;
+    html += '<div class="plan-preview-day">';
+    html += '<div class="plan-preview-day-title">' + escapeHtml(d.date || d.id || 'Day') + '</div>';
+    const stops = Array.isArray(d.stops) ? d.stops : [];
+    if (!stops.length) {
+      html += '<div class="plan-preview-empty">No stops</div>';
+    } else {
+      stops.forEach(s => {
+        if (!s) return;
+        html += '<div class="plan-preview-stop">';
+        html += '<strong>' + escapeHtml(s.name || 'Untitled stop') + '</strong>';
+        if (s.arrive || s.depart) {
+          html += ' <span class="time">' + escapeHtml(s.arrive || '??:??') + ' &rarr; ' + escapeHtml(s.depart || '??:??') + '</span>';
+        }
+        html += '</div>';
+      });
+    }
+    html += '</div>';
+  });
+
+  container.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(String(str)));
+  return div.innerHTML;
+}
+
+/* Initial render + hook into change events */
+renderMergedPlanPreview();
+
+/* Re-render preview whenever conflict radios or stop toggles change */
+const _origOnToggleChange = onToggleChange;
+onToggleChange = function() {
+  _origOnToggleChange();
+  renderMergedPlanPreview();
+};
+
+/* Also listen to conflict resolution radios for preview updates */
+document.querySelectorAll('input[type="radio"][name^="c"]').forEach(el => {
+  el.addEventListener('change', renderMergedPlanPreview);
+});
 </script>

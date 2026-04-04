@@ -878,8 +878,10 @@ scheduler is designed around four stages:
   \item \textbf{Matrix construction:} request pairwise travel durations (when
         available).
   \item \textbf{Ordering:} determine visit order using strict order constraints
-        when provided; otherwise apply Nearest Neighbour ordering as a heuristic
-        baseline \cite{ref_nn_tsp}.
+        when provided; otherwise use Held-Karp exact solver for small instances
+        ($N \leq 12$) \cite{ref_tsp_study} or Nearest Neighbour with 2-opt
+        refinement for larger instances
+        \cite{ref_nn_tsp,ref_nn_2opt_hybrid}.
   \item \textbf{Packing into days:} greedily place stops into day windows while
         maintaining non-overlap and travel gaps.
   \item \textbf{Constraint enforcement:} apply opening hours, desired windows,
@@ -909,7 +911,17 @@ uses:
   \item a merge engine producing a merged snapshot plus a list of conflicts.
 \end{itemize}
 
-Figure~\ref{fig:merge_flow} illustrates the decision logic of the merge engine.
+The fundamental principle, inherited from Git's merge model, is that a conflict
+only arises when \textbf{both} branches express a different opinion about the
+same data relative to the base. If only one branch changes a stop (or deletes
+it) and the other leaves it untouched, the merge engine cleanly accepts the
+change---just as \texttt{git merge} auto-resolves one-sided edits. For example,
+if one branch deletes a stop and the other never touched it, the deletion is
+accepted; a conflict is raised only if the other branch also \textit{edited}
+that stop, creating a genuine disagreement.
+
+Figure~\ref{fig:merge_flow} illustrates the full decision logic of the merge
+engine.
 
 \begin{figure}[H]
   \centering

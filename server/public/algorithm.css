@@ -215,11 +215,20 @@
   font-family:'SF Mono','Fira Code','Consolas',monospace;
   font-size:11px;
   line-height:1.1;
-  overflow-x:auto;
+  overflow:hidden;
   color:#8a9b97;
   margin:0;
-  white-space:pre;
+  white-space:pre-wrap;
+  word-break:break-word;
+  scrollbar-width:thin;
+  scrollbar-color:#2a3a36 transparent;
 }
+.algo-code::-webkit-scrollbar{width:6px;height:6px}
+.algo-code::-webkit-scrollbar-track{background:transparent}
+.algo-code::-webkit-scrollbar-thumb{background:#2a3a36;border-radius:3px}
+.algo-code::-webkit-scrollbar-thumb:hover{background:#3a4a46}
+.algo-code::-webkit-scrollbar-corner{background:transparent}
+.algo-code code{background:none;padding:0;border:none;border-radius:0;display:block;margin:0}
 .algo-code .line{
   display:block;
   padding:0 4px;

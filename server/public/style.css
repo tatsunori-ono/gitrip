@@ -174,7 +174,7 @@ p{color:var(--text)}
 input, select, button, textarea{
   padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; font-size:14px;
 }
-textarea{ font-family:inherit; resize:vertical; }
+textarea{ font-family:inherit; resize:vertical; width:100%; box-sizing:border-box; }
 input[type="date"], input[type="time"]{ min-width: 160px; }
 label{ display:flex; flex-direction:column; font-size:12px; color:var(--muted) }
 

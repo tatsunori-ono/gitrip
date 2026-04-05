@@ -44,6 +44,58 @@ header a{ color:#fff; text-decoration:none; font-weight:700; letter-spacing:.2px
   opacity:.9;
 }
 .nav-links a + a{ margin-left:10px; }
+.nav-dropdown{ position:relative; display:inline-block; margin-left:10px; }
+.nav-dropdown-trigger{ font-weight:500; opacity:.9; cursor:pointer; }
+.nav-dropdown-menu{
+  display:none;
+  position:absolute;
+  top:100%;
+  left:50%;
+  transform:translateX(-50%);
+  margin-top:8px;
+  background:#1e293b;
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:10px;
+  padding:6px 0;
+  min-width:190px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.3);
+  z-index:1000;
+}
+.nav-dropdown-menu::before{
+  content:'';
+  position:absolute;
+  top:-6px;
+  left:50%;
+  transform:translateX(-50%);
+  border-left:6px solid transparent;
+  border-right:6px solid transparent;
+  border-bottom:6px solid #1e293b;
+}
+.nav-dropdown-menu a{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 14px;
+  font-size:13px;
+  font-weight:500;
+  color:#e2e8f0;
+  text-decoration:none;
+  white-space:nowrap;
+  transition:background 0.15s;
+  margin:0;
+}
+.nav-dropdown-menu a:hover{
+  background:rgba(255,255,255,0.08);
+}
+.nav-dropdown-menu a i{
+  width:16px;
+  text-align:center;
+  opacity:0.7;
+}
+.nav-dropdown:hover .nav-dropdown-menu,
+.nav-dropdown:focus-within .nav-dropdown-menu{
+  display:block;
+}
 .logo-link{
   display:flex;
   align-items:center;
@@ -1227,6 +1279,28 @@ main{animation:pageIn .3s ease-out both}
     border-bottom:1px solid rgba(255,255,255,0.1);
   }
   .nav-links a + a{ margin-left:0; }
+  .nav-dropdown{ margin-left:0; }
+  .nav-dropdown-trigger{ display:none; }
+  .nav-dropdown-menu{
+    display:block;
+    position:static;
+    transform:none;
+    background:none;
+    border:none;
+    border-radius:0;
+    padding:0;
+    min-width:0;
+    box-shadow:none;
+    margin-top:0;
+  }
+  .nav-dropdown-menu::before{ display:none; }
+  .nav-dropdown-menu a{
+    padding:10px 0;
+    border-bottom:1px solid rgba(255,255,255,0.1);
+    color:inherit;
+    font-size:inherit;
+  }
+  .nav-dropdown-menu a:hover{ background:none; }
 
   /* Nav right items stacked */
   .nav-right{

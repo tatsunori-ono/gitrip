@@ -1,0 +1,142 @@
+<!-- server/views/merge-demo.ejs -->
+
+<!-- Compact hero -->
+<div class="merge-demo-hero" data-readable="true">
+  <h1>How GiTrip Merges Trip Plans</h1>
+  <p class="lead">
+    GiTrip uses three-way merge to combine divergent trip plans.
+    Explore each scenario step by step to see how conflicts are detected and resolved.
+  </p>
+</div>
+
+<!-- Main visualisation -->
+<section class="merge-demo-main">
+  <div class="merge-demo-layout">
+
+    <!-- Plan panels (replaces the map) -->
+    <div class="merge-demo-panels-wrap">
+      <div class="merge-demo-panels" id="mergePanels">
+        <div class="merge-demo-panel" id="panelBase">
+          <h3 class="merge-demo-panel-title">Base</h3>
+          <div class="merge-demo-panel-files" id="panelBaseFiles" hidden></div>
+          <div class="merge-demo-panel-stops" id="panelBaseStops"></div>
+        </div>
+        <div class="merge-demo-panel" id="panelOurs">
+          <h3 class="merge-demo-panel-title">Source <span class="merge-demo-panel-tag">(Ours)</span></h3>
+          <div class="merge-demo-panel-files" id="panelOursFiles" hidden></div>
+          <div class="merge-demo-panel-stops" id="panelOursStops"></div>
+        </div>
+        <div class="merge-demo-panel" id="panelTheirs">
+          <h3 class="merge-demo-panel-title">Target <span class="merge-demo-panel-tag">(Theirs)</span></h3>
+          <div class="merge-demo-panel-files" id="panelTheirsFiles" hidden></div>
+          <div class="merge-demo-panel-stops" id="panelTheirsStops"></div>
+        </div>
+        <div class="merge-demo-panel" id="panelMerged">
+          <h3 class="merge-demo-panel-title">Merged Result</h3>
+          <div class="merge-demo-panel-files" id="panelMergedFiles" hidden></div>
+          <div class="merge-demo-panel-stops" id="panelMergedStops"></div>
+        </div>
+      </div>
+      <div id="mergePhase" class="merge-demo-phase" aria-live="polite"></div>
+      <div id="mergeStats" class="merge-demo-stats" hidden></div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="merge-demo-sidebar">
+      <!-- Scenario tabs -->
+      <div class="merge-demo-tabs">
+        <button class="merge-demo-tab active" data-scenario="clean">Clean Merge</button>
+        <button class="merge-demo-tab" data-scenario="time">Time Conflict</button>
+        <button class="merge-demo-tab" data-scenario="delete">Delete Conflict</button>
+        <button class="merge-demo-tab" data-scenario="whole">Whole-Plan</button>
+        <button class="merge-demo-tab" data-scenario="file">File Conflict</button>
+        <button class="merge-demo-tab" data-scenario="field">Field Conflict</button>
+      </div>
+      <p id="mergeDescription" class="merge-demo-description"></p>
+
+      <!-- Playback controls -->
+      <div class="merge-demo-controls card">
+        <div class="merge-demo-controls-row">
+          <button id="mergePlayBtn" class="btn btn-primary" type="button" aria-label="Play animation">
+            <i class="fa-solid fa-play" aria-hidden="true"></i> Play
+          </button>
+          <button id="mergePauseBtn" class="btn" type="button" aria-label="Pause animation" hidden>
+            <i class="fa-solid fa-pause" aria-hidden="true"></i> Pause
+          </button>
+          <button id="mergeStepBtn" class="btn" type="button" aria-label="Step forward one step">
+            <i class="fa-solid fa-forward-step" aria-hidden="true"></i> Step
+          </button>
+          <label class="merge-demo-speed-label">
+            Speed
+            <input id="mergeSpeedSlider" type="range" min="0.5" max="10" step="0.5" value="1" />
+            <span id="mergeSpeedValue" class="merge-demo-speed-value">1&times;</span>
+          </label>
+          <button id="mergeResetBtn" class="btn" type="button" aria-label="Reset animation">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Pseudocode -->
+      <div class="merge-demo-pseudocode-panel card">
+        <h2 id="mergePseudoTitle">Pseudocode</h2>
+        <pre id="mergePseudocode" class="merge-demo-code" aria-label="Merge algorithm pseudocode with current-line highlighting"><code></code></pre>
+      </div>
+
+      <!-- Legend -->
+      <div class="merge-demo-legend card">
+        <div class="merge-demo-legend-row">
+          <div class="merge-demo-legend-item">
+            <span class="merge-demo-legend-swatch merge-demo-legend-swatch--unchanged"></span> Unchanged
+          </div>
+          <div class="merge-demo-legend-item">
+            <span class="merge-demo-legend-swatch merge-demo-legend-swatch--modified"></span> Modified
+          </div>
+          <div class="merge-demo-legend-item">
+            <span class="merge-demo-legend-swatch merge-demo-legend-swatch--added"></span> Added
+          </div>
+          <div class="merge-demo-legend-item">
+            <span class="merge-demo-legend-swatch merge-demo-legend-swatch--deleted"></span> Deleted
+          </div>
+          <div class="merge-demo-legend-item">
+            <span class="merge-demo-legend-swatch merge-demo-legend-swatch--conflict"></span> Conflict
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Educational context -->
+  <div class="merge-demo-context">
+    <article class="merge-demo-context-card card" data-readable="true">
+      <h3><i class="fa-solid fa-code-branch" aria-hidden="true"></i> Three-Way Merge</h3>
+      <p>
+        Like Git, GiTrip compares each branch against a common <strong>base</strong> snapshot.
+        By knowing what the plan looked like before either branch changed it,
+        the algorithm can tell <em>who</em> changed what and apply non-conflicting
+        edits automatically.
+      </p>
+    </article>
+    <article class="merge-demo-context-card card" data-readable="true">
+      <h3><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Conflict Detection</h3>
+      <p>
+        A conflict occurs when <strong>both</strong> branches modify the same stop in
+        incompatible ways &mdash; for example, changing arrival times to different values,
+        or one branch deleting a stop the other edited. GiTrip flags these for
+        manual resolution rather than guessing.
+      </p>
+    </article>
+    <article class="merge-demo-context-card card" data-readable="true">
+      <h3><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Automatic Resolution</h3>
+      <p>
+        When only <strong>one</strong> branch touched a stop, GiTrip takes that change
+        automatically. It also computes a <strong>Jaccard similarity</strong> score between
+        the two branches&rsquo; stop sets &mdash; if the plans diverged too much
+        (similarity &lt; 0.4), the entire plan is flagged as a whole-plan conflict.
+      </p>
+    </article>
+  </div>
+</section>
+
+<link rel="stylesheet" href="/public/merge-demo.css" />
+<script src="/public/merge-demo.js" defer></script>

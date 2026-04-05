@@ -1261,6 +1261,7 @@ app.get('/sitemap.xml', (req, res) => {
     { loc: '/ui/public', priority: '0.9', changefreq: 'daily' },
     { loc: '/ui/explore', priority: '0.7', changefreq: 'monthly' },
     { loc: '/ui/algorithm', priority: '0.6', changefreq: 'monthly' },
+    { loc: '/ui/merge-demo', priority: '0.6', changefreq: 'monthly' },
     { loc: '/ui/login', priority: '0.3', changefreq: 'yearly' },
     { loc: '/ui/signup', priority: '0.3', changefreq: 'yearly' },
     { loc: '/ui/privacy', priority: '0.2', changefreq: 'yearly' },
@@ -1320,6 +1321,21 @@ app.get('/ui/algorithm', (req, res) => {
       '@type': 'Article',
       name: 'How Route Optimisation Works',
       description: 'Interactive educational visualisation of the Nearest Neighbour greedy algorithm for route optimisation.',
+      author: { '@type': 'Organization', name: 'GiTrip' },
+    },
+  });
+});
+
+app.get('/ui/merge-demo', (req, res) => {
+  res.render('merge-demo', {
+    pageTitle: 'How Three-Way Merge Works',
+    pageDescription: 'An interactive visual explanation of how GiTrip merges divergent trip plans using three-way merge with conflict detection.',
+    canonicalUrl: canonical(req, '/ui/merge-demo'),
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      name: 'How Three-Way Merge Works',
+      description: 'Interactive educational visualisation of three-way merge for trip itineraries.',
       author: { '@type': 'Organization', name: 'GiTrip' },
     },
   });

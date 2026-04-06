@@ -458,6 +458,49 @@ transport modes, and includes playback controls (play, pause, step, reset, speed
 slider), synchronised pseudocode highlighting, animated scan lines showing which
 edges are being evaluated, and a cost comparison panel.
 
+\subsection{Constraint-Aware Scheduling Visualisation}
+A second educational page (\texttt{/ui/schedule-demo}) demonstrates the
+constraint-aware scheduling algorithm with eight animated scenarios:
+\begin{enumerate}
+  \item \textbf{Basic Schedule:} cursor-based packing with travel gaps.
+  \item \textbf{Opening Hours:} nudging stops forward when proposed before
+        opening time.
+  \item \textbf{Fixed Time:} immovable stops that other stops pack around.
+  \item \textbf{Time Windows:} soft desired-window preferences (e.g.\ lunch
+        slot).
+  \item \textbf{Day Overflow:} stops spilling to the next day when the active
+        window is full.
+  \item \textbf{Multi-Constraint:} opening hours, desired window, and fixed
+        time combined in a single scenario.
+  \item \textbf{Focus Shift:} comparing morning, midday, and afternoon start
+        offsets side by side.
+  \item \textbf{Compact vs Sparse:} comparing tight and distributed packing
+        modes on the same stops.
+\end{enumerate}
+
+The page renders an SVG day timeline (08:00--21:00) with animated stop blocks,
+an opening-hours bar, a real-time constraint info panel, and synchronised
+pseudocode highlighting. No API calls are required; all data is hardcoded.
+
+\subsection{Three-Way Merge Visualisation}
+A third educational page (\texttt{/ui/merge-demo}) demonstrates the three-way
+merge algorithm with eight scenarios covering all merge outcomes:
+\begin{itemize}
+  \item \textbf{Auto-resolved:} clean merge (one side changed), identical
+        changes (both made the same edit), and both-delete (both removed the
+        same stop).
+  \item \textbf{Conflicts:} stop-time conflict, delete-vs-edit conflict,
+        field conflict (e.g.\ name differs), file conflict (e.g.\ trip
+        description), and whole-plan conflict (Jaccard similarity below~0.4).
+\end{itemize}
+
+The page shows four plan panels (Base, Source, Target, Merged Result) with
+colour-coded stop cards, animated per-stop comparison, and a file-level
+description display for file-conflict scenarios. All three educational pages
+share the same visual design, dark colour scheme, playback controls, and
+pseudocode highlighting pattern, and are accessible via a ``How it works''
+dropdown in the navigation bar.
+
 \section{Frontend Implementation}
 GiTrip's pages are server-rendered with EJS templates and enhanced with
 client-side JavaScript:

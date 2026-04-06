@@ -1,0 +1,145 @@
+<!-- server/views/schedule-demo.ejs -->
+
+<!-- Compact hero -->
+<div class="sched-demo-hero" data-readable="true">
+  <h1>How GiTrip Schedules Your Day</h1>
+  <p class="lead">
+    GiTrip packs stops into days while respecting opening hours, desired time windows,
+    and travel gaps. Explore each scenario step by step to see constraint-aware scheduling in action.
+  </p>
+</div>
+
+<!-- Main visualisation -->
+<section class="sched-demo-main">
+  <div class="sched-demo-layout">
+
+    <!-- Timeline area -->
+    <div class="sched-demo-timeline-wrap">
+      <div class="sched-demo-day-label" id="schedDayLabel">Day 1</div>
+      <svg id="schedTimeline" class="sched-demo-svg" aria-label="Day timeline showing stops being scheduled from 08:00 to 21:00"></svg>
+      <div id="schedTimeline2Wrap" class="sched-demo-timeline2-wrap" hidden>
+        <div class="sched-demo-day-label" id="schedDay2Label">Day 2</div>
+        <svg id="schedTimeline2" class="sched-demo-svg" aria-label="Day 2 timeline"></svg>
+      </div>
+      <div id="schedTimeline3Wrap" class="sched-demo-timeline2-wrap" hidden>
+        <div class="sched-demo-day-label" id="schedDay3Label">Day 3</div>
+        <svg id="schedTimeline3" class="sched-demo-svg" aria-label="Day 3 timeline"></svg>
+      </div>
+      <!-- Opening hours bar -->
+      <div id="schedOpeningHours" class="sched-demo-opening-hours" hidden>
+        <div class="sched-demo-opening-hours-label">Opening Hours</div>
+        <svg id="schedOpeningSvg" class="sched-demo-opening-svg"></svg>
+      </div>
+      <!-- Constraint info panel -->
+      <div id="schedConstraintInfo" class="sched-demo-constraint-info" aria-live="polite">
+        <span id="schedConstraintText">Press Play to start scheduling</span>
+      </div>
+      <!-- Stops to schedule list -->
+      <div class="sched-demo-stops-list">
+        <h3 class="sched-demo-stops-title">Stops to Schedule</h3>
+        <div id="schedStopsList"></div>
+      </div>
+      <div id="schedPhase" class="sched-demo-phase" aria-live="polite"></div>
+      <div id="schedStats" class="sched-demo-stats" hidden></div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sched-demo-sidebar">
+      <!-- Scenario tabs -->
+      <div class="sched-demo-tabs">
+        <button class="sched-demo-tab active" data-scenario="basic">Basic Schedule</button>
+        <button class="sched-demo-tab" data-scenario="opening">Opening Hours</button>
+        <button class="sched-demo-tab" data-scenario="fixed">Fixed Time</button>
+        <button class="sched-demo-tab" data-scenario="desired">Time Windows</button>
+        <button class="sched-demo-tab" data-scenario="overflow">Day Overflow</button>
+        <button class="sched-demo-tab" data-scenario="multi">Multi-Constraint</button>
+        <button class="sched-demo-tab" data-scenario="focus">Focus Shift</button>
+        <button class="sched-demo-tab" data-scenario="compact">Compact vs Sparse</button>
+      </div>
+      <p id="schedDescription" class="sched-demo-description"></p>
+
+      <!-- Playback controls -->
+      <div class="sched-demo-controls card">
+        <div class="sched-demo-controls-row">
+          <button id="schedPlayBtn" class="btn btn-primary" type="button" aria-label="Play animation">
+            <i class="fa-solid fa-play" aria-hidden="true"></i> Play
+          </button>
+          <button id="schedPauseBtn" class="btn" type="button" aria-label="Pause animation" hidden>
+            <i class="fa-solid fa-pause" aria-hidden="true"></i> Pause
+          </button>
+          <button id="schedStepBtn" class="btn" type="button" aria-label="Step forward one step">
+            <i class="fa-solid fa-forward-step" aria-hidden="true"></i> Step
+          </button>
+          <label class="sched-demo-speed-label">
+            Speed
+            <input id="schedSpeedSlider" type="range" min="0.5" max="10" step="0.5" value="1" />
+            <span id="schedSpeedValue" class="sched-demo-speed-value">1&times;</span>
+          </label>
+          <button id="schedResetBtn" class="btn" type="button" aria-label="Reset animation">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Pseudocode -->
+      <div class="sched-demo-pseudocode-panel card">
+        <h2 id="schedPseudoTitle">Pseudocode</h2>
+        <pre id="schedPseudocode" class="sched-demo-code" aria-label="Scheduling algorithm pseudocode with current-line highlighting"><code></code></pre>
+      </div>
+
+      <!-- Legend -->
+      <div class="sched-demo-legend card">
+        <div class="sched-demo-legend-row">
+          <div class="sched-demo-legend-item">
+            <span class="sched-demo-legend-swatch sched-demo-legend-swatch--scheduled"></span> Scheduled
+          </div>
+          <div class="sched-demo-legend-item">
+            <span class="sched-demo-legend-swatch sched-demo-legend-swatch--nudged"></span> Nudged
+          </div>
+          <div class="sched-demo-legend-item">
+            <span class="sched-demo-legend-swatch sched-demo-legend-swatch--rejected"></span> Rejected
+          </div>
+          <div class="sched-demo-legend-item">
+            <span class="sched-demo-legend-swatch sched-demo-legend-swatch--travel"></span> Travel
+          </div>
+          <div class="sched-demo-legend-item">
+            <span class="sched-demo-legend-swatch sched-demo-legend-swatch--opening"></span> Opening Hrs
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Educational context -->
+  <div class="sched-demo-context">
+    <article class="sched-demo-context-card card" data-readable="true">
+      <h3><i class="fa-solid fa-clock" aria-hidden="true"></i> Opening Hours</h3>
+      <p>
+        Many attractions have limited opening windows. GiTrip checks each stop's
+        hours and <strong>nudges</strong> the proposed arrival forward to the next valid
+        opening time if needed. If no slot fits today, the stop overflows to the next day.
+      </p>
+    </article>
+    <article class="sched-demo-context-card card" data-readable="true">
+      <h3><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Day Packing</h3>
+      <p>
+        The scheduler uses a <strong>cursor-based</strong> approach: it advances a time
+        cursor through the day, placing each stop at the earliest valid moment after
+        accounting for travel time. When the cursor exceeds the active window, remaining
+        stops spill to the next day.
+      </p>
+    </article>
+    <article class="sched-demo-context-card card" data-readable="true">
+      <h3><i class="fa-solid fa-list-ol" aria-hidden="true"></i> Constraint Priority</h3>
+      <p>
+        Constraints are checked in order: <strong>fixed time</strong> first (immovable),
+        then <strong>opening hours</strong>, then <strong>desired window</strong>, and
+        finally the <strong>active day window</strong>. This layered approach ensures
+        hard constraints are never violated while soft preferences are honoured when possible.
+      </p>
+    </article>
+  </div>
+</section>
+
+<link rel="stylesheet" href="/public/schedule-demo.css" />
+<script src="/public/schedule-demo.js" defer></script>

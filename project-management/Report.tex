@@ -1,0 +1,385 @@
+% ======================================================================
+% GiTrip Project Management Report
+% Author: Tatsunori Ono
+% Degree/Year: 3rd Year Computer Science
+% Supervisor: Professor Mike Joy
+% Academic Year: 2025/26
+%
+% Based on the University of Warwick CS Report Template
+% Original template by Chris Quinn 28/06/2020
+% ======================================================================
+
+\documentclass[pdftex,11pt,a4paper,oneside]{article}
+
+% -- Original Warwick template packages ----------------------------------
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{setspace}           % Spacing (used on front page for crest)
+\usepackage[]{fncychap}         % Section heading style
+\usepackage[hyphens]{url}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{appendix}
+\usepackage{cite}               % IEEE citation grouping [1]-[3]
+
+% -- Additional packages for content -------------------------------------
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}              % [H] placement for figures
+
+% Keep hyperref last
+\usepackage[hidelinks]{hyperref}
+
+% -- Paragraph formatting ------------------------------------------------
+\setstretch{1.15}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+
+% -- Warwick-style header/footer -----------------------------------------
+\fancyhf{}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0.2pt}
+\lfoot{\centering \thepage}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%% DOCUMENT STARTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+% ========================================================================
+% TITLE PAGE
+% ========================================================================
+\thispagestyle{empty}
+
+\begin{spacing}{2}
+    \begin{center}
+        \includegraphics[scale=0.45]{Preamble/WarwickCrest.pdf}
+        % Two options: WarwickCrest.pdf (colour) or WarwickAlt.pdf (B&W)
+    \end{center}
+    \vspace{5mm}
+    \begin{center}
+        \textbf{\begin{LARGE}
+        GiTrip \\ $\sim$\textit{Git} for Collaborative Trip Planning$\sim$
+        \end{LARGE}}
+        \vspace{5mm}
+    \end{center}
+    \begin{center}
+        {\large Project Management Report}\\
+        \vspace{20mm}
+    \end{center}
+    \begin{center}
+        \textbf{\large Tatsunori Ono}
+        \vspace{20mm}
+    \end{center}
+    \begin{center}
+        {\large Supervisor: Professor Mike Joy}\\
+        {\large Second Assessor: Professor Charilaos Efthymiou}\\
+        \vspace{5mm}
+        \textbf{\large Department of Computer Science}\\
+        {\large University of Warwick}\\
+        {\large Academic Year 2025/26\\}
+    \end{center}
+\end{spacing}
+
+% ========================================================================
+% FRONT MATTER
+% ========================================================================
+\pagenumbering{roman}
+
+\pagebreak
+
+\tableofcontents
+
+\newpage
+
+% ========================================================================
+% MAIN BODY
+% ========================================================================
+\pagenumbering{arabic}
+
+\section{Introduction}
+This Project Management Report summarises how GiTrip was planned, organised and
+executed. It complements the Final Report by focusing on process rather than
+technical design. Evidence is drawn from the Project Specification, the
+maintained schedule, supervision records, and the project's version control
+history (over 200 commits on GitHub). The report addresses six key questions:
+development methodology, time management, stakeholder relationships, risk
+management, unforeseen issues, and legal/ethical/professional considerations.
+
+\section{Development Methodology}
+The Project Specification defined a milestone-driven plan to match fixed
+university deadlines. The project followed an \emph{iterative waterfall}
+approach: milestones remained stable, while work within each milestone was
+refined through short feedback cycles. Supervisor meetings were held regularly
+throughout both terms --- Weeks 1, 2, 4, 5, 7, and 9 in Term~1, and Weeks 1,
+2, 4, 6, 8, and 10 in Term~2 (12 meetings total) --- with additional sessions
+near submission deadlines to review drafts and incorporate feedback. This
+balanced predictable progress reporting for supervision with early discovery of
+integration risks (routing providers, geocoding, and interactive editing). For
+example, in Term~1 Week~6, API quota exhaustion was identified during a
+supervisor meeting, prompting immediate caching and fallback implementation.
+This reduced technical risk by identifying integration issues early and ensuring
+the system remained demonstrable throughout Term~1.
+
+Development did not begin immediately. Early work (before substantial
+implementation) consisted of competitor analysis, a focused literature review
+(version control and three-way merge concepts, scheduling heuristics, and
+usability heuristics), and a preliminary survey in November 2025 (30 responses).
+These activities produced the Project Specification, MoSCoW objectives, and an
+evaluation plan, reducing the risk of building features that did not address
+real user needs.
+
+\section{Time Management and Work Tracking}
+Time management combined a Gantt-style plan with weekly goal-setting and review.
+The plan was organised around Term~1 delivery of the end-to-end minimum viable
+product (MVP) and Term~2 hardening (tests, robustness, deployment, and evaluation
+readiness). Weekly work was prioritised using MoSCoW (Must/Should/Could/Won't),
+protecting Must-have items first.
+
+\begin{table}[h]
+\centering
+\caption{Milestone plan (summary).}
+\label{tab:milestones}
+\begin{tabular}{@{}p{0.22\linewidth}p{0.68\linewidth}@{}}
+\toprule
+\textbf{Period} & \textbf{Primary deliverables} \\
+\midrule
+Nov--Dec 2025  & Research, survey, Project Specification, initial prototypes \\
+Dec 2025--Jan 2026 & Repository model, planner pipeline, editing UI, initial
+                     merge workflow \\
+Feb 2026       & Hardening, automated tests, deployment, evaluation preparation \\
+Late Feb 2026  & Evaluation Day demonstration and data collection \\
+Mar 2026       & Final integration and documentation \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Progress was monitored using three artefacts:
+\begin{itemize}
+  \item \textbf{Supervision notes:} each meeting used a prepared agenda recorded
+        in Obsidian with a structure inspired by the Cornell note-taking
+        system~\cite{ref_cornell}: ``General Notes'', ``Questions to Ask and
+        Answers'', and ``Summary and To-dos''. Whenever questions arose between
+        meetings, they were recorded in the ``Questions to Ask'' section of the
+        next meeting file. Notes were additionally backed up via an automated
+        GitHub plugin sync (every 15 minutes) to reduce the risk of data loss.
+  \item \textbf{Source control history:} all work was committed to GitHub for
+        backup and traceability; by completion the repository contained well over
+        200 commits and feature branches for experimentation.
+  \item \textbf{Living schedule:} the original Gantt chart from the Project
+        Specification was reviewed weekly. When a three-day delay emerged due to
+        API quota exhaustion, the timetable was revised to absorb the delay
+        through buffer time and tasks were re-prioritised.
+\end{itemize}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.92\linewidth]{Figures/github-commits.png}
+  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the GitHub
+  repository commit history or network graph showing branching and regular
+  commit activity across the project timeline.}}
+  \caption{GitHub commit history showing regular development activity.}
+  \label{fig:github-commits}
+\end{figure}
+
+To sustain momentum, each week ended with an integrated build and a short review
+against the schedule (what was completed, what slipped, and why). This reduced
+the accumulation of partially integrated features and ensured that demonstrations
+for supervision and Evaluation Day rehearsal were based on the current main
+branch.
+
+\section{Stakeholder Management}
+The key stakeholder was the supervisor (Professor Mike Joy). Meetings were held
+on a regular cadence across both terms (12 meetings total), with additional
+sessions near submission deadlines. Each meeting served as a checkpoint: questions were
+prepared in advance (e.g., ``questions to ask'' and ``updates since last
+meeting''), decisions were recorded, and action items were converted into weekly
+tasks. This reduced rework and helped keep scope aligned with the Project
+Specification.
+
+Due to the author's course transfer from MEng to BSc Computer Science, the
+supervision meeting recordings on Tabula are split across two pages
+(Figures~\ref{fig:tabula-bsc} and~\ref{fig:tabula-meng}).
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.92\linewidth]{Figures/tabula-1.png}
+  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the dissertation
+  supervisor record of meetings on Tabula (BSc page).}}
+  \caption{Dissertation supervisor record of meetings on Tabula (BSc page).}
+  \label{fig:tabula-bsc}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.92\linewidth]{Figures/tabula-2.png}
+  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the dissertation
+  supervisor record of meetings on Tabula (MEng page).}}
+  \caption{Dissertation supervisor record of meetings on Tabula (MEng page).}
+  \label{fig:tabula-meng}
+\end{figure}
+
+Feedback from the Progress Report assessment was incorporated into Term~2
+planning. Concerns about overly complex diagrams informed a decision to use
+smaller, purpose-specific figures in the Final Report. The second assessor's
+suggestion to explore machine learning was recorded as future work without
+expanding the MVP scope.
+
+\section{Risk Management and Resilience}
+A lightweight risk register was maintained and revisited during supervision.
+Table~\ref{tab:risk} lists the most significant risks, mitigations, and outcomes.
+
+\begin{table}[h]
+\centering
+\caption{Key risks and mitigations.}
+\label{tab:risk}
+\begin{tabular}{@{}p{0.24\linewidth}p{0.34\linewidth}p{0.32\linewidth}@{}}
+\toprule
+\textbf{Risk} & \textbf{Mitigation} & \textbf{Outcome} \\
+\midrule
+External routing API failure / quota limits
+  & Caching, rate limiting, bounded concurrency, Haversine fallbacks
+  & Planner remained usable and demos remained reliable. \\
+\midrule
+Merge correctness (silent data loss)
+  & Merge hardening plus 16 unit tests for conflicts and deletions
+  & Merge behaviour became deterministic and test-backed. \\
+\midrule
+Git concepts confusing for novices
+  & Easy mode toggle; seeded demos; clearer labels and affordances
+  & Most users completed key tasks; issues logged for future work. \\
+\midrule
+Data loss (notes or DB)
+  & GitHub backups; Obsidian sync; persistent SQLite volume on Fly.io
+  & Reduced single points of failure. \\
+\midrule
+Evaluation logistics (network, devices)
+  & Public deployment (Fly.io) and multi-device setup
+  & Four Linux machines plus laptop; attendees also used personal devices. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Evaluation risk was specifically reduced by preparing a seeded repository that
+reliably produced a merge conflict for demonstration, and by creating a short
+Microsoft Forms survey to collect feedback consistently across all participants.
+Unforeseen issues that arose during development are discussed in the following
+section.
+
+\section{Unforeseen Issues and How They Were Handled}
+The project remained broadly aligned to the Project Specification and MoSCoW
+priorities, but several unforeseen issues required adaptation.
+
+\textbf{API quota exhaustion.} OpenRouteService rate limits were hit during
+intensive testing, causing the planner to return errors. This was addressed by
+implementing a TTL cache, bounded concurrency (maximum four simultaneous
+requests), and a Haversine-based fallback so the planner degrades gracefully
+rather than failing entirely. The fix required schedule adjustment but was
+absorbed by buffer time.
+
+\textbf{Merge edge cases.} Early merge testing revealed that
+\texttt{JSON.stringify}-based comparison produced false positives when key
+ordering differed between branches. This required a substantial rework of the
+merge engine to use deep structural equality and stable stop identifiers,
+completed before Evaluation Day and backed by 16 automated tests.
+
+\textbf{Geocoding fuzzy search.} Users reported that near-miss queries (e.g.\
+``stick n sushi'' for ``Sticks'n'Sushi'') returned no results from Nominatim,
+which performs exact index matching. This was resolved by adding Photon as a
+fuzzy-search fallback, called only when Nominatim returns zero results.
+
+\textbf{Place search typo sensitivity.} Nominatim search was sensitive to minor
+spelling errors (e.g.\ ``stick n sushi'' for ``Sticks'n'Sushi'') and often
+returned no results for near-miss queries. This was resolved by adding Photon
+as a fuzzy-search fallback, called only when Nominatim returns zero results.
+Photon uses the same OpenStreetMap data but with Elasticsearch-based
+typo-tolerant indexing.
+
+\textbf{Constraint-aware interactive editing.} Timeline drag-and-drop
+interactions could easily produce invalid plans (overlaps, insufficient travel
+time, or violations of daily active hours). A two-tier validation strategy was
+adopted: the UI enforces minimal constraints with immediate visual feedback
+during edits, while server-side validation performs full feasibility checks on
+commit.
+
+\textbf{Increased operational work.} Deployment hardening (security headers,
+CSP, HTTPS enforcement, rate limiting) and public deployment on Fly.io were not
+originally scoped but proved necessary to support reliable demonstrations and
+remote testing. The Project Specification boundary excluding generative AI
+remained unchanged to avoid scope creep.
+
+\section{Legal, Ethical, Social and Professional Issues}
+
+\subsection{Ethical Consent and Human Participation}
+The project included two human-participation activities: a preliminary survey
+(November 2025, 30 responses) and user acceptance testing on Evaluation Day
+(February 2026, 13 responses). Both involved low-risk tasks: answering questions
+about planning habits and completing a guided trial of the software,
+respectively. Participants were students from Warwick DCS and the author's
+personal network. Responses were collected anonymously via Microsoft Forms, and
+results are reported in aggregate statistics. Formal ethical approval was not
+required for this scope, but the study followed good practice: minimal data
+collection, no sensitive questions, and the ability for participants to withdraw
+at any time. If GiTrip were to become a commercial product, a more robust study
+with formal consent procedures (information sheet, explicit consent, and clearer
+withdrawal mechanisms) would be required.
+
+\subsection{Data Protection and Privacy}
+GiTrip minimises personal data collection and avoids sensitive categories. For
+user accounts, only essential identifiers (email and username) are stored, along
+with bcrypt-hashed passwords. Session cookies are HttpOnly and SameSite=Lax.
+Access control is enforced via repository visibility settings and collaborator
+roles. Users can request the export or deletion of their data. The design aligns
+with General Data Protection Regulation (GDPR) principles \cite{ref_gdpr}.
+
+\subsection{Third-Party Services and Legal Compliance}
+GiTrip integrates with several third-party services: OpenStreetMap (map tiles),
+Nominatim and Photon (geocoding), OpenRouteService (routing matrices), Google
+Directions API (transit legs), GNews API (travel alerts), and Open-Meteo
+(weather forecasts). Usage policies for each service were respected through
+caching, rate limiting, and bounded concurrency. Required attribution for map
+data is displayed in the UI \cite{ref_osm_tiles}. API keys are stored as
+environment variables and never exposed to clients.
+
+\subsection{Accessibility}
+Accessibility considerations followed WCAG~2.2 guidance \cite{ref_wcag22}. The
+application provides font-size adjustment, a high-contrast mode, and a
+read-aloud mode for key content, as shown in Figure~\ref{fig:accessibility}.
+Labelled form controls and semantic HTML are used throughout. Remaining
+limitations (interactive map and timeline drag controls are not fully
+keyboard-accessible) are documented in the Final Report rather than concealed.
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.92\linewidth]{Figures/ui-accessibility.png}
+  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the accessibility
+  settings panel showing font-size adjustment, high-contrast mode, and
+  read-aloud mode.}}
+  \caption{Accessibility settings: font-size adjustment, high-contrast mode,
+  and read-aloud mode.}
+  \label{fig:accessibility}
+\end{figure}
+
+\subsection{Professional Conduct}
+Professional behaviour was guided by the BCS Code of Conduct \cite{ref_bcs}.
+This included honest reporting of evaluation results (including limitations and
+negative findings), proper attribution of third-party tools and data sources,
+and transparent documentation of scope boundaries and known issues.
+
+\section{Conclusion}
+GiTrip was delivered through evidence-based planning, milestone-driven execution,
+and iterative refinement under regular supervision. Risks were identified early
+and mitigated through fallbacks, testing, and careful scope control. The project
+was conducted professionally, with explicit attention to ethics, privacy, legal
+compliance for third-party services, and accessibility expectations.
+
+% ========================================================================
+% REFERENCES (IEEE style)
+% ========================================================================
+\bibliographystyle{ieeetr}
+\bibliography{bibliography}
+
+\end{document}

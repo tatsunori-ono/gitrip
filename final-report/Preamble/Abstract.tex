@@ -8,7 +8,7 @@ disagreements about priorities. Existing tools typically optimise a single
 itinerary (e.g., mapping and routing applications) or support generic
 collaboration (e.g., shared documents), but they do not provide robust
 change-management semantics tailored to itineraries. This project presents
-\textit{GiTrip}, a server-rendered web application that applies Git-style
+GiTrip, a server-rendered web application that applies Git-style
 version control concepts to trip planning: a trip is modelled as a repository,
 alternative itineraries are branches, each saved version is a commit containing
 a complete snapshot, and divergent branches can be merged using a three-way
@@ -19,10 +19,12 @@ interaction. An automatic scheduler produces feasible multi-day itineraries
 based on user inputs such as active hours, stay durations, ordering constraints,
 desired time windows, public transit selection, and opening hours. Users can
 then refine plans using two interactive surfaces: a timeline editor for
-adjusting arrival/departure times and a map editor for repositioning locations.
-To address the usability barrier of Git concepts for non-technical users, GiTrip
-includes an ``Easy mode'' that hides advanced controls while preserving version
-safety.
+adjusting arrival/departure times and a map editor for repositioning stops with
+route geometries. The version history is visualised as a workflow graph,
+and users can rollback to any previous version or fork public trip repositories
+to customise existing itineraries. To address the usability barrier of Git
+concepts for non-technical users, GiTrip includes a ``Git mode" toggle; when
+turned off, the interface operates in an ``Easy mode" that hides advanced git operations such as branches, commits, and merge controls while preserving version safety.
 
 The completed system was evaluated through an in-person Evaluation Day
 demonstration and user acceptance testing. Objective task results show high
@@ -34,6 +36,4 @@ limitations and future work (including optional machine learning extensions
 beyond the original project scope).
 
 \vspace{0.6em}
-\textbf{Keywords:} trip planning; version control; branching and merging;
-scheduling constraints; routing; usability; progressive web app; conflict
-resolution
+\textbf{Keywords:} trip planning, version control, branching and merging, scheduling constraints, shortest path routing, travelling salesman problem, progressive web app

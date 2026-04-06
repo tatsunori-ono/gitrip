@@ -2,7 +2,7 @@
 
 /* Compact hero bar */
 .algo-hero{
-  background:radial-gradient(circle at top left,#2f4643,#1b251f);
+  background:#1b251f;
   color:#fff;
   padding:18px 24px;
   text-align:center;

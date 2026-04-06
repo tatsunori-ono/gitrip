@@ -1,0 +1,15 @@
+
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+\vspace{2cm}
+
+\large
+This Progress Report summarises progress on \textit{GiTrip}, a web-based trip planning system that applies \textit{Git}-style version control concepts (repositories, commits, branches, merges, and conflict resolution) to itinerary planning. The project targets a common problem in group travel: plans evolve quickly, collaborators make parallel edits, and typical tools either optimise a single route (e.g., map applications) or support collaboration without structured change management (e.g., generic documents). \textit{GiTrip} combines version control semantics with a constraint-based scheduler that considers travel time, daily active hours, per-stop stay durations, opening-hours constraints, and user preferences (compact vs.\ sparse timing, time-of-day focus, strict ordering, and transport mode).
+
+By the end of Term~1, the project has delivered a working vertical slice: repositories and history in SQLite; a planner that produces feasible day-by-day schedules; server-side routing integration using Openrouteservice (matrix and per-leg directions) and Google Directions for transit; place search via a Nominatim proxy; interactive visualisation through an SVG timeline editor and Leaflet map; and a merge UI with conflict detection and resolution. Robust fallbacks are implemented so the system remains functional under API quota limits or outages.
+
+The remainder of the project focuses on deployment and Progressive Web App support, security hardening, systematic testing and evaluation (including a UAT dry-run), and final report/viva preparation. An updated timetable and risk plan are provided to demonstrate feasibility for successful completion.
+
+\vspace{1cm}
+
+\noindent \textit{Keywords: Flux Capacitor, 1.21 Gigawatts, Calvin Klein}

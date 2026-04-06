@@ -652,6 +652,7 @@
                 <div style="margin-top:4px">
                   <button type="button"
                           class="btn btn-sm"
+                          title="Takes you back to how the trip looked then"
                           onclick="restoreCommit('<%= c.id %>')">
                     Restore this version
                   </button>
@@ -665,7 +666,6 @@
                       <%= (c.keyChangeManual || c.keyChangeAuto) ? 'Unmark key change' : 'Mark key change' %>
                     </button>
                   <% } %>
-                  <span class="time"> Takes you back to how the trip looked then.</span>
                 </div>
               </li>
             <% }); %>

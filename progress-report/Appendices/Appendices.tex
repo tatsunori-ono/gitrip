@@ -1,0 +1,288 @@
+\begin{appendices}
+\addcontentsline{toc}{section}{Appendices}
+
+\section{Preliminary Survey Results}
+\label{app:survey}
+
+\subsection{Survey Overview}
+
+The survey was conducted with $n=30$ participants (author's friends, including students from Warwick Department of Computer Science, and family) via Microsoft Forms from November 24\ts{th} to 27\ts{th}, 2025.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-q0.png}
+\caption{Responses Overview (the duration says 42 Days, but this is because the author did not close the survey till recently. 30 responses were collected within just the first 3 days since opened. As an evidence, Figure \ref{app:survey-excel} shows the dates when responses are received)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-excel.png}
+\caption{Screenshot of responses in a spreadsheet}
+\label{app:survey-excel}
+\end{figure}
+
+As displaying each of these responses individually would take up space, the aggregate result would be presented from the next subsection (Appendix~\ref{app:agg-res}).
+
+\subsection{Aggregate Survey Results}
+\label{app:agg-res}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-q1.png}
+\caption{Q1) How often do you plan trips?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-q2.png}
+\caption{Q2) How often do you find trip planning stressful/time consuming?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-q3.png}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-q3-detail.png}
+\caption{Q3) Which services do you use to plan/manage trips? (multi-select)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-q4.png}
+\caption{Q4) Likelihood of using an app matching GiTrip's concept?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-q5.png}
+\caption{Q5) Ranked helpfulness of proposed GiTrip features.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-q6.png}
+\caption{Q6) Perceived value of Git-style operations in a trip-planning context.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-q7.png}
+\caption{Q7) Free-text feature requests.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Survey/survey-q8.png}
+\caption{Q8) Free-text concerns/flaws.}
+\end{figure}
+
+\section{Project Specification}
+\label{app:spec}
+The Project Specification is included to support assessment of progress against the initial plan. To preserve the exact same formatting, it is included as a compiled PDF, starting from the next page.
+
+\includepdf[
+    pages=-,
+    addtotoc={
+        1,subsection,2,Problem Statement,prev:problem,
+        1,subsection,2,Objectives,prev:objectives,
+        3,subsubsection,3,Success Criteria,prev:success,
+        3,subsection,2,Technical and Concept,prev:technical,
+        3,subsubsection,3,System Overview,prev:system,
+        4,subsubsection,3,Place Search and Opening-hours,prev:placesearch,
+        4,subsubsection,3,Routing,prev:routing,
+        4,subsubsection,3,Optimisation Strategy and Limits,prev:optimisation,
+        4,subsubsection,3,Scheduling Model,prev:scheduling,
+        4,subsubsection,3,Versioning and Merge,prev:versioning,
+        5,subsubsection,3,Conflict Resolution,prev:conflicts,
+        5,subsubsection,3,Collaboration,prev:collaboration,
+        5,subsection,2,Methodology,prev:methodology,
+        5,subsubsection,3,Testing,prev:testing,
+        5,subsection,2,Timetable,prev:timetable,
+        6,subsection,2,Resources,prev:resources,
+        6,subsubsection,3,Risks and Mitigations,prev:risks,
+        7,subsection,2,Legal Social Ethical and Professional Issues,prev:legal,
+        7,subsection,2,References,prev:references
+    }
+]{Report/Appendices/cs310-project-specification-5513312-tatsunori-ono.pdf}
+
+\section{Robust and Detailed Algorithm Used in Implementation}
+\label{app:algorithm}
+
+\vspace{-3mm}
+
+\begin{algorithm}[H]
+\caption{Auto-scheduling algorithm: NN ordering with constraint handling}
+\begin{algorithmic}[1]
+\STATE Filter enabled places from input; assign stable unique ids if missing.
+\STATE Build the day list from the input date range; if \texttt{targetDays} is provided, trim the day list to the first \texttt{targetDays} days.
+\STATE Partition places into fixed-day buckets (preferredDay) and an unassigned pool.
+
+\STATE Compute travel duration matrix $M$ if coordinates exist and routing mode supports matrix API.
+\IF{\texttt{transport} = \texttt{transit}}
+  \STATE Skip matrix computation; transit legs will use per-leg routing calls instead of $M$.
+\ENDIF
+
+\STATE Order places: if any strict ordering exists, sort by strict order field; else apply nearest-neighbor heuristic using $M$ (or haversine distance if $M$ unavailable).
+\IF{\texttt{orderingMode} = \texttt{strict}}
+  \STATE Treat strict order field as exact positions in the ordered list.
+\ELSIF{\texttt{orderingMode} = \texttt{relative}}
+  \STATE Preserve original input order; reorder only places with a strict order field within that stable order.
+\ENDIF
+\STATE Apply the ordering procedure separately within each preferredDay bucket and within the unassigned pool.
+\IF{$M$ unavailable \AND coordinates missing}
+  \STATE Keep original input order as a fallback (no distance-based reordering possible).
+\ENDIF
+
+\STATE Compute focus preference offset and sparse gap; ignore focus preference offset when compactness = sparse.
+
+\FOR{each day $d$ in date range}
+  \STATE Initialise cursor time $t$ based on daily active hours start and focus preference offset.
+  \STATE Initialise today's ordered list by concatenating: (i) preferredDay bucket for $d$ (if any), then (ii) remaining unassigned places in their order.
+  \WHILE{unscheduled places remain \AND $t$ within day's active window}
+    \STATE Retrieve next place $p$ from ordered list.
+    \STATE Compute travel time $\tau$ from previous stop to $p$ (using routing API or fallback).
+    \IF{\texttt{transport} = \texttt{transit}}
+      \STATE Compute $\tau$ (and any per-leg mode details) via a per-leg routing call; use the returned transit/walk steps when available.
+    \ELSE
+      \STATE Compute $\tau$ from $M$ when available; otherwise fall back to a distance-based estimate (e.g., haversine).
+    \ENDIF
+    \STATE Propose arrival time: $a = t_{\text{prev\_depart}} + \text{break\_minutes} + \tau$.
+    \STATE Apply desired window constraints (soft) and opening-hours constraints (hard) to $a$.
+    \IF{$p$ is marked fixedTime}
+      \STATE Treat desired window constraints for $p$ as hard (must be satisfied).
+    \ENDIF
+    \STATE If opening-hours indicate $p$ is closed at $a$, nudge $a$ to the next feasible open slot when possible; otherwise mark as infeasible.
+    \IF{resulting interval $(a, a + \text{dwell})$ fits within day's active window}
+      \STATE Commit stop $p$ to day $d$ with times $(a, a + \text{dwell})$ and metadata (travel~$\tau$, route geometry, mode).
+      \STATE Advance cursor: $t = a + \text{dwell}$ (compact), or $t = a + \text{dwell} + \text{extra\_gap}$ (sparse).
+    \ELSE
+      \IF{$p$ is fixed to day $d$ via preferredDay}
+        \STATE Push stop $p$ to overflow list (fixed-day stop could not fit within day $d$).
+        \STATE Remove $p$ from the unscheduled set so it is not considered on later days.
+      \ENDIF
+      \STATE Spill stop $p$ to next day.
+      \STATE If $p$ is unassigned, it remains eligible on subsequent days until scheduled or pushed to overflow at the end of the date range.
+    \ENDIF
+  \ENDWHILE
+\ENDFOR
+\STATE Output: list of days with scheduled stops \& overflow list of unscheduled places (if any exceed date range).
+\end{algorithmic}
+\end{algorithm}
+
+\section{Supplementary UI and Feature Evidence}
+\label{app:supp-ui-evidence}
+
+\subsection{Additional UI screenshots}
+\label{app:more-ui}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/UI/about.png}
+\caption{About page}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/UI/repo.png}
+\caption{Repositories page}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/UI/public-repo.png}
+\caption{Public repositories page (sorted by most stars)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/UI/view-tab.png}
+\caption{Repository page (view tab, \textit{Git} mode off)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/UI/view-tab-git-mode.png}
+\caption{Repository page (view tab, \textit{Git} mode on)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/UI/edit-tab.png}
+\caption{Repository page (edit tab, \textit{Git} mode off)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{Report/Appendices/UI/edit-tab-git-mode.png}
+\caption{Repository page (edit tab, \textit{Git} mode on)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/UI/settings-tab.png}
+\caption{Repository page (settings tab, \textit{Git} mode off)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/UI/settings-tab-git-mode.png}
+\caption{Repository page (settings tab, \textit{Git} mode on)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.34\textwidth]{Report/Appendices/UI/long-trip-repo.png}
+\caption{Successful example of auto-scheduler scheduling a long trip (16 stops across 3 days)}
+\end{figure}
+
+\subsection{iCalendar export and Google Calendar import}
+\label{app:ical}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/UI/ical-export.png}
+\caption{Importing the exported .ics file into Google Calendar}
+\end{figure}
+
+\subsection{Progressive Web App (PWA) Packaging and Installation}
+\label{app:pwa}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/UI/pwa-offline-app.png}
+\caption{\textit{GiTrip} installed as a PWA}
+\end{figure}
+
+\section{Record of Supervisor Meeting}
+\label{app:meeting}
+
+\subsection{GitHub Notes Backup}
+\label{app:github-notes}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Meetings/github-backup.png}
+\caption{Supervisor meeting notes backed up on GitHub every 15 minutes (if any changes are made)}
+\end{figure}
+
+\subsection{Tabula Record of Meeting}
+\label{app:tabula}
+Due to the author's course change from MEng to BSc Computer Science, the recordings on Tabula are split across 2 pages.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Meetings/tabula-1.png}
+\caption{Dissertation supervisor record of meetings on Tabula (BSc page)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Appendices/Meetings/tabula-2.png}
+\caption{Dissertation supervisor record of meetings on Tabula (MEng page)}
+\end{figure}
+
+
+\end{appendices}

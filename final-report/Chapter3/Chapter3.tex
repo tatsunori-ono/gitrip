@@ -97,20 +97,17 @@ and deployment:
 \end{itemize}
 
 \section{Scope Boundary: Why AI Was Excluded from the MVP}
-The Project Specification explicitly excluded AI-powered itinerary generation
-from natural language prompts. This boundary served four practical purposes:
-\begin{itemize}
-  \item \textbf{Determinism and explainability:} the scheduler must justify
-        feasibility decisions (e.g., opening-hours nudges), which is easier with
-        rule-based logic than with generative approaches.
-  \item \textbf{Evaluation clarity:} success criteria focus on constraint
-        satisfaction and merge usability, which require objective measurement.
-  \item \textbf{Privacy and deployment:} avoiding model hosting and user
-        preference profiling reduces privacy risks and operational complexity.
-  \item \textbf{Time and risk control:} adding AI would broaden the problem into
-        recommendation, preference learning, and natural-language understanding,
-        which exceeds the MVP schedule.
-\end{itemize}
+\label{sec:ai_scope}
+GiTrip does not use AI or machine learning in the current implementation. The
+Project Specification explicitly excluded AI-powered itinerary generation from
+natural language prompts. This boundary served four practical purposes:
+determinism and explainability (the scheduler must justify feasibility decisions
+with rule-based logic), evaluation clarity (success criteria require objective
+measurement of constraint satisfaction and merge usability), privacy and
+deployment simplicity (avoiding model hosting and preference profiling), and time
+and risk control (AI would broaden the problem into recommendation and
+natural-language understanding, exceeding the MVP schedule).
 
-Machine learning is still a credible future extension and is discussed in
-Chapter~9.
+That said, AI is clearly an interesting direction for future implementation.
+Potential extensions such as preference learning, dwell-time prediction, and
+context-aware recommendations are discussed in Chapter~9.

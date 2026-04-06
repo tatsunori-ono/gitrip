@@ -1,0 +1,84 @@
+\section{What Are We Doing Next? (Plan for Remaining Work)}
+\label{sec:next}
+
+\subsection{Changes from the Original Plan}
+
+In addition to the implementation of the \textit{Git} mode toggle button, the quick route page (Section~\ref{interactive-ui}), and additional features (Section~\ref{additional-progress}), the main change to the project is that one MoSCoW objective was re-scoped: C1 (CLI along with the Web UI). The web UI covers core version-control interactions, but the command-line interface component was de-scoped to avoid duplicating effort and because survey feedback suggested that \textit{Git}-like workflows are already a barrier for some users (Section~\ref{interactive-ui}). Effort was instead invested into making the web workflow clearer and into providing an easy-mode pathway.
+
+\subsection{Remaining Technical Work}
+\label{remaining-work}
+The following work carries over from Term 1 (estimated effort in focused days):
+
+\begin{enumerate}
+  \item \textbf{Opening-hours integration (2--3):}
+  Currently, \textit{GiTrip} retrieves opening-hours metadata during place selection via Nominatim
+  (\texttt{extratags.opening\_hours}) and stores it in both the planner input (\texttt{planInput})
+  and the resulting stops for reproducibility. The scheduler already parses these opening hours
+  strings and can detect closed intervals. The remaining work is to integrate this information into
+  scheduling decisions through: (i) \emph{nudging} (if a proposed arrival falls in a closed interval,
+  shift the stop to the next feasible open slot where possible), and (ii) \emph{blocking/spillover}
+  (if no feasible open slot exists within the day, spill the stop to the next day, or to overflow
+  if the date range is exhausted).
+
+  \item \textbf{Merge conflict resolution (3--4):}
+  A conflict resolver is implemented, but it is not yet a fully generic per-field resolver for all
+  stop attributes. The current system resolves: (i) file-level conflicts in \texttt{snapshot.files},
+  (ii) per-stop timing conflicts (\texttt{arrive}/\texttt{depart}), (iii) delete-vs-edit conflicts at
+  the stop level, and (iv) whole-plan conflicts where both branches significantly restructure the
+  itinerary. To complete the originally intended ``field-level'' scope, the remaining task is to
+  define a bounded set of stop fields that should be independently resolvable (e.g.,
+  \texttt{name}, \texttt{arrive}, \texttt{depart}, \texttt{stayMin}, \texttt{routeMode}, \texttt{lat},
+  \texttt{lng}) and extend both the merge logic and UI to support these cases without overwhelming
+  non-expert users.
+\end{enumerate}
+
+On top of these carry-over items, Term 2 focuses on deployment hardening, evaluation execution,
+and completion of the final written deliverables. The planned work is summarised in
+Table~\ref{tab:remaining-tasks}. These packages are sequenced to reduce evaluation risk. Merge resolution and opening-hours integration are scheduled first because they directly affect itinerary correctness and user trust. Deployment and security hardening follow, so the pilot can run in the same environment as on Evaluation Day, avoiding last-minute configuration changes. The User Acceptance Testing (UAT) pilot will validate task scripts, instrumentation, and terminology; afterwards, a feature freeze will limit changes to bug fixes and documentation to map findings onto the success criteria.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.20\textwidth}|>{\raggedright\arraybackslash}p{0.22\textwidth}|X|}
+\hline
+\textbf{Week} & \textbf{Focus} & \textbf{Deliverables (completion criteria)} \\
+\hline
+W16 (19 Jan--25 Jan) & Merge conflict resolver & Extend the merge engine and UI toward per-field resolution for a defined set of stop attributes. Add seeded regression scenarios and tests for common conflicts. Update user-facing guidance in the UI. \\
+\hline
+W17 (26 Jan--1 Feb) & Opening-hours integration in auto-scheduler & Implement opening-hours nudging to the next open interval. Enforce hard closed intervals. Spill to the next day when infeasible. Add scheduler tests covering opening-hours edge cases. \\
+\hline
+W18 (2 Feb--8 Feb) & Deployment and security baseline & Hosted deployment with a public URL. Secrets moved to environment variables. API key handling verified. Dependency audit (\texttt{npm audit}) and remediation of high-risk issues. Harden input validation against SQL injection and XSS. Basic rate limiting and clear fallback/error messages. \\
+\hline
+W19 (9 Feb--15 Feb) & UAT pilot & Protocol finalised. Pilot sessions on 3--5 users completed. Instrumentation validated (task timings, error logging). High-severity issues triaged and fixed. \\
+\hline
+W21 (23 Feb--1 Mar) & Post-evaluation fixes & Implement the top issues revealed by the evaluation. Stabilise merge workflows. Add regression tests. Prepare a demo plan for Viva. \\
+\hline
+W22 (2 Mar--8 Mar) & Final Report plan & Freeze report outline and figure list. Lock evaluation analysis plan. Begin drafting methods and implementation sections with consistent referencing and appendix structure. \\
+\hline
+W23--W27 (9 Mar--12 Apr) & Final Report & Complete full draft including evaluation results and discussion. Incorporate supervisor feedback and proofread. Finalise formatting, references, and appendices, then produce submission-ready PDF. \\
+\hline
+W25--W27 (23 Mar--12 Apr) & Project Management Report & Draft and finalise the PM report: methodology, risk management, progress tracking, and reflections. Ensure appendices include supporting evidence where appropriate. \\
+\hline
+W28--W30 (13 Apr--3 May) & Viva rehearsal & Finalise slides and demo script, then rehearse. Prepare Q\&A bank and contingency plan. Perform final submission checks. \\
+\hline
+\end{tabularx}
+\caption{Upcoming tasks (Term 2 and 3)}
+\label{tab:remaining-tasks}
+\end{table}
+
+\subsection{Updated Timetable}
+Incorporating the discussion from Section~\ref{progress-against-original} to Section~\ref{remaining-work}, Figure~\ref{fig:updated-gantt} presents the updated Gantt chart.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Figures/gantt-updated.png}
+\caption{Updated Gantt chart, showing Term~1 progress and remaining work}
+\label{fig:updated-gantt}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.25\textwidth]{Report/Figures/key-updated.png}
+\caption{Updated Gantt chart keys with status indicators}
+\label{fig:updated-key}
+\end{figure}

@@ -1,0 +1,20 @@
+\section{Appraisals and Reflections}
+\label{sec:reflections}
+
+\subsection{What Went Well}
+\paragraph{Core feasibility achieved early.}
+All must-have features were integrated into an end-to-end workflow during Term 1, reducing the main technical risk: whether \textit{Git}-style semantics can coexist with constraint-based scheduling and routing in a usable UI. The vertical-slice strategy (end-to-end workflows before deep refinement) exposed interface mismatches early and reduced rework.
+
+\paragraph{Robustness by design.}
+Fallback routing and caching kept development progressing during quota exhaustion and provided resilience for demonstrations and evaluation.
+
+\paragraph{Novice and expert workflows.}
+Survey results motivated dual-path interactions (``easy save'' vs.\ advanced VCS controls). Informal testing suggests this reduces friction for non-experts while preserving power-user capability.
+
+\subsection{Lessons Learned and Applications to Remaining Work}
+
+Three main lessons emerged from Term~1. First, implementing features requires explicit schedule allocation due to unexpected edge cases appearing at system boundaries (e.g., routing normalisation, drag-edit validation from Section~\ref{sec:challenges}). This is reflected in the updated timetable, which reserves focused time for robustness work.
+
+Second, primary user research should occur early to minimise redesign. The survey results influenced both prioritisation (e.g., novice vs.\ expert workflows) and presentation (e.g., terminology), and therefore UAT pilot sessions are scheduled early in Term 2 to validate usability assumptions before final evaluation.
+
+Third, lightweight decision logs reduce reporting overhead and improve traceability. Concretely, this project adopts traceable artefacts such as structured commit messages and an in-UI ``Rationale'' view that explains ordering and timing decisions for each stop. In Term 2, this approach will be extended by recording merge-resolution decisions and by capturing evaluation observations in a consistent format, improving reproducibility of findings and easing final report writing.

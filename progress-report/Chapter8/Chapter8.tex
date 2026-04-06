@@ -1,0 +1,17 @@
+\section{Project Management}
+\label{sec:project-management}
+
+\subsection{Methodology and Supervision}
+\label{sec:methodology}
+Supervisor meetings were held bi-weekly (Weeks 2, 4, 6, 8, and 10), with additional meetings scheduled near submission deadlines to review drafts and incorporate feedback. The Project Specification initially proposed a milestone-driven (waterfall-style) development plan to align with fixed submission deadlines and regular supervision (Appendix~\ref{prev:methodology}). In practice, the project followed an \textit{iterative} waterfall approach, with milestones remaining stable (as captured in the Gantt chart), but implementation proceeded through iterative refinement with the supervisor to ensure robustness and usability. For example, in Term 1 Week 6, API quota exhaustion was identified during the supervisor meeting, prompting immediate caching and a fallback implementation. This reduced technical risk by identifying integration issues early and ensuring the system remained demonstrable throughout Term 1.
+
+\subsection{Work Tracking and Progress Monitoring}
+\label{sec:work-tracking}
+
+Progress is tracked through complementary mechanisms:
+
+\begin{itemize}
+    \item \textbf{Supervisor meeting notes:} Notes for supervisor meetings were recorded in author's Obsidian using a simple structure with sections of  ``General Notes", ``Questions to Ask and Answers", and ``Summary and To-dos". How the notes are divided into 3 sections were inspired by Cornell note taking sytem~\cite{cornell-notes}. Whenever questions come up in mind, they were recorded on the ``Questions to Ask" section of the next meeting \texttt{.md} file. Notes were additionally backed up via an automated GitHub plugin sync (every 15 minutes) to reduce the risk of data loss. Evidence of the supervision log and note repository is provided in Appendix~\ref{app:meeting}.
+    \item \textbf{Version control of \textit{GiTrip} source code:} All work managed via GitHub~\cite{github}, providing auditable history (approximately 200 commits as of January 2026), robust backup, and support for experimental branches. Commit history enables retrospective analysis of time spent per feature, informing Term~2 estimates.
+    \item \textbf{Living timetable:} Original Gantt chart (Appendix \ref{app:spec}) reviewed weekly. When a three-day delay emerged due to API shortage, the timetable was revised to absorb the delay through buffer time.    
+\end{itemize}

@@ -1,0 +1,33 @@
+\section{Introduction to the Project}
+
+\subsection{Problem Context and Motivation}
+Trip planning is time-consuming because the schedule must satisfy time feasibility constraints (travel time by different modes of transport, per-stop stay time, and daily active hours window) and real-world constraints (opening hours, weather conditions, and traffic news). This becomes more complex for group trip planning because participants propose alternative routes and schedules, with edits distributed across chat messages, screenshots, and documents. This fragmented approach increases the likelihood of duplicated work, accidental overwrites, and loss of rationale for changes.
+
+While existing route planners can optimise a single itinerary and generic collaboration tools can support shared documents, optimising the entire trip schedule and supporting change management in group trip planning remain insufficient.
+
+\paragraph{Evidence of need:}
+To validate the practical relevance of this problem, a preliminary survey was conducted with 30 participants. The full questionnaire and results are in Appendix~\ref{app:survey}.
+
+Key findings support three observations:
+\begin{enumerate}
+  \item \textbf{Planning is widely effortful:} 60\% (18/30) reported trip planning as \emph{often} or \emph{always} stressful/time-consuming; 93\% (28/30) as \emph{at least sometimes} stressful.
+  \item \textbf{Fragmented tool usage is common:} For planning trips, 83\% (25/30) use \textit{Google Maps}~\cite{google-maps}; 47\% (14/30) use \textit{Google Docs}~\cite{google-docs}/\textit{Microsoft Word}~\cite{microsoft-word} (multi-select). Current practice fragments planning across maps and general-purpose tools.
+  \item \textbf{Demand for integrated solution:} 90\% (27/30) responded \emph{very likely} or \emph{somewhat likely} to use \textit{GiTrip} (collaborative editing via \textit{Git}~\cite{git}-style version control combined with auto-scheduling, travel-time computation, and opening-hours constraints).
+\end{enumerate}
+
+These findings motivated subsequent background research and competitor analysis (Chapter~\ref{sec:background}) to identify a market gap.
+
+\subsection{Project Overview}
+\textit{GiTrip} applies \textit{Git}-style version control system (VCS) semantics to trip planning. A trip is represented as a repository containing the users’ commits (changes made to the trip). Users can branch (make alternative routes) and merge branches via structured conflict resolution to make the final trip plan. This version-controlled plan is integrated with an automatic scheduler that produces a non-overlapping itinerary while respecting constraints such as active hours, per-stop stay duration, user preferences, and opening hours.
+
+The key design goal is usability for non-experts. \textit{Git} concepts are surfaced through a clear web interface (buttons for branching/merging, workflow graph, conflict resolver screens). Trip plans are visualised using an interactive timeline (editable by dragging) and a map view showing ordered stops and route geometries. The feature-ranking results (Q5) of the survey reinforce this requirement: concrete itinerary features such as timeline/map visualisation, travel-time estimation, and automatic optimisation are perceived as most helpful, while \textit{Git}-style trip repository concepts are less directly valued by some respondents (Appendix~\ref{app:agg-res}). Therefore, \textit{Git}-style semantics should be implemented to enable VCS, but presented through an approachable interface that does not assume prior \textit{Git} knowledge.
+
+\subsection{Objectives and Significance}
+The objectives and feature requirements, categorised by MoSCoW prioritisation, remain consistent with the Project Specification (Appendix~\ref{prev:objectives}). The following is the summary:
+
+\begin{itemize}
+    \item \textbf{Must-haves:} repositories with history (commits/branches), an optimised automatic scheduler, routing integration, interactive visualisation (timeline and map), and merge with conflict resolution.
+    \item \textbf{Should-haves:} validation and nudging for opening hours, user preferences (compact vs.\ sparse, focus time, mode recomputation), and productivity features such as web-based branch creation and forking.
+\end{itemize}
+
+\textit{GiTrip} is a suitably challenging 3rd-year Computer Science project because it combines: (i) VCS semantics over structured data, (ii) constraint-aware scheduling with external routing services, and (iii) interactive visualisation with editable timelines and maps. The project makes a novel contribution by applying VCS semantics to collaborative trip planning, addressing a documented gap in existing tools. This is also significant because the combination of constraint-aware scheduling with structured change management has potential applications beyond tourism when generalised, including project planning and resource allocation scenarios.

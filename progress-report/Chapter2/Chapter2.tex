@@ -1,0 +1,82 @@
+\section{Background Research}
+\label{sec:background}
+
+This section expands on the market research and literature review in the Project Specification (Appendix~\ref{prev:problem}) by positioning \textit{GiTrip} within the competitor landscape and justifying key design and technology choices made for implementation.
+
+\subsection{Competitor Landscape and Differentiation}
+\label{sec:competitors}
+
+Q3 survey results (Appendix~\ref{app:agg-res}) indicate that users commonly assemble plans using \textit{Google Maps} plus general-purpose editors, or use trip-planning services. Therefore, competitors are grouped into (1) maps and route computation,  (2) generic collaboration, and (3) trip-planning products.
+
+\subsubsection{Maps and Route Computation}
+\textit{Google Maps} and \textit{Apple Maps}~\cite{apple-maps} supports route planning and shared lists, but does not provide structured multi-version change management such as branching/merging alternatives, nor conflict resolution at the stop/field level. Itinerary feasibility constraints (dwell times, active hours, opening hours) are not treated as first-class constraints during collaborative editing.
+
+\subsubsection{Generic Collaboration}
+\textit{Notion}~\cite{notion}, \textit{Google Docs}, and spreadsheets support real-time collaboration and some version history, but require users to manually manage scheduling constraints and travel-time feasibility. They also lack domain-specific operations such as recomputing a leg after edits, automatically reflowing a day while respecting constraints, or resolving conflicts on a stop-by-stop basis.
+
+\subsubsection{Trip-planning Products}
+Trip planners such as \textit{Wanderlog}~\cite{wanderlog}, \textit{Furkot}~\cite{furkot}, \textit{Roadtrippers}~\cite{roadtrippers}, and \textit{TripIt}~\cite{tripit} provide itinerary organisation, maps, route planning, and sharing features. However, they generally focus on maintaining a single evolving itinerary rather than treating alternatives as first-class objects that can be explored independently and merged later with explicit reconciliation. Consequently, they do not directly address the failure of ``parallel edits".
+
+\subsubsection{Why \textit{GiTrip} is Distinctive}
+\label{sec:uniqueness}
+\textit{GiTrip} is defined by the combination of:
+\begin{enumerate}[label=\alph*)]
+    \item \textit{Git}-style VCS semantics (\textit{branch}, \textit{merge}, \textit{rollback}, etc.) implemented on structured trip data,
+    \item constraint-aware auto-scheduling integrating travel-time computation and opening-hours constraints,
+    \item an interactive visual editor (timeline and map) where edits are committed back into history, enabling traceability of changes, and 
+    \item collaborative editing for group trip-planning.
+\end{enumerate}
+As evident from Table~\ref{tab:competitor-diff}, no tool in the market provides all four components as a single coherent workflow.
+
+\begin{table}[H]
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Tool Category} &
+\textbf{a) Version Control} &
+\textbf{b) Automatic Scheduling} &
+\textbf{c) Visual Editing} &
+\textbf{d) Collaboration} \\
+\hline
+\textbf{Maps and Route Computation} (e.g., \textit{Google Maps}, \textit{Apple Maps}, \textit{Citymapper}\cite{citymapper}) &
+No &
+Yes, but limited constraints such as arrival time/departing time and mode of transportation &
+Yes for map interface, but limited interaction on timeline &
+Yes, but partial sharing of a single itinerary \\
+\hline
+\textbf{Generic Collaborations} (e.g., \textit{Google Docs}, \textit{Notion}, \textit{Google Sheets}~\cite{google-sheets}, \textit{Microsoft Excel}~\cite{microsoft-excel}) &
+Yes, but document-level only &
+No, manual data collection and scheduling &
+No, manual and also not domain-aware (not trip-specific) &
+Yes, very strong real-time collaboration \\
+\hline
+\textbf{Trip planners} (e.g., \textit{Wanderlog}, \textit{Furkot}, \textit{Roadtrippers}, \textit{TripIt}, \textit{Google Travel}~\cite{google-travel}) &
+No, most of them only allows undo/redot &
+No, the focus is on recommending places and not producing robust constraint-aware schedule &
+Yes, but timeline and map interface are not always interactive &
+Yes, most of them can share itinerary \\
+\hline
+\textbf{GiTrip} &
+\textbf{Yes} &
+\textbf{Yes} &
+\textbf{Yes} &
+\textbf{Yes} \\
+\hline
+\end{tabularx}
+\caption{Competitor differentiation\tablefootnote{Examples listed are a representative sample of 20+ competitor tools observed and analysed throughout the market research process.}}
+\label{tab:competitor-diff}
+\end{table}
+
+\subsection{Research and Justification of Tools and Technologies}
+\label{sec:tech-justification}
+
+The background research on the technologies utilised and the theories applied, along with their justifications, is discussed in the Project Specification (Appendix~\ref{prev:technical}). This subsection summarises them.
+
+\subsubsection{Key Foundational Sources}
+\textit{GiTrip} draws on \textit{Git}'s distributed model, three-way merge, and structured merge semantics (e.g., JSON merge~\cite{json-merge-patch}). These inform how \textit{GiTrip} identifies changes per branch and presents meaningful conflict resolution options. Scheduling design is informed by research on timetabling under time windows and feasibility constraints~\cite{timetable-scheduling}. For route ordering, a nearest-neighbour (NN) heuristic~\cite{hougardy-nn} was selected as a pragmatic baseline given typical trip sizes and interactive constraints. UI design was informed by usability heuristics~\cite{nielsen-usability}, motivating visual workflows (graphs and side-by-side comparisons) rather than command-line interactions.
+
+\subsubsection{Implementation Technology Choices}
+\textit{GiTrip} uses a JavaScript full-stack to reduce development overhead in a single-developer project and share data models and validation logic across client/server. Node.js' non-blocking I/O suits the I/O-heavy workload (routing/geocoding calls plus repository read/write operations)~\cite{nodejs}. Express provides a minimal server and API layer since EJS supports rapid iteration on key UX flows without a complex front-end build chain~\cite{express}.
+
+SQLite was selected as a lightweight relational store with transactional integrity and low operational complexity~\cite{sqlite}. For the expected scale (tens of stops per trip; snapshots typically $<100$KB), snapshot storage is practical while simplifying branching, rollback, and merging. Place search uses Nominatim~\cite{nominatim}, and Leaflet~\cite{leaflet} with OpenStreetMap~\cite{osm} provides interactive mapping. Travel-time computation uses Openrouteservice (ORS) matrix endpoints~\cite{ors-matrix} (for matrix-enabled modes) and Google Directions~\cite{google-directions} (for transit). API quota outage is mitigated via caching, throttling, and distance-based fallback estimates.

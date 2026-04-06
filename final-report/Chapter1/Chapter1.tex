@@ -4,7 +4,7 @@
 % ======================================================================
 
 This report presents the design, implementation, testing, and evaluation of
-\textit{GiTrip}, a web application for collaborative trip planning with
+GiTrip, a web application for collaborative trip planning with
 Git-like version control semantics. The core premise is that itineraries change
 in ways similar to software artefacts: multiple contributors propose
 alternatives, edits happen in parallel, and the history of decisions matters.
@@ -65,14 +65,7 @@ scheduling with constraints, (b) collaborative change history, and (c) Git-style
 branching and merging semantics in the trip-planning domain
 \cite{ref_wanderlog,ref_furkot,ref_roadtrippers,ref_tripit,ref_google_travel}.
 
-A key boundary condition is that the original scope intentionally excluded
-AI-powered itinerary generation from natural language. This decision was stated
-as a Won't-have requirement to prioritise deterministic, inspectable scheduling
-behaviour, and to avoid expanding scope into content recommendation and personal
-preference modelling. The second assessor's Progress Report feedback suggested
-investigating machine learning to strengthen the project; this report therefore
-discusses AI as future work while justifying why it was not appropriate for the
-Minimum Viable Product (MVP) scope.
+A key boundary condition is that the original scope intentionally excluded AI-powered itinerary generation from natural language. This decision was stated as a Won't-have requirement to prioritise deterministic, inspectable scheduling behaviour, and to avoid expanding scope into content recommendation and personal preference modelling. The second assessor's Progress Report feedback suggested ``to investigate how some Machine Learning techniques could be exploited to make the project even stronger"; this report therefore discusses AI as future work (Chapter~9) while justifying why it was not appropriate for the Minimum Viable Product (MVP) scope (Section~\ref{sec:ai_scope}).
 
 \section{Contributions}
 The technical contributions of this project are:

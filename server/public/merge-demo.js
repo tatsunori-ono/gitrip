@@ -167,6 +167,48 @@
         stop('bb', 'Big Ben', '15:00', '16:00'),
       ],
     },
+    identical: {
+      label: 'Identical Changes',
+      desc: 'Both branches independently make the exact same change to Tower Bridge\'s times. Since the changes are identical, there is no conflict — the merge engine accepts either version.',
+      base: [
+        stop('bm', 'British Museum', '09:00', '11:00'),
+        stop('tb', 'Tower Bridge', '11:30', '12:30'),
+        stop('cg', 'Covent Garden', '13:00', '14:30'),
+        stop('bb', 'Big Ben', '15:00', '16:00'),
+      ],
+      ours: [
+        stop('bm', 'British Museum', '09:00', '11:00'),
+        stop('tb', 'Tower Bridge', '10:00', '11:00'),
+        stop('cg', 'Covent Garden', '13:00', '14:30'),
+        stop('bb', 'Big Ben', '15:00', '16:00'),
+      ],
+      theirs: [
+        stop('bm', 'British Museum', '09:00', '11:00'),
+        stop('tb', 'Tower Bridge', '10:00', '11:00'),
+        stop('cg', 'Covent Garden', '13:00', '14:30'),
+        stop('bb', 'Big Ben', '15:00', '16:00'),
+      ],
+    },
+    bothdelete: {
+      label: 'Both Delete',
+      desc: 'Both branches independently delete Covent Garden. Since both agree on the deletion, the stop is silently omitted from the merged result — no conflict.',
+      base: [
+        stop('bm', 'British Museum', '09:00', '11:00'),
+        stop('tb', 'Tower Bridge', '11:30', '12:30'),
+        stop('cg', 'Covent Garden', '13:00', '14:30'),
+        stop('bb', 'Big Ben', '15:00', '16:00'),
+      ],
+      ours: [
+        stop('bm', 'British Museum', '09:00', '11:00'),
+        stop('tb', 'Tower Bridge', '11:30', '12:30'),
+        stop('bb', 'Big Ben', '15:00', '16:00'),
+      ],
+      theirs: [
+        stop('bm', 'British Museum', '09:00', '11:00'),
+        stop('tb', 'Tower Bridge', '11:30', '12:30'),
+        stop('bb', 'Big Ben', '15:00', '16:00'),
+      ],
+    },
     field: {
       label: 'Field Conflict',
       desc: 'Both branches rename Covent Garden to different names while keeping the same times. Source calls it "Covent Garden Market", Target calls it "The Piazza" — a field conflict.',

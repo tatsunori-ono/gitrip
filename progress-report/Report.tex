@@ -1,0 +1,172 @@
+\documentclass[pdftex,10pt,a4paper,oneside]{article}
+%Can change the pt, papersize etc.
+\usepackage{amsmath} %For both in-line and equation mode
+\numberwithin{equation}{section} %Numbering of our equations per section
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algorithmic} %Algorithm styles, need to be nested for the example shown
+\usepackage{fancyhdr} %For our headers
+\usepackage{graphicx} %Inserting images
+\usepackage{lipsum}  %Blank text fill, delete me when finished
+\usepackage{setspace} %Spacing on the front page for crest and titles
+\usepackage[]{fncychap} % Styles can be Sonny, Lenny, Glenn, Conny, Rejne, Bjarne and Bjornstrup
+\usepackage[hyphens]{url} %Deals with hyphens in urls to make them clickable
+\usepackage{xcolor} %Great if you want coloured text
+\usepackage{pdfpages} % For \includepdf command
+\usepackage{tabularx}
+\usepackage{appendix} %Take a wild guess slick
+\usepackage{geometry}
+\geometry{top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm,headheight=14pt}
+\usepackage{booktabs}
+\usepackage{threeparttable}
+\usepackage{tablefootnote}
+\usepackage[para]{footmisc}
+\renewcommand{\footnotesize}{\small}
+\usepackage{footnotehyper}
+%KEEP THIS ONE LAST it's quite buggy, it allows you to click on links within the pdf and web links without changing the colour. The mouse cursor simply changes its icon to indicate to the user. Great tool - still awkward
+\usepackage[hidelinks]{hyperref}
+%This will tell the compiler to do the header style, page and spacing between the header and text
+\fancyhf{}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0.2pt}
+\newcommand{\ts}{\textsuperscript}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\usepackage{float}  % for [H] placement specifier
+
+\begin{document}
+
+\include{Report/Preamble/Frontpage}
+\include{Report/Preamble/Contents}
+\include{Report/Preamble/ChapterMods}
+\include{Report/Chapter1/Chapter1}
+\include{Report/Chapter2/Chapter2}
+\include{Report/Chapter3/Chapter3}
+\include{Report/Chapter5/Chapter5}
+\include{Report/Chapter6/Chapter6}
+\include{Report/Chapter7/Chapter7}
+\include{Report/Chapter8/Chapter8}
+\include{Report/Chapter9/Chapter9}
+
+% WORD COUNT IGNORING COMMENT
+%TC:ignore
+\addcontentsline{toc}{section}{References}
+\begin{thebibliography}{9}
+
+\bibitem{google-maps}
+Google, ``Google Maps,'' 2025. [Online]. Available: \url{https://www.google.com/maps}. [Accessed: 10 Jan. 2026].
+
+\bibitem{google-docs}
+Google, ``Google Docs,'' 2025. [Online]. Available: \url{https://www.google.com/docs/about/}. [Accessed: 10 Jan. 2026].
+
+\bibitem{microsoft-word}
+Microsoft Corporation, ``Microsoft Word,'' 2025. [Online]. Available: \url{https://www.microsoft.com/en-us/microsoft-365/word}. [Accessed: 18 Jan. 2026].
+
+\bibitem{git}
+L.~Torvalds and J.~C.~Hamano, ``Git: distributed version control system,'' 2005--2025. [Online].
+Available: \url{https://git-scm.com/}. [Accessed: 1 Jun. 2025].
+
+\bibitem{apple-maps}
+Apple Inc., ``Apple Maps,'' 2025. [Online]. Available: \url{https://www.apple.com/maps/}. [Accessed: 18 Jan. 2026].
+
+\bibitem{notion}
+Notion Labs Inc., ``Notion: Your connected workspace,'' 2025. [Online]. Available: \url{https://www.notion.so}. [Accessed: 10 Jan. 2026].
+
+\bibitem{wanderlog}
+Wanderlog, ``Wanderlog --- Trip Planning \& Itinerary App,'' 2025. [Online]. Available: \url{https://wanderlog.com}. [Accessed: 10 Jan. 2026].
+
+\bibitem{furkot}
+Furkot, ``Furkot --- Road Trip Planner,'' 2025. [Online]. Available: \url{https://furkot.com}. [Accessed: 10 Jan. 2026].
+
+\bibitem{roadtrippers}
+Roadtrippers, ``Roadtrippers --- Plan Your Road Trip,'' 2025. [Online]. Available: \url{https://roadtrippers.com}. [Accessed: 10 Jan. 2026].
+
+\bibitem{tripit}
+TripIt, ``TripIt --- Travel Organizer,'' 2025. [Online]. Available: \url{https://www.tripit.com}. [Accessed: 10 Jan. 2026].
+
+\bibitem{citymapper}
+Citymapper Limited, ``Citymapper,'' 2025. [Online]. Available: \url{https://citymapper.com/}. [Accessed: 18 Jan. 2026].
+
+\bibitem{google-sheets}
+Google, ``Google Sheets,'' 2025. [Online]. Available: \url{https://www.google.com/sheets/about/}. [Accessed: 18 Jan. 2026].
+
+\bibitem{microsoft-excel}
+Microsoft Corporation, ``Microsoft Excel,'' 2025. [Online]. Available: \url{https://www.microsoft.com/en-us/microsoft-365/excel}. [Accessed: 18 Jan. 2026].
+
+\bibitem{google-travel}
+Google, ``Google Travel,'' 2025. [Online]. Available: \url{https://www.google.com/travel/}. [Accessed: 15 Jan. 2026].
+
+\bibitem{json-merge-patch}
+J.~K.~Nottingham and P.~Bryan, ``RFC 7396: JSON Merge Patch,'' IETF, 2014. doi: 10.17487/RFC7396.
+
+\bibitem{timetable-scheduling}
+E.~K.~Burke and H.~Rudov\'a, Eds., \emph{Practice and Theory of Automated Timetabling VI (PATAT 2006)}. Berlin, Germany: Springer, 2007. ISBN: 978-3-540-77345-0.
+
+\bibitem{hougardy-nn}
+S.~Hougardy, ``On the nearest neighbor rule for the metric traveling salesman problem,'' \emph{Discrete Applied Mathematics}, vol.~187, pp.~62--72, 2015. doi: 10.1016/j.dam.2015.03.002. [Online]. Available: \url{https://www.sciencedirect.com/science/article/pii/S0166218X14001486}. [Accessed: 9 Oct. 2025].
+
+\bibitem{nielsen-usability}
+J.~Nielsen, \emph{Usability Engineering}. San Francisco, CA, USA: Morgan Kaufmann, 1994. ISBN: 978-0-12-518406-9.
+
+\bibitem{nodejs}
+OpenJS Foundation, ``About Node.js,'' 2025. [Online]. Available: \url{https://nodejs.org/en/about}. [Accessed: 1 Jan. 2026].
+
+\bibitem{express}
+Express Contributors, ``Express --- Node.js web application framework,'' 2025. [Online]. Available: \url{https://expressjs.com/}. [Accessed: 5 Jan. 2026].
+
+\bibitem{sqlite}
+SQLite Consortium, ``SQLite: About,'' 2025. [Online]. Available: \url{https://sqlite.org/about.html}. [Accessed: 5 Jan. 2026].
+
+\bibitem{nominatim}
+Nominatim, ``Nominatim API Overview,'' 2025. [Online]. Available: \url{https://nominatim.org/release-docs/latest/api/Overview/}. [Accessed: 5 Jan. 2026].
+
+\bibitem{leaflet}
+V.~Agafonkin and Leaflet contributors, ``Leaflet: an open-source JavaScript library for interactive maps,'' 2011--2025. [Online]. Available: \url{https://leafletjs.com/}. [Accessed: 5 Jan. 2026].
+
+\bibitem{osm}
+OpenStreetMap contributors, ``OpenStreetMap,'' 2004--2025. [Online]. Available: \url{https://www.openstreetmap.org/}. [Accessed: 5 Jan. 2026].
+
+\bibitem{ors-matrix}
+Openrouteservice, ``Matrix Endpoint --- API Reference,'' 2025. [Online]. Available: \url{https://giscience.github.io/openrouteservice/api-reference/endpoints/matrix/}. [Accessed: 8 Oct. 2025].
+
+\bibitem{google-directions}
+Google, ``Directions API Documentation,'' 2025. [Online]. Available: \url{https://developers.google.com/maps/documentation/directions}. [Accessed: 5 Jan. 2026].
+
+\bibitem{progit-snapshots}
+S.~Chacon and B.~Straub, ``Snapshots, Not Differences,'' in \emph{Pro Git}, 2nd ed. New York, NY, USA: Apress, 2014, ch. 1. [Online]. Available: \url{https://git-scm.com/book/en/v2/Getting-Started-What-is-Git%3F}. [Accessed: 18 Jan. 2026].
+
+\bibitem{navarro-guided}
+G.~Navarro, ``A guided tour to approximate string matching,'' \emph{ACM Computing Surveys}, vol.~33, no.~1, pp.~31--88, Mar.~2001. doi: 10.1145/375360.375365.
+
+\bibitem{applegate-tsp}
+D.~L.~Applegate, R.~E.~Bixby, V.~Chv\'atal, and W.~J.~Cook, \emph{The Traveling Salesman Problem: A Computational Study}. Princeton, NJ, USA: Princeton University Press, 2007. ISBN: 978-0-691-12993-8.
+
+\bibitem{johnson-mcgeoch}
+D.~S.~Johnson and L.~A.~McGeoch, ``The Traveling Salesman Problem: A Case Study in Local Optimization,'' in \emph{Local Search in Combinatorial Optimization}. Chichester, UK: Wiley, 1997. [Online]. Available: \url{https://www.cs.ubc.ca/~hutter/previous-earg/EmpAlgReadingGroup/TSP-JohMcg97.pdf}. [Accessed: 9 Oct. 2025].
+
+\bibitem{gnews-api}
+GNews, ``GNews API --- News API for Developers,'' 2025. [Online]. Available: \url{https://gnews.io/}. [Accessed: 18 Jan. 2026].
+
+\bibitem{open-meteo}
+Open-Meteo, ``Open-Meteo Weather API,'' 2025. [Online]. Available: \url{https://open-meteo.com/}. [Accessed: 18 Jan. 2026].
+
+\bibitem{gdpr}
+European Parliament and Council of the European Union, ``Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data (General Data Protection Regulation),'' \emph{Official Journal of the European Union}, vol.~L119, pp.~1--88, May 2016. [Online]. Available: \url{https://eur-lex.europa.eu/eli/reg/2016/679/oj}. [Accessed: 18 Jan. 2026].
+
+\bibitem{wcag22}
+W3C, \emph{Web Content Accessibility Guidelines (WCAG) 2.2}, Oct. 2023.
+[Online]. Available: \url{https://www.w3.org/TR/WCAG22/}. [Accessed: 7 Oct. 2025].
+
+\bibitem{cornell-notes}
+W.~Pauk and R.~Owens, \emph{How to Study in College}, 11th ed. Boston, MA, USA: Cengage Learning, 2013.
+
+\bibitem{github}
+GitHub, Inc., ``GitHub: Where the world builds software,'' 2025. [Online]. Available: \url{https://github.com/}. [Accessed: 10 Jan. 2026].
+
+\end{thebibliography}
+
+\include{Report/Appendices/Appendices}
+%TC:endignore
+% WORD COUNT IGNORING COMMENT END
+
+\end{document}

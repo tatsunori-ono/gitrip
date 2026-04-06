@@ -1,0 +1,306 @@
+\section{Where Are We Now? (Progress and Current System)}
+\label{sec:current}
+
+This section discusses the implemented system, design decisions, and progress against the Term~1 plan.
+
+\subsection{System Overview}
+\textit{GiTrip} is a server-rendered web application with the following architecture:
+\begin{itemize}
+  \item \textbf{Backend:} Node.js with Express, providing both UI routes (EJS templates) and JSON API endpoints for asynchronous operations.
+  \item \textbf{Persistence:} SQLite storing repositories, branches, commits, users (optional), sessions, and collaborators.
+  \item \textbf{Frontend:} EJS templates enhanced with client-side JavaScript for map and timeline interactions.
+  \item \textbf{Mapping:} Leaflet with OpenStreetMap tiles.
+\end{itemize}
+
+Commits store complete plan snapshots. Snapshot versioning was selected over delta storage (method to store only the differences between versions) because it (i) simplifies branch switching and rollback (no delta replay), (ii) simplifies three-way merge (each tip contains a complete state), and (iii) remains feasible for the expected scale~\cite{progit-snapshots}. Delta compression is noted as future work for production-scale repositories.
+
+\subsection{Data Model and Repository Semantics}
+The core database tables implemented are expressed in Entity-Relationship (ER) Diagram below\footnote{This is not the full database schema ER since the software also has \texttt{users}, \texttt{sessions}, \texttt{repo\textunderscore collaborators} (join table: user $\Leftrightarrow$ repo), \texttt{repo\textunderscore stars} (join table: user $\Leftarrow$ repo), etc. However, those are excluded here as they are not relevant to the discussion of versioning.}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    entity/.style={rectangle, draw, minimum width=3.3cm, minimum height=1cm, align=center},
+    relationship/.style={->, >=stealth, thick},
+    note/.style={font=\small, align=left}
+]
+
+% Repository entity
+\node[entity] (repo) {
+    \textbf{Repository}\\[0.2cm]
+    \begin{minipage}{3.1cm}
+    \small
+    \textbf{id} (PK)\\
+    title\\
+    created\_at\\
+    owner\_user\_id (nullable)\\
+    visibility\\
+    current\_branch (name)\\
+    forked\_from\_repo\_id (nullable)
+    \end{minipage}
+};
+
+% Branch entity
+\node[entity, below=2.2cm of repo] (branch) {
+    \textbf{Branch}\\[0.2cm]
+    \begin{minipage}{3.1cm}
+    \small
+    \textbf{id} (PK)\\
+    repo\_id (logical FK)\\
+    name\\
+    head\_commit\_id (logical FK, nullable)\\
+    created\_at
+    \end{minipage}
+};
+
+% Commit entity
+\node[entity, right=3.2cm of branch] (commit) {
+    \textbf{Commit}\\[0.2cm]
+    \begin{minipage}{3.1cm}
+    \small
+    \textbf{id} (PK)\\
+    repo\_id (logical FK)\\
+    author\\
+    message\\
+    parents (JSON array)\\
+    snapshot (JSON)\\
+    created\_at
+    \end{minipage}
+};
+
+% Relationships
+\draw[relationship] (repo) -- node[right, font=\small] {has (1:*)} (branch);
+\draw[relationship] (repo) -- node[above right, font=\small] {contains (1:*)} (commit);
+\draw[relationship] (branch) -- node[above, font=\small] {head\_commit (0..1)} (commit);
+
+\draw[relationship, dashed] (repo.west) to[bend right=20]
+node[left, font=\small] {current\_branch (1:1)} (branch.west);
+
+\draw[relationship, dashed] (repo) to[out=100,in=70,looseness=2]
+node[above right, font=\small] {forked\_from (0..1)} (repo);
+
+\draw[relationship, dashed] (commit) to[out=100,in=70,looseness=2]
+node[above right, font=\small] {parents (0..*)} (commit);
+
+\end{tikzpicture}
+\caption{ER diagram for \textit{GiTrip} versioning core}
+\label{fig:er-diagram}
+\end{figure}
+
+A repository has multiple branches, each branch points to a head commit, and commits reference up to two parents to support merge commits (0 for root, 1 for normal commit, 2 for merge commit). Snapshots include: \texttt{plan} (days, stops, timings, and travel segments), \texttt{planInput} (dates, active hours, preferences for reproducibility and UI hydration), and \texttt{files} (reserved for future artefacts). This model supports:
+\begin{itemize}
+  \item \textbf{Branch switching:} rendering the snapshot at the selected branch head.
+  \item \textbf{Restore (non-destructive rollback):} creating a new commit matching an earlier snapshot while preserving history.
+  \item \textbf{Fork:} cloning a snapshot into a new repository with attribution metadata.
+\end{itemize}
+
+\subsection{Place Search and Location Retrieval}
+Place search uses a server-side proxy to Nominatim to avoid exposing third-party endpoints, comply with usage policies, and centralise caching/rate limiting. A key usability issue was typo sensitivity. To improve tolerance and reduce zero-result searches, results are re-ranked using normalised edit distance between the query and candidate labels~\cite{navarro-guided}. This approach was preferred over geographic bounding boxes (which require user region input or location permissions) and avoided additional UI complexity compared to autocomplete-based approaches.
+
+\subsection{Routing Integration and Robustness}
+Routing serves two purposes. First, ORS matrix endpoints compute pairwise travel durations for route ordering (driving/cycling/walking). The matrix endpoint reduces API calls from $O(n^2)$ pairwise requests to a single request per optimisation run. Second, per-leg routing provides geometries for map visualisation; Google Directions is used for transit legs, including decoding polylines and extracting step-level sub-modes to distinguish walking approach segments.
+
+To preserve availability under quotas/outages, the system falls back to haversine distance with mode-dependent speed assumptions when routing APIs fail (e.g., $\approx$5 km/h walking; 15 km/h cycling; 50 km/h driving; 30 km/h transit). While less accurate than network routing, this prevents total failure and keeps the scheduler usable, with manual refinement supported via the timeline editor.
+
+\subsection{Automatic Scheduling and Constraint Handling}
+The automatic scheduler takes structured inputs as shown in Figure~\ref{fig:autosch-input}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Figures/annotated-scheduler.png}
+\caption{The UI of auto-scheduler input form with annotation}
+\label{fig:autosch-input}
+\end{figure}
+
+Then, it produces a day-by-day itinerary with computed arrival and departure times for each stop. Key implemented behaviours include:
+\begin{itemize}
+  \item \textbf{Ordering logic:} If any stop has strict ordering enabled (e.g., a dinner reservation that must occur at a specific position), the schedule respects that order. Otherwise, NN heuristic is applied using the travel-time matrix when available (driving, walking, cycling), or haversine distance as fallback (transit, or when API unavailable).
+  
+  \item \textbf{Compact vs.\ sparse scheduling:}  It controls how much free time is inserted between stops (compact schedules leave minimal gaps, while sparse adds buffer time between stops as much as possible).
+  
+  \item \textbf{Multi-day spillover:} If a stop cannot fit within the current day's active window, it is automatically moved to the next day. This prevents infeasible schedules where activities would extend past midnight or violate venue hours.
+\end{itemize}
+
+The simplified scheduling algorithm to recreate these behaviours is formalised in Algorithm~\ref{alg:autoplan} (a more robust algorithm, used in the implementation, is in Appendix~\ref{app:algorithm}). The abstract idea is to process stops sequentially (after ordering), compute feasible arrival times by adding travel time and breaks, apply constraints (desired windows and opening hours), and commit the stop if it falls within the day's active window; otherwise, spill it to the next day.
+
+\begin{algorithm}[H]
+\caption{Auto-scheduling algorithm: NN ordering with constraint handling (simplified)}
+\label{alg:autoplan}
+\begin{algorithmic}[1]
+\STATE Filter enabled places from input; assign stable unique ids if missing.
+\STATE Compute travel duration matrix $M$ if coordinates exist and routing mode supports matrix API.
+\STATE Order places: if any strict ordering exists, sort by strict order field; else apply nearest-neighbor heuristic using $M$ (or haversine distance if $M$ unavailable).
+\FOR{each day $d$ in date range}
+  \STATE Initialise cursor time $t$ based on daily active hours start and focus preference offset.
+  \WHILE{unscheduled places remain \AND $t$ within day's active window}
+    \STATE Retrieve next place $p$ from ordered list.
+    \STATE Compute travel time $\tau$ from previous stop to $p$ (using routing API or fallback).
+    \STATE Propose arrival time: $a = t_{\text{prev\_depart}} + \text{break\_minutes} + \tau$.
+    \STATE Apply desired window constraints (soft) and opening-hours constraints (hard) to $a$.
+    \IF{resulting interval $(a, a + \text{dwell})$ fits within day's active window}
+      \STATE Commit stop $p$ to day $d$ with times $(a, a + \text{dwell})$ and metadata (travel~$\tau$, route geometry, mode).
+      \STATE Advance cursor: $t = a + \text{dwell}$ (compact), or $t = a + \text{dwell} + \text{extra\_gap}$ (sparse).
+    \ELSE
+      \STATE Spill stop $p$ to next day.
+    \ENDIF
+  \ENDWHILE
+\ENDFOR
+\STATE Output: list of days with scheduled stops \& overflow list of unscheduled places (if any exceed date range).
+\end{algorithmic}
+\end{algorithm}
+
+A key design trade-off in the scheduler is the choice of NN ordering over more sophisticated approaches such as exact TSP solvers~\cite{applegate-tsp} or meta-heuristics~\cite{johnson-mcgeoch}. NN was selected because: (i) it runs in $O(n^2)$ time and performs acceptably for typical trip sizes ($n \le 50$ stops), (ii) it avoids the implementation complexity and computational cost of exact solvers, and (iii) API quota constraints make it infeasible to request large distance matrices repeatedly during interactive editing. For trips with more than 50 stops, the scheduler divides the itinerary into day-sized chunks and optimises each independently, which maintains reasonable performance while accepting some suboptimality in cross-day transitions.
+
+Figure~\ref{fig:flowchart} shows this end‑to‑end ``auto-scheduled trip creation” workflow: how a user goes from the Repo page to the Auto‑Schedule form, how the server builds defaults and runs the planner (with search and routing), how a new plan gets committed to a branch and returned to the Repo UI, and finally how the user saves further edits via interactive timeline and map\footnote{This flowchart does not include interactions with the GNews API~\cite{gnews-api} or Open-Meteo~\cite{open-meteo}, since travel alerts and weather conditions do not affect scheduling yet. Currently, \textit{GiTrip} only retrieves that information and displays it in the repository.}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Figures/autoscheduler-flowchart.png}
+\caption{End-to-end trip scheduling workflow: Repository UI $\rightarrow$ auto-scheduler inputs $\rightarrow$ routing/constraints $\rightarrow$ commit $\rightarrow$ updated timeline/map}
+\label{fig:flowchart}
+\end{figure}
+
+\subsection{Interactive UI With Timeline, Map, and Workflow Visualisation}
+\label{interactive-ui}
+
+In this subsection, the design and rationale for the main UI design are discussed. Further screenshots of the UI (included as supporting evidence of implementation progress) are available in Appendix~\ref{app:more-ui}.
+
+Figure~\ref{fig:repo-edit} illustrates the edit tab of repository UI. The user can edit stop timings via the timeline and adjust locations on the map.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{Report/Figures/ui-main.png}
+  \caption{Repository page (Edit tab)}
+  \label{fig:repo-edit}
+\end{figure}
+
+The UI aims to make plans understandable, editable and version-controlled:
+\begin{itemize}
+  \item \textbf{Timeline editor:} per-day blocks represent stops and travel gaps. Drag editing adjusts times with 5-minute snapping. During editing, the UI highlights overlaps and enforces minimum durations. On commit, server-side validation checks full feasibility and can offer auto-rescheduling.
+  \item \textbf{Map view:} numbered markers and polylines show stop order and route geometry. Mode-based styling improves legibility (including walking segments within transit routes).
+  \item \textbf{Commits and Workflow graph:} history is visualised as a commit graph with branch heads, supporting understanding of divergence and debugging of merge behaviour as shown in Figure~\ref{fig:ui-history}.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.3\textwidth]{Report/Figures/ui-history.png}
+\caption{Side bar of the repository page: Branch heads, commit list (with restore), and workflow graph.}
+\label{fig:ui-history}
+\end{figure}
+
+In Q8 of the survey, asking if there are any concerns with this project, 6/11 respondents mentioned that \textit{Git} concept is may be complicated for users without a technical background. To reduce this cognitive overhead while preserving versioning power for advanced users, the ``Git mode" toggle button was invented. When turned off, the UI replaces \textit{Git}-related terminologies with task-oriented wording  (e.g., ``Save trip'' rather than ``Commit''), while keeping the functionality same. In addition, when turned off, the advanced auto-scheduler workflow is complemented by an easy-mode scheduling path (Appendix~\ref{app:more-ui}), where users can create a trip by entering a bullet-point stop list and letting the system generate and commit a feasible itinerary. This design keeps the novice workflow ``single-track'' (plan $\rightarrow$ save $\rightarrow$ refine) while allowing expert users to opt into full version-control semantics without losing compatibility with the stored data.
+
+Furthermore, the ``Quick route'' page (Figure~\ref{fig:ui-quick-route}) adopts a \textit{Google Maps}-like interaction style to minimise onboarding friction: the primary surface is a map plus a simple stop list, and the user can immediately compute an optimised order and per-leg travel times without first understanding repositories, branches, or commits. This design matches a common mental model for trip planning (enter places $\rightarrow$ see route $\rightarrow$ iterate), and it also includes a bookmark feature that lets users save places and immediately compute the entire route when pressed. Crucially, \textit{GiTrip} connects this streamlined workflow back to the full versioned system via ``Save as Repository'': once the user is satisfied with a route, the system creates a repository and an initial snapshot commit containing the generated plan. This provides a low-friction entry point for new users, while still enabling the richer repository workflow (timeline editing, map refinement, branching, and merging) when needed.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Report/Figures/ui-quick-route.png}
+\caption{Quick route mode to compute shortest route from a stop list without repository workflow}
+\label{fig:ui-quick-route}
+\end{figure}
+
+\subsection{Merge and Conflict Resolution}
+Merging is implemented as a three-way merge over snapshot commits using a computed lowest common ancestor (LCA): \texttt{base} is the common ancestor snapshot, \texttt{ours} is the incoming/source head, and \texttt{theirs} is the current target head. The merge engine (\texttt{mergeSnapshots}) first merges the \texttt{files} map key-by-key, automatically accepting non-overlapping edits and flagging a conflict only when both branches changed the same file key differently.
+
+The current implementation focuses on the highest-impact conflicts for schedule validity (timing), while deferring a fully general per-field stop resolver (e.g., name vs.\ coordinates vs.\ stay duration vs.\ routing mode) and delete-vs-edit policies as remaining work (Section~\ref{remaining-work}).
+
+\subsection{Additional Progress Reflecting on Survey Responses}
+\label{additional-progress}
+Additional progress was made beyond the initially stated feature requirements. In particular, survey responses in Q7 (requested features) and Q8 (concerns and suggestions) motivated several refinements that remained within the scope of this project. The following features were implemented as direct responses to this feedback:
+
+\begin{enumerate}
+  \item \textbf{Branch comparison support:} a route comparison of branches using the same map, helping users understand differences before merging.
+  \item \textbf{Weather integration:} per-day weather announcement using the Open-Meteo API.
+  \item \textbf{Public gallery and stars:} a public repository gallery with starring and sorting by popularity, supporting discovery and sharing (Appendix~\ref{app:more-ui}).
+  \item \textbf{Packing list notes:} a lightweight notes facility for trip preparation items (Appendix~\ref{app:more-ui}).
+  \item \textbf{Calendar interoperability:} export to iCalendar (\texttt{.ics}) so trips can be imported into Google Calendar and other calendar clients (Appendix~\ref{app:ical}).
+  \item \textbf{PDF export:} a ``Export to PDF'' flow to produce a portable itinerary summary (Appendix~\ref{app:more-ui}).
+  \item \textbf{Travel disruption alert:} display of news-based travel issues (e.g., strikes, public holidays) via the GNews API, alongside manual notes (Appendix~\ref{app:more-ui}).
+  \item \textbf{Progressive Web App (PWA):} installable app shell and offline read-only support, improving usability on mobile devices (Appendix~\ref{app:pwa}).
+\end{enumerate}
+
+Notably, 3 and 8 were originally classified as ``Could-have'' objectives (Appendix~\ref{prev:objectives}), but were reprioritised due to repeated requests from survey respondents.
+
+\subsection{Challenges Encountered and Mitigations}
+\label{sec:challenges}
+
+Several challenges emerged during Term~1 and their mitigations are summarised below.
+
+\paragraph{Challenge 1: Routing API quota exhaustion.}
+Rapid UI testing iteration triggered repeated Google Directions requests for identical routes, exhausting free-tier quotas and blocking development.\\
+\textbf{Mitigation:} Server-side caching of routing responses keyed by \texttt{(origin, destination, mode, departure time)} with 24-hour expiry was introduced. When APIs fail or quotas are exceeded, a distance-based fallback estimates travel time using haversine distance and mode-specific speeds, preserving application availability.
+
+\paragraph{Challenge 2: Place search relevance and typo sensitivity.}
+Nominatim search was sensitive to minor spelling errors and often prioritised geographically distant matches for common names.\\
+\textbf{Mitigation:} Returned candidates are post-processed and re-ranked using normalised edit distance between the query and place labels, improving typo tolerance and relevance without requiring bounding boxes, location permissions, or additional API calls.
+
+\paragraph{Challenge 3: Constraint-aware interactive editing.}
+Timeline drag-and-drop interactions can easily produce invalid plans, including overlaps, insufficient travel time, or violations of daily active hours.\\
+\textbf{Mitigation:} A two-tier validation strategy was adopted: the UI enforces minimal constraints and provides immediate visual feedback during edits, while server-side validation performs full feasibility checks on commit and offers corrective actions such as automatic rescheduling.
+
+Overall, these challenges reinforced the need for defensive design around external services and layered validation for interactive planning. Hence, Term~2 plan focuses more on robustness and evaluation readiness (Section~\ref{sec:next}).
+
+\subsection{Progress Against the Original Timetable}
+\label{progress-against-original}
+The original Gantt chart (Appendix~\ref{prev:timetable}) guided Term~1 delivery. Table~\ref{tab:milestone-comparison} summarises planned versus actual completion for major milestones.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{c X c c c}
+\toprule
+\textbf{\#} & \textbf{Milestone} & \textbf{Planned} & \textbf{Actual} & \textbf{Status}\\
+\midrule
+4 & Project Specification (Formative) & Oct 16 & Oct 15 & Complete\\
+5 & UX flows and wireframes & Mid Oct & Mid Oct & Complete\\
+6 & Seed data, data model, migrations & Late Oct & Late Oct & Complete\\
+7 & Commit, branch, merge operations & Late Oct & Late Oct & Complete\\
+8 & Place search via proxy & Late Oct & Late Oct & Complete\\
+9 & NN ordering \& constraints algorithm & Late Oct--Early Nov & Late Oct--Early Nov & Complete\\
+10 & Opening-hours ingestion \& parsing & Mid Nov & - & In Progress\\
+11 & API Reliability hardening & Mid Nov & Mid Nov & Complete\\
+12 & ORS/Google routing integration & Mid Nov & Mid Nov & Complete\\
+13 & Multi-day spillover & Mid Nov & Mid Nov & Complete\\
+14 & Compact vs.\ sparse & Mid Nov & Mid Nov & Complete\\
+15 & Focus-time preference & Late Nov & Late Nov & Complete\\
+16 & Desired time windows & Late Nov & Late Nov & Complete\\
+17 & Strict ordering/start pin & Early Dec & Early Dec & Complete\\
+18 & Recompute travel by mode & Early Dec & Early Dec & Complete\\
+19 & Conflict resolver per stop/field & Early Dec & - & In Progress\\
+20 & Commit edits from timeline/map & Early Dec & Early Dec & Complete\\
+21 & Progress Report & Jan 22 & Jan 21 & Complete\\
+22 & Progressive Web App (PWA) & Late Jan & Early Jan & Complete\\
+23 & Security check & Late Jan & Early Dec & Complete \\
+\bottomrule
+\end{tabularx}
+\caption{Planned vs.\ actual milestone completion (Term~1)}
+\label{tab:milestone-comparison}
+\end{table}
+
+At the time of writing this report, progress on the software is on time. This is because some tasks (integrating opening hours into the auto-scheduler and the conflict resolver) have been delayed, while future tasks (PWA and security check) have been brought forward and completed, balancing things out. Slippage was managed by reprioritising feature requirements and using planned buffer time in the timetable. As a result, the progress against MoSCoW objectives is on track (Table~\ref{tab:moscow-progress}).
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{p{0.1\textwidth} c X p{0.25\textwidth}}
+\toprule
+\textbf{Priority} & \textbf{\#} & \textbf{Feature area} & \textbf{Status}\\
+\midrule
+Must & 1 & Repos/commits/branches \& history visualisation & Implemented\\
+ & 2 & Auto-planner \& spillover \& key constraints & Implemented\\
+ & 3 & Routing integration (ORS matrix \& Google transit) & Implemented\\
+ & 4 & Timeline \& map visualisation and editing & Implemented\\
+ & 5 & Merge \& conflict resolver (field-level) & Partially Implemented\\
+\midrule
+Should & 1 & Opening-hours validation and nudging & Partially Implemented\\
+ & 2 & Preferences (compact/sparse, focus, mode recompute) & Implemented\\
+ & 3 & Branch productivity (compare, fork) & Implemented\\
+\midrule
+Could & 1 & Command-line interface (CLI) along with the Web UI & Partially Rejected\\
+ & 2 & Public trip repository & Implemented\\
+ & 3 & Real-time tracking & Partially Implemented\\
+ & 4 & Busy-time consideration & Not Implemented\\
+ & 5 & PWA/offline read-only and queued edits & Implemented\\
+\bottomrule
+\end{tabularx}
+\caption{Progress against MoSCoW objectives}
+\label{tab:moscow-progress}
+\end{table}

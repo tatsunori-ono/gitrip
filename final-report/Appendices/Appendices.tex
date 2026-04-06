@@ -30,9 +30,82 @@ same directory as this \texttt{.tex} file, or update the path below.
 \chapter{User Acceptance Test Results (Full Tables)}
 \label{appx:uat}
 
-This appendix repeats the UAT tables from Chapter~8 for archival completeness.
-These results constitute objective evidence of feasibility and merge usability
-under time constraints.
+This appendix reproduces the full UAT results from Evaluation Day for archival
+completeness. Summary statistics are presented in Chapter~8; the raw data is
+included here to allow detailed inspection.
+
+\begin{table}[H]
+\centering
+\caption{UAT Task T1 --- Auto-schedule feasibility (full results).}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Participant} & \textbf{Completed?} & \textbf{Time} &
+\textbf{Non-overlapping?} & \textbf{Non-zero travel gaps?} \\
+\midrule
+P1  & Y & 3:12  & Y & Y \\
+P2  & Y & 4:45  & Y & Y \\
+P3  & Y & 2:58  & Y & Y \\
+P4  & Y & 5:30  & Y & Y \\
+P5  & Y & 3:44  & Y & Y \\
+P6  & Y & 6:02  & Y & Y \\
+P7  & N & 8:00* & -- & -- \\
+P8  & Y & 4:11  & Y & Y \\
+P9  & Y & 3:55  & Y & Y \\
+P10 & Y & 4:28  & Y & Y \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+{\footnotesize *P7 timed out due to difficulty locating the auto-scheduler
+button without a hint.}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{UAT Task T2 --- Merge conflict resolution (full results).}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Participant} & \textbf{Resolved?} & \textbf{Time} &
+\textbf{Hints given} \\
+\midrule
+P1  & Y & 2:34  & 0 \\
+P2  & Y & 4:50  & 1 \\
+P3  & Y & 1:58  & 0 \\
+P4  & Y & 3:22  & 0 \\
+P5  & Y & 4:47  & 1 \\
+P6  & N & 6:10* & 2 \\
+P7  & Y & 3:05  & 1 \\
+P8  & Y & 2:41  & 0 \\
+P9  & Y & 4:33  & 1 \\
+P10 & Y & 3:18  & 0 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3em}
+{\footnotesize *P6 selected the wrong branch and ran out of time.}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{UAT Task T3 --- Quick edit and save without Git explanation (full
+results).}
+\begin{tabular}{@{}lcp{0.55\linewidth}@{}}
+\toprule
+\textbf{Participant} & \textbf{Completed?} & \textbf{Notes} \\
+\midrule
+P1  & Y & Edited timeline stop duration naturally \\
+P2  & Y & Used ``Save'' without prompting \\
+P3  & Y & -- \\
+P4  & N & Asked ``does saving here create a version?'' \\
+P5  & Y & -- \\
+P6  & Y & -- \\
+P7  & Y & -- \\
+P8  & N & Hesitated; unsure if edit was auto-saved \\
+P9  & Y & -- \\
+P10 & Y & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \chapter{Additional Diagrams and Screenshots}
 \label{appx:diagrams}

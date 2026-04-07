@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { config } from 'dotenv';
 
 // Load .env so API keys are available
-config();
+config({ quiet: true });
 
 const ORS_KEY = process.env.ORS_API_KEY || '';
 const GOOGLE_KEY =

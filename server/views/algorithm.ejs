@@ -25,7 +25,7 @@
       <!-- Algorithm tabs -->
       <div class="algo-tabs">
         <button class="algo-tab active" data-algo="nn">Nearest Neighbour</button>
-        <button class="algo-tab" data-algo="nn2opt">NN and 2-opt</button>
+        <button class="algo-tab" data-algo="nn2opt">NN and 2-Opt</button>
         <button class="algo-tab" data-algo="hk">Held-Karp DP</button>
       </div>
       <p id="algoDescription" class="algo-description"></p>
@@ -99,7 +99,7 @@
     <article class="algo-context-card card" data-readable="true">
       <h3><i class="fa-solid fa-gauge-high" aria-hidden="true"></i> Time Complexity</h3>
       <p>
-        <strong>Nearest Neighbour</strong> runs in O(N&sup2;). <strong>2-opt</strong> adds
+        <strong>Nearest Neighbour</strong> runs in O(N&sup2;). <strong>2-Opt</strong> adds
         O(N&sup2;) per pass. <strong>Held&ndash;Karp</strong> is exact but exponential:
         O(2<sup>N</sup>&middot;N&sup2;), feasible only for small N.
       </p>
@@ -108,7 +108,7 @@
       <h3><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Trade-offs</h3>
       <p>
         The NN greedy approach can produce paths up to 25&percnt; longer than optimal.
-        Adding <strong>2-opt</strong> iteratively reverses sub-segments to shorten the route.
+        Adding <strong>2-Opt</strong> iteratively reverses sub-segments to shorten the route.
         <strong>Held&ndash;Karp</strong> guarantees the shortest path but is too slow for many stops.
       </p>
     </article>
@@ -116,7 +116,7 @@
       <h3><i class="fa-solid fa-code-branch" aria-hidden="true"></i> When GiTrip Uses Each</h3>
       <p>
         For <strong>12 or fewer</strong> stops GiTrip uses Held&ndash;Karp for the exact optimum.
-        For <strong>more than 12</strong> it falls back to Nearest Neighbour and 2-opt,
+        For <strong>more than 12</strong> it falls back to Nearest Neighbour and 2-Opt,
         trading optimality for speed. Try each tab to compare.
       </p>
     </article>

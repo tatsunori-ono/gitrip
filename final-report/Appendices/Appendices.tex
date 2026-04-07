@@ -1,42 +1,169 @@
 % !TEX root = ../Report.tex
 \appendix
 
-\chapter{Evaluation Day Survey Instrument and Results}
-\label{appx:survey}
+\chapter{Preliminary Survey Results}
+\label{appx:prelim_survey}
 
-This appendix contains supporting evidence from the Evaluation Day survey. The
-main body of the report presents the key findings; the complete survey export is
-included here to allow assessors to inspect the full distribution of responses.
+This appendix reproduces the aggregate results from the preliminary survey, initially presented in the Progress Report. These results informed the MoSCoW objectives and design decisions described in Chapter~\ref{ch:requirements}.
 
-\section{Survey Questions (Summary)}
-The survey included:
-\begin{itemize}
-  \item Git familiarity and feature usage questions,
-  \item System Usability Scale (SUS) items,
-  \item Git concept understanding Likert items,
-  \item Core functionality Likert items,
-  \item Overall impression Likert items,
-  \item free-text questions on positives, frustrations, adoption likelihood,
-        and comparison to current workflows.
-\end{itemize}
+\section{Survey Overview}
 
-\section{Full Survey Export PDF}
-\textbf{Compilation note:} place \texttt{eval\_day\_survey\_results.pdf} in the
-same directory as this \texttt{.tex} file, or update the path below.
+The survey was conducted with $n=30$ participants (author's friends, including students from Warwick Department of Computer Science, and family) via Microsoft Forms from 24\ts{th} to 27\ts{th} November 2025.
 
-% Uncomment the line below once the PDF is available:
-% \includepdf[pages=-]{Appendices/eval_day_survey_results.pdf}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/Survey/survey-q0.png}
+\caption{Responses Overview (the duration says ``42 Days", but this is because the author did not close the survey till recently. 30 responses were collected within just the first 3 days since opened).}
+\end{figure}
 
-\chapter{User Acceptance Test Results (Full Tables)}
+As displaying each of the responses individually would take up space, the aggregate result would be presented from the next section (Appendix~\ref{app:agg-res}).
+
+\section{Aggregate Survey Results}
+\label{app:agg-res}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/Survey/survey-q1.png}
+\caption{Q1) How often do you plan trips?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/Survey/survey-q2.png}
+\caption{Q2) How often do you find trip planning stressful/time consuming?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/Survey/survey-q3.png}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/Survey/survey-q3-detail.png}
+\caption{Q3) Which services do you use to plan/manage trips? (multi-select)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/Survey/survey-q4.png}
+\caption{Q4) Likelihood of using an app matching GiTrip's concept?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/Survey/survey-q5.png}
+\caption{Q5) Ranked helpfulness of proposed GiTrip features.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/Survey/survey-q6.png}
+\caption{Q6) Perceived value of Git-style operations in a trip-planning context.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/Survey/survey-q7.png}
+\caption{Q7) Free-text feature requests.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/Survey/survey-q8.png}
+\caption{Q8: Free-text concerns and perceived flaws.}
+\end{figure}
+
+\chapter{Post-demo Survey (Evaluation Day) Results}
+\label{appx:eval_survey}
+
+This appendix contains supporting evidence from the Post-demo survey, conducted on the Evaluation Day. These results supported the analysis for evaluation of GiTrip in Chapter~\ref{ch:evaluation}.
+
+\section{Survey Overview}
+
+The survey was conducted with $n=13$ participants at the Evaluation Day on 25\ts{th} February 2026, 1st slot (13:05--13:45) in Room CS0.03 Table B01, collected via Microsoft Forms.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q0.png}
+\caption{Responses Overview (the duration says ``41 Days'' because the author did not close the survey until recently; 13 responses were collected on or shortly after Evaluation Day).}
+\end{figure}
+
+As displaying each of the responses individually would take up space, the aggregate results are presented from the next section (Appendix~\ref{app:agg-res-demo-survey}).
+
+\section{Aggregate Survey Results}
+\label{app:agg-res-demo-survey}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q1.png}
+\caption{Q1) Before today, how familiar were you with Git (commit/branch/merge)?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q2.png}
+\caption{Q2) Which parts of GiTrip did you personally try?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q3.png}
+\caption{Q3) System Usability Scale (SUS) via 10 standard Likert items.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q4.png}
+\caption{Q4) Git Concept Understanding via Likert responses.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q5.png}
+\caption{Q5) Core Functionality via Likert responses.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q6.png}
+\caption{Q6) Overall Impression via Likert responses.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q7.png}
+\caption{Q7) What was the most useful or impressive part of GiTrip (and why)?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q8.png}
+\caption{Q8) What was the most frustrating part of using GiTrip (and why)?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q9.png}
+\caption{Q9) Would you use GiTrip for a real trip? If yes, why? If no, what's the biggest blocker?}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q10.png}
+\caption{Q10) How does this compare to how you currently plan trips?}
+\end{figure}
+
+\chapter{User Acceptance Test (Evaluation Day) Results}
 \label{appx:uat}
 
 This appendix reproduces the full UAT results from Evaluation Day for archival
-completeness. Summary statistics are presented in Chapter~8; the raw data is
+completeness. Summary statistics are presented in Chapter~\ref{ch:evaluation}; the raw data is
 included here to allow detailed inspection.
 
 \begin{table}[H]
 \centering
-\caption{UAT Task T1 --- Auto-schedule feasibility (full results).}
+\caption{UAT Task T1 - Auto-schedule feasibility (full results).}
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 \textbf{Participant} & \textbf{Completed?} & \textbf{Time} &
@@ -62,7 +189,7 @@ button without a hint.}
 
 \begin{table}[H]
 \centering
-\caption{UAT Task T2 --- Merge conflict resolution (full results).}
+\caption{UAT Task T2 - Merge conflict resolution (full results).}
 \begin{tabular}{@{}lccc@{}}
 \toprule
 \textbf{Participant} & \textbf{Resolved?} & \textbf{Time} &
@@ -87,7 +214,7 @@ P10 & Y & 3:18  & 0 \\
 
 \begin{table}[H]
 \centering
-\caption{UAT Task T3 --- Quick edit and save without Git explanation (full
+\caption{UAT Task T3 - Quick edit and save without Git explanation (full
 results).}
 \begin{tabular}{@{}lcp{0.55\linewidth}@{}}
 \toprule
@@ -110,48 +237,63 @@ P10 & Y & -- \\
 \chapter{Additional Diagrams and Screenshots}
 \label{appx:diagrams}
 
-% TODO: Replace each placeholder below with a real screenshot.
-%       Save screenshots as PNG/PDF in the Appendices/ folder and use:
-%       \includegraphics[width=0.92\linewidth]{Appendices/filename.png}
+% Screenshots from the deployed system. Where images are available they use
+% \includegraphics; remaining placeholders are marked TODO.
 
 \begin{figure}[H]
   \centering
   % \includegraphics[width=0.92\linewidth]{Appendices/merge-ui.png}
   \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the merge
-  conflict resolution UI showing ours/theirs choices and the resolve button.}}
-  \caption{Merge conflict resolution UI.}
+  conflict resolution UI from the deployed system, showing ours/theirs choices
+  per stop/field and the resolve button. Evidence that M5 (merge and conflicts)
+  is complete.}}
+  \caption{Merge conflict resolution UI --- evidence of M5 completion.}
 \end{figure}
 
 \begin{figure}[H]
   \centering
   % \includegraphics[width=0.92\linewidth]{Appendices/timeline-editor.png}
   \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the timeline
-  editor with draggable stop blocks showing arrival/departure times.}}
-  \caption{Timeline editor with draggable stop blocks.}
+  editor from the deployed system, with draggable stop blocks showing
+  arrival/departure times and travel segments. Evidence that M4 (interactive
+  visualisation) is complete.}}
+  \caption{Timeline editor with draggable stop blocks --- evidence of M4
+           completion.}
 \end{figure}
 
 \begin{figure}[H]
   \centering
   % \includegraphics[width=0.92\linewidth]{Appendices/map-editor.png}
   \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the map editor
-  showing numbered markers, route polylines, and transit leg styling.}}
-  \caption{Map editor with numbered markers and route geometry.}
+  from the deployed system, showing numbered markers, route polylines, and
+  transit leg styling. Evidence that M3 (routing integration) and M4 are
+  complete.}}
+  \caption{Map editor with numbered markers and route geometry --- evidence of
+           M3 and M4 completion.}
 \end{figure}
 
 \begin{figure}[H]
   \centering
-  % \includegraphics[width=0.92\linewidth]{Appendices/easy-mode.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot comparing Easy mode
-  (simplified controls) vs Git mode (branches, commits, merge visible).}}
-  \caption{Easy mode vs Git mode comparison.}
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/view-tab.png}
+    \subcaption{Easy mode (Git mode off)}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/view-tab-git-mode.png}
+    \subcaption{Git mode on}
+  \end{minipage}
+  \caption{Easy mode vs Git mode comparison --- addressing survey feedback on
+           Git complexity. Easy mode hides branches, commits, and merge controls.}
 \end{figure}
 
 \begin{figure}[H]
   \centering
   % \includegraphics[width=0.92\linewidth]{Appendices/algo-visualisation.png}
   \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the algorithm
-  visualisation page showing the map, pseudocode highlighting, and playback
-  controls.}}
+  visualisation page from the deployed system, showing the map, pseudocode
+  highlighting, and playback controls.}}
   \caption{Algorithm visualisation page.}
 \end{figure}
 
@@ -159,9 +301,91 @@ P10 & Y & -- \\
   \centering
   % \includegraphics[width=0.92\linewidth]{Appendices/quick-explore.png}
   \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the quick
-  explore mode showing the optimised route with summary stats.}}
+  explore mode from the deployed system, showing the optimised route with
+  summary stats.}}
   \caption{Quick explore mode with optimised route.}
 \end{figure}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.92\linewidth]{Appendices/auto-scheduler-form.png}
+  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the
+  auto-scheduler form from the deployed system, showing constraint inputs
+  (active hours, stay durations, ordering, preferences). Evidence that M2
+  (optimised automatic scheduler) is complete.}}
+  \caption{Auto-scheduler form with constraint inputs --- evidence of M2
+           completion.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/edit-tab.png}
+    \subcaption{Edit tab (Git mode off)}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/edit-tab-git-mode.png}
+    \subcaption{Edit tab (Git mode on)}
+  \end{minipage}
+  \caption{Repository edit page --- evidence of M1 completion. The edit tab
+           shows place search, stop list, and commit controls.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/public-repo.png}
+  \caption{Public gallery with starring --- Could-have objective completed.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/about.png}
+  \caption{About page.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/repo.png}
+  \caption{Repositories page showing the user's trip repositories.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/long-trip-repo.png}
+  \caption{Long trip example (16 stops across 3 days).}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/ical-export.png}
+  \caption{iCalendar export to Google Calendar.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/pwa-offline-app.png}
+  \caption{PWA installation for offline support.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/settings-tab.png}
+    \subcaption{Settings tab (Git mode off)}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/settings-tab-git-mode.png}
+    \subcaption{Settings tab (Git mode on)}
+  \end{minipage}
+  \caption{Settings tab comparison with Git mode off and on.}
+\end{figure}
+
+\noindent\textit{Note: These screenshots are reproduced from the Progress Report,
+showing the system state at the end of Term~1.}
 
 \chapter{Project Schedule}
 \label{appx:schedule}

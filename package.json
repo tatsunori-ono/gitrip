@@ -1,9 +1,9 @@
 {
-  "name": "gitrip-mvp",
+  "name": "gitrip",
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "description": "GiTrip MVP (Node + Express + SQLite + CLI)",
+  "description": "GiTrip (Node + Express + SQLite)",
   "scripts": {
     "start": "node server/server.js",
     "dev": "node server/server.js",

@@ -1,13 +1,14 @@
 % !TEX root = ../Report.tex
 % ======================================================================
 \chapter{Implementation}
+\label{ch:implementation}
 % ======================================================================
 
 This chapter documents how the design was realised in code, covering major
 implementation modules and the reasoning behind key decisions.
 
 \section{Backend Structure}
-The backend is a Node.js + Express application \cite{ref_node_about,ref_express}.
+The backend is a Node.js and Express application \cite{ref_node_about,ref_express}.
 The main server file configures:
 \begin{itemize}
   \item EJS templating for UI routes,
@@ -35,6 +36,7 @@ This prevents information leakage of internal paths, stack traces, or
 dependency details that could aid reconnaissance.
 
 \section{Planner Implementation}
+\label{sec:planner-impl}
 The auto-scheduler is implemented in \texttt{server/planner.js}. Key components
 include:
 \begin{itemize}
@@ -42,7 +44,7 @@ include:
   \item \textbf{Matrix building:} ORS matrix for non-transit; null for transit.
   \item \textbf{Ordering logic:} strict order handling (absolute or relative);
         when no strict orders exist, Held-Karp exact solver for $N \leq 12$
-        \cite{ref_tsp_study}, otherwise Nearest Neighbour with 2-opt refinement
+        \cite{ref_tsp_study}, otherwise Nearest Neighbour with 2-Opt refinement
         \cite{ref_nn_tsp,ref_nn_2opt_hybrid}.
   \item \textbf{Constraint fit check:} \texttt{applyOpeningHours} integrates
         active hours, desired windows, fixed-time behaviour, and opening-hours
@@ -55,150 +57,108 @@ The planner records travel minutes (\texttt{prevTravelMin}) and effective route
 mode per leg, including detection of transit vs walking in cases where the
 transit provider returns walking-only legs.
 
+The ordering stage uses three strategies depending on instance size, presented in Algorithms~\ref{alg:nn}--\ref{alg:heldkarp}. The NN heuristic (Algorithm~\ref{alg:nn}) greedily selects the closest unvisited stop; if no finite edge exists from the current node, remaining stops are appended in their original input order. The 2-Opt refinement (Algorithm~\ref{alg:twoopt}) iteratively reverses sub-segments to reduce total cost, keeping the origin fixed and running up to 4 sweeps or until no improvement is found. The Held-Karp solver (Algorithm~\ref{alg:heldkarp}) solves for the shortest \emph{path} (open tour), not a cycle, unlike the classic TSP formulation.
+
+\begin{algorithm}[H]
+  \caption{Nearest Neighbour heuristic - greedy $O(N^2)$ path construction.}
+  \label{alg:nn}
+  \begin{algorithmic}[1]
+    \Require travel-time matrix $M$, start index $s$
+    \Ensure  visit order $\mathit{order}$
+    \State $\mathit{order} \gets [s]$; \; $\mathit{used}[s] \gets \textbf{true}$
+    \While{$|\mathit{order}| < N$}
+      \State $\mathit{cur} \gets \mathit{order}.\mathrm{last}$
+      \State $\mathit{best} \gets \arg\min_{j \notin \mathit{used}} M[\mathit{cur}][j]$
+      \If{$\mathit{best}$ exists}
+        \State $\mathit{used}[\mathit{best}] \gets \textbf{true}$; \;
+               append $\mathit{best}$ to $\mathit{order}$
+      \Else
+        \State append all remaining unvisited nodes in original index order
+        \State \textbf{break}
+      \EndIf
+    \EndWhile
+    \State \Return $\mathit{order}$
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+  \caption{2-Opt local search refinement.}
+  \label{alg:twoopt}
+  \begin{algorithmic}[1]
+    \Require visit order $\mathit{order}$, travel-time matrix $M$
+    \Ensure  improved visit order $\mathit{best}$
+    \State $\mathit{best} \gets \mathit{order}$; \;
+           $\mathit{bestCost} \gets \Call{PathCost}{\mathit{best}, M}$
+    \For{$\mathit{pass} \gets 1$ \textbf{to} $4$}
+      \State $\mathit{improved} \gets \textbf{false}$
+      \For{$i \gets 1$ \textbf{to} $N - 3$}
+        \Comment{skip index 0 to fix origin}
+        \For{$k \gets i + 1$ \textbf{to} $N - 2$}
+          \State $\mathit{cand} \gets \mathit{best}$ with segment $[i \ldots k]$ reversed
+          \If{$\Call{PathCost}{\mathit{cand}, M} < \mathit{bestCost}$}
+            \State $\mathit{best} \gets \mathit{cand}$; \;
+                   $\mathit{bestCost} \gets \Call{PathCost}{\mathit{cand}, M}$; \;
+                   $\mathit{improved} \gets \textbf{true}$
+          \EndIf
+        \EndFor
+      \EndFor
+      \If{$\lnot\mathit{improved}$} \textbf{break} \EndIf
+    \EndFor
+    \State \Return $\mathit{best}$
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+  \caption{Held-Karp exact solver - bitmask DP in $O(2^N \cdot N^2)$, used for $N \leq 12$.}
+  \label{alg:heldkarp}
+  \begin{algorithmic}[1]
+    \Require travel-time matrix $M$, start index $s$
+    \Ensure  optimal visit order $\mathit{order}$, cost
+    \State $N \gets |M|$; \; $\mathit{FULL} \gets 2^N - 1$
+    \State $\mathit{dp}[\mathit{mask}][j] \gets \infty$ for all $(\mathit{mask}, j)$
+    \State $\mathit{parent}[\mathit{mask}][j] \gets -1$ for all $(\mathit{mask}, j)$
+    \State $\mathit{dp}[2^s][s] \gets 0$
+      \Comment{base case: start at $s$}
+
+    \Statex
+    \For{$\mathit{mask} \gets 0$ \textbf{to} $\mathit{FULL}$}
+      \If{bit $s$ not set in $\mathit{mask}$} \textbf{continue} \EndIf
+      \For{$j \gets 0$ \textbf{to} $N-1$ where bit $j$ set in $\mathit{mask}$}
+        \For{$k \gets 0$ \textbf{to} $N-1$ where bit $k$ \emph{not} set in $\mathit{mask}$}
+          \State $\mathit{nm} \gets \mathit{mask} \;\mathbin{|}\; 2^k$
+          \If{$\mathit{dp}[\mathit{mask}][j] + M[j][k] < \mathit{dp}[\mathit{nm}][k]$}
+            \State $\mathit{dp}[\mathit{nm}][k] \gets \mathit{dp}[\mathit{mask}][j] + M[j][k]$
+            \State $\mathit{parent}[\mathit{nm}][k] \gets j$
+          \EndIf
+        \EndFor
+      \EndFor
+    \EndFor
+
+    \Statex \Comment{--- Reconstruct optimal path ---}
+    \State $\mathit{bestEnd} \gets \arg\min_j \mathit{dp}[\mathit{FULL}][j]$
+    \State $\mathit{order} \gets []$; \; $\mathit{mask} \gets \mathit{FULL}$; \;
+           $\mathit{cur} \gets \mathit{bestEnd}$
+    \While{$\mathit{cur} \neq -1$}
+      \State prepend $\mathit{cur}$ to $\mathit{order}$
+      \State $\mathit{prev} \gets \mathit{parent}[\mathit{mask}][\mathit{cur}]$; \;
+             clear bit $\mathit{cur}$ from $\mathit{mask}$; \;
+             $\mathit{cur} \gets \mathit{prev}$
+    \EndWhile
+    \State \Return $(\mathit{order},\;\mathit{dp}[\mathit{FULL}][\mathit{bestEnd}])$
+  \end{algorithmic}
+\end{algorithm}
+
+Figure~\ref{fig:planner_flow} shows the auto-scheduler flowchart. The algorithm builds an ORS travel-time matrix (with Haversine fallback), orders stops (strict constraints, Held-Karp for $N \leq 12$, or NN and 2-Opt), then partitions them into preferred-day buckets and an unassigned pool. Phase~1 schedules preferred-day stops on their assigned day, sending unfitting stops directly to overflow. Phase~2 schedules unassigned stops greedily, spilling to subsequent days (retrying the same stop) or overflow when no days remain. The cursor is initialised with a focus-dependent shift (morning, midday, or afternoon).
+
 \begin{figure}[H]
   \centering
-  \resizebox{0.92\textwidth}{!}{%
-  \begin{tikzpicture}[
-    >=Stealth,
-    every node/.style={font=\small, align=center},
-    startstop/.style={rectangle, rounded corners=8pt, draw=black, fill=red!10,
-                      minimum width=3cm, minimum height=0.8cm},
-    process/.style={rectangle, draw=black, fill=blue!8, minimum width=4.2cm,
-                    minimum height=0.8cm, rounded corners=2pt},
-    decision/.style={diamond, draw=black, fill=yellow!15, minimum width=2cm,
-                     minimum height=1cm, aspect=2.2, inner sep=2pt},
-    result/.style={rectangle, draw=black, fill=green!10, minimum width=3cm,
-                   minimum height=0.7cm, rounded corners=2pt},
-    arr/.style={->, thick},
-  ]
-
-    \node[startstop] (start) at (0,0) {Start: places, dates, mode,\\preferences};
-
-    \node[process] (matrix) at (0,-1.8)
-      {Build travel-time matrix\\(ORS or Haversine fallback)};
-
-    \node[decision] (strict) at (0,-4) {Strict order\\constraints?};
-
-    \node[process] (applystrict) at (-4,-5.8) {Apply strict ordering\\(absolute + relative)};
-    \node[process] (nn) at (4,-5.8) {Held-Karp ($N\!\leq\!12$)\\or NN + 2-opt ($N\!>\!12$)};
-
-    \node[process] (partition) at (0,-7.6)
-      {Partition stops into\\preferred-day buckets and unassigned pool};
-
-    % ── Phase 1: preferred-day buckets ──
-    \node[process, fill=blue!15] (phase1) at (0,-9.4)
-      {\textbf{Phase 1}: schedule preferred-day stops,\\order within each day bucket};
-
-    \node[process] (initpref) at (0,-11.2)
-      {Initialise day cursor at\\active-hours start + focus shift};
-
-    \node[decision] (prefremain) at (0,-13.2) {Preferred stops\\remain in bucket?};
-
-    \node[process] (preffit) at (0,-15.4)
-      {Try fit stop on its preferred day\\(travel gap + opening hours)};
-
-    \node[decision] (preffits) at (0,-17.8) {Stop fits\\in day?};
-
-    \node[result] (prefplace) at (-4.5,-19.5) {Place stop;\\advance cursor};
-    \node[process] (prefover) at (4.5,-19.5) {Add to overflow\\(no day spilling)};
-
-    % ── Phase 2: unassigned stops ──
-    \node[process, fill=blue!15] (phase2) at (0,-21.6)
-      {\textbf{Phase 2}: schedule unassigned stops,\\order by NN or strict order};
-
-    \node[process] (initunassign) at (0,-23.4)
-      {Initialise cursor on current day at\\active-hours start + focus shift};
-
-    \node[decision] (morestops) at (0,-25.4) {Unassigned\\stops remain?};
-
-    \node[process] (fitstop) at (0,-27.6)
-      {Try fit next stop on current day\\(travel gap + opening hours)};
-
-    \node[decision] (fits) at (0,-30) {Stop fits\\in day?};
-
-    \node[result] (place) at (-4.5,-31.8) {Place stop;\\advance cursor};
-    \node[decision] (nextday) at (4.5,-31.8) {More days\\available?};
-
-    \node[process] (spill) at (4.5,-33.8) {Advance to next day;\\reset cursor};
-    \node[process] (overflow) at (8.5,-31.8) {Add to overflow};
-
-    \node[startstop] (done) at (0,-36)
-      {Return scheduled plan\\+ overflow list};
-
-    % ══════ Arrows ══════
-
-    % Start → matrix → ordering
-    \draw[arr] (start) -- (matrix);
-    \draw[arr] (matrix) -- (strict);
-    \draw[arr] (strict) -| node[above, pos=0.25]{\scriptsize Yes} (applystrict);
-    \draw[arr] (strict) -| node[above, pos=0.25]{\scriptsize No} (nn);
-    \draw[arr] (applystrict) |- (partition);
-    \draw[arr] (nn) |- (partition);
-
-    % Partition → Phase 1
-    \draw[arr] (partition) -- (phase1);
-    \draw[arr] (phase1) -- (initpref);
-    \draw[arr] (initpref) -- (prefremain);
-
-    % Phase 1 loop
-    \draw[arr] (prefremain) -- node[right]{\scriptsize Yes} (preffit);
-    \draw[arr] (preffit) -- (preffits);
-    \draw[arr] (preffits) -| node[above, pos=0.25]{\scriptsize Yes} (prefplace);
-    \draw[arr] (preffits) -| node[above, pos=0.25]{\scriptsize No} (prefover);
-    \draw[arr] (prefplace.west) -- ++(-2.5,0) |- (prefremain.west);
-    \draw[arr] (prefover.east) -- ++(2.5,0) |- (prefremain.east);
-
-    % Phase 1 done → Phase 2
-    \draw[arr] (prefremain.south) ++(0,-0.1) -- ++(-8,0)
-      |- node[above, pos=0.08]{\scriptsize No} (phase2.west);
-
-    % Phase 2
-    \draw[arr] (phase2) -- (initunassign);
-    \draw[arr] (initunassign) -- (morestops);
-
-    % Phase 2 loop
-    \draw[arr] (morestops) -- node[right]{\scriptsize Yes} (fitstop);
-    \draw[arr] (fitstop) -- (fits);
-    \draw[arr] (fits) -| node[above, pos=0.25]{\scriptsize Yes} (place);
-    \draw[arr] (fits) -| node[above, pos=0.25]{\scriptsize No} (nextday);
-
-    % Place → back to morestops
-    \draw[arr] (place.west) -- ++(-2.5,0) |- (morestops.west);
-
-    % Spill: retry SAME stop on next day (arrow goes back to fitstop, not morestops)
-    \draw[arr] (nextday) -- node[right]{\scriptsize Yes} (spill);
-    \draw[arr] (nextday) -- node[above]{\scriptsize No} (overflow);
-    \draw[arr] (spill.east) -- ++(3,0) |- (fitstop.east);
-
-    % Overflow → back to morestops (move to next stop)
-    \draw[arr] (overflow) |- ([yshift=5pt]morestops.east);
-
-    % No more stops → done
-    \draw[arr] (morestops.south) ++(0,-0.1) -- ++(-8,0)
-      |- node[above, pos=0.1]{\scriptsize No} (done.west);
-
-  \end{tikzpicture}%
-  }%
-  \caption{Auto-scheduler flowchart. The algorithm builds an ORS
-           travel-time matrix (with Haversine fallback), orders stops
-           (strict constraints, Held-Karp for $N \leq 12$, or NN + 2-opt),
-           then partitions
-           them into preferred-day buckets and an unassigned pool.
-           Phase~1 schedules preferred-day stops on their assigned day,
-           sending unfitting stops directly to overflow.  Phase~2
-           schedules unassigned stops greedily, spilling to subsequent
-           days (retrying the same stop) or overflow when no days remain.
-           The cursor is initialised with a focus-dependent shift
-           (morning, midday, or afternoon).}
+  \includegraphics[width=0.9\textwidth]{Chapter6/auto-scheduler-flowchart.png}
+  \caption{Auto-scheduler flowchart.}
   \label{fig:planner_flow}
 \end{figure}
 
 \begin{algorithm}[H]
-  \caption{Auto-scheduler pseudocode.  The full implementation
-           (\texttt{server/planner.js}, 783~lines) handles additional
-           concerns---transit leg queries, sparse spacing gaps,
-           fixed-time constraints, and opening-hour nudging---that are
-           omitted here for clarity.}
+  \caption{Auto-scheduler pseudocode (simplified from \texttt{server/planner.js}, 783~lines).}
   \label{alg:planner}
   \begin{algorithmic}[1]
     \Require $\mathit{places}$, $\mathit{days}$, $\mathit{activeStart}$, $\mathit{activeEnd}$, $\mathit{focus}$, $\mathit{transport}$
@@ -284,42 +244,24 @@ after the Progress Report address known risks:
 
 Structural divergence is detected using a Jaccard similarity heuristic over
 stop-key sets; if the Jaccard index falls below 0.4, a \texttt{plan-whole}
-conflict is produced and the UI requires choosing an entire plan.
-Without this guard, per-stop merging would attempt to align two largely
-unrelated itineraries---for example, one collaborator replacing the plan with
-stops in Tokyo while the other replaces it with stops in Paris---producing a
-nonsensical hybrid plan with no meaningful correspondence between stops.
+conflict is produced and the UI requires choosing an entire plan. Without this check, per-stop merging would attempt to align two largely unrelated itineraries, producing a nonsensical hybrid plan. For example, one collaborator completely replacing the plan with 5 new stops in Tokyo while the other completely replaces it with 5 new stops in Paris.
 
 \begin{figure}[H]
-\begin{lstlisting}[language=JavaScript,
-  caption={Jaccard similarity function used to detect structural divergence
-           between two plan branches (\texttt{server/merge.js}, lines 112--120).
-           A threshold of 0.4 was chosen empirically to balance between
-           flagging genuinely unrelated plans and allowing minor structural edits
-           to proceed to per-stop merging.},
-  label={lst:jaccard}]
-function jaccard(a, b) {
-  if (!a.size && !b.size) return 1;
-  let inter = 0;
-  for (const v of a) {
-    if (b.has(v)) inter++;
-  }
-  const union = a.size + b.size - inter;
-  return union ? inter / union : 0;
-}
-\end{lstlisting}
+  \centering
+  \includegraphics[width=0.85\linewidth]{Chapter6/jaccard-code.png}
+  \caption{Jaccard similarity function (\texttt{server/merge.js}).}
+  \label{fig:jaccard}
 \end{figure}
 
 \section{Routing Implementation}
 Routing integration is implemented in \texttt{server/routing.js}:
 \begin{itemize}
-  \item ORS matrix requests use the matrix endpoint and return durations in
-        minutes \cite{ref_ors_matrix}.
+  \item ORS~\cite{ref_ors_matrix} matrix requests use the matrix endpoint and return durations in
+        minutes.
   \item ORS directions requests fetch per-leg geometry for map rendering.
-  \item Google Directions transit routes provide detailed per-step segments,
-        including polylines decoded via the standard polyline algorithm
-        \cite{ref_google_directions_api}.
-  \item Fallback estimates use Haversine distance.
+  \item Google Directions~\cite{ref_google_directions_api} transit routes provide detailed per-step segments,
+        including polylines decoded via the standard polyline algorithm.
+  \item Fallback estimates use Haversine distance with mode-dependent speed assumptions (approximately 5~km/h walking, 15~km/h cycling, 50~km/h driving, and 30~km/h transit).
 \end{itemize}
 
 \section{Quick Explore Mode}
@@ -329,113 +271,14 @@ result. This is implemented via \texttt{server/quickroute.js}:
 \begin{itemize}
   \item for small instances (N $\leq$ 12), an exact Held-Karp dynamic programming
         solver is used \cite{ref_tsp_study,ref_tsp_local_search};
-  \item for larger instances, NN is used with 2-opt refinement
+  \item for larger instances, NN is used with 2-Opt refinement
         \cite{ref_nn_2opt_hybrid}.
 \end{itemize}
 
 The quick route engine builds a travel-time matrix using ORS, transit pairwise
 calls for small transit sets (limited to N~$\leq$~7 to control API cost), or
 Haversine fallback. Concurrency is bounded to a pool of four simultaneous
-requests to reduce API burst risk.
-
-\begin{algorithm}[H]
-  \caption{Nearest Neighbour heuristic (\texttt{server/quickroute.js},
-           lines 212--247).  Greedy $O(N^2)$ path construction starting from
-           a fixed origin; if no finite edge exists from the current node,
-           remaining stops are appended in their original input order.}
-  \label{alg:nn}
-  \begin{algorithmic}[1]
-    \Require travel-time matrix $M$, start index $s$
-    \Ensure  visit order $\mathit{order}$
-    \State $\mathit{order} \gets [s]$; \; $\mathit{used}[s] \gets \textbf{true}$
-    \While{$|\mathit{order}| < N$}
-      \State $\mathit{cur} \gets \mathit{order}.\mathrm{last}$
-      \State $\mathit{best} \gets \arg\min_{j \notin \mathit{used}} M[\mathit{cur}][j]$
-      \If{$\mathit{best}$ exists}
-        \State $\mathit{used}[\mathit{best}] \gets \textbf{true}$; \;
-               append $\mathit{best}$ to $\mathit{order}$
-      \Else
-        \State append all remaining unvisited nodes in original index order
-        \State \textbf{break}
-      \EndIf
-    \EndWhile
-    \State \Return $\mathit{order}$
-  \end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}[H]
-  \caption{2-opt local search refinement (\texttt{server/quickroute.js},
-           lines 254--285).  Iteratively reverses sub-segments of the path
-           to reduce total cost.  The first node (origin) is kept fixed.
-           Runs up to 4 full sweeps or until no improvement is found.}
-  \label{alg:twoopt}
-  \begin{algorithmic}[1]
-    \Require visit order $\mathit{order}$, travel-time matrix $M$
-    \Ensure  improved visit order $\mathit{best}$
-    \State $\mathit{best} \gets \mathit{order}$; \;
-           $\mathit{bestCost} \gets \Call{PathCost}{\mathit{best}, M}$
-    \For{$\mathit{pass} \gets 1$ \textbf{to} $4$}
-      \State $\mathit{improved} \gets \textbf{false}$
-      \For{$i \gets 1$ \textbf{to} $N - 3$}
-        \Comment{skip index 0 to fix origin}
-        \For{$k \gets i + 1$ \textbf{to} $N - 2$}
-          \State $\mathit{cand} \gets \mathit{best}$ with segment $[i \ldots k]$ reversed
-          \If{$\Call{PathCost}{\mathit{cand}, M} < \mathit{bestCost}$}
-            \State $\mathit{best} \gets \mathit{cand}$; \;
-                   $\mathit{bestCost} \gets \Call{PathCost}{\mathit{cand}, M}$; \;
-                   $\mathit{improved} \gets \textbf{true}$
-          \EndIf
-        \EndFor
-      \EndFor
-      \If{$\lnot\mathit{improved}$} \textbf{break} \EndIf
-    \EndFor
-    \State \Return $\mathit{best}$
-  \end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}[H]
-  \caption{Held-Karp exact solver (\texttt{server/quickroute.js},
-           lines 131--196).  Bitmask dynamic programming in
-           $O(2^N \cdot N^2)$ time and space; used only for $N \leq 12$.
-           Unlike the classic TSP formulation this solves for the shortest
-           \emph{path} (open tour), not a cycle.}
-  \label{alg:heldkarp}
-  \begin{algorithmic}[1]
-    \Require travel-time matrix $M$, start index $s$
-    \Ensure  optimal visit order $\mathit{order}$, cost
-    \State $N \gets |M|$; \; $\mathit{FULL} \gets 2^N - 1$
-    \State $\mathit{dp}[\mathit{mask}][j] \gets \infty$ for all $(\mathit{mask}, j)$
-    \State $\mathit{parent}[\mathit{mask}][j] \gets -1$ for all $(\mathit{mask}, j)$
-    \State $\mathit{dp}[2^s][s] \gets 0$
-      \Comment{base case: start at $s$}
-
-    \Statex
-    \For{$\mathit{mask} \gets 0$ \textbf{to} $\mathit{FULL}$}
-      \If{bit $s$ not set in $\mathit{mask}$} \textbf{continue} \EndIf
-      \For{$j \gets 0$ \textbf{to} $N-1$ where bit $j$ set in $\mathit{mask}$}
-        \For{$k \gets 0$ \textbf{to} $N-1$ where bit $k$ \emph{not} set in $\mathit{mask}$}
-          \State $\mathit{nm} \gets \mathit{mask} \;\mathbin{|}\; 2^k$
-          \If{$\mathit{dp}[\mathit{mask}][j] + M[j][k] < \mathit{dp}[\mathit{nm}][k]$}
-            \State $\mathit{dp}[\mathit{nm}][k] \gets \mathit{dp}[\mathit{mask}][j] + M[j][k]$
-            \State $\mathit{parent}[\mathit{nm}][k] \gets j$
-          \EndIf
-        \EndFor
-      \EndFor
-    \EndFor
-
-    \Statex \Comment{--- Reconstruct optimal path ---}
-    \State $\mathit{bestEnd} \gets \arg\min_j \mathit{dp}[\mathit{FULL}][j]$
-    \State $\mathit{order} \gets []$; \; $\mathit{mask} \gets \mathit{FULL}$; \;
-           $\mathit{cur} \gets \mathit{bestEnd}$
-    \While{$\mathit{cur} \neq -1$}
-      \State prepend $\mathit{cur}$ to $\mathit{order}$
-      \State $\mathit{prev} \gets \mathit{parent}[\mathit{mask}][\mathit{cur}]$; \;
-             clear bit $\mathit{cur}$ from $\mathit{mask}$; \;
-             $\mathit{cur} \gets \mathit{prev}$
-    \EndWhile
-    \State \Return $(\mathit{order},\;\mathit{dp}[\mathit{FULL}][\mathit{bestEnd}])$
-  \end{algorithmic}
-\end{algorithm}
+requests to reduce API burst risk. The ordering logic reuses the same NN, 2-Opt, and Held-Karp strategies described in Section~\ref{sec:planner-impl} (Algorithms~\ref{alg:nn}--\ref{alg:heldkarp}).
 
 \section{Algorithm Visualisation}
 GiTrip includes an educational algorithm visualisation page
@@ -444,10 +287,10 @@ algorithms with step-by-step animation on a Leaflet map:
 \begin{enumerate}
   \item \textbf{Nearest Neighbour (NN):} greedy selection of the closest
         unvisited stop; $O(N^2)$ time.
-  \item \textbf{NN + 2-opt:} starts from an NN solution and iteratively reverses
+  \item \textbf{NN and 2-Opt:} starts from an NN solution and iteratively reverses
         sub-segments to shorten the route; used for instances with more than 12
         stops.
-  \item \textbf{Held-Karp dynamic programming:} exact bitmask DP solver in
+  \item \textbf{Held-Karp dynamic programming (DP):} exact bitmask DP solver in
         $O(2^N \cdot N^2)$ time; guarantees optimality but is limited to
         N~$\leq$~12 stops due to exponential growth.
 \end{enumerate}
@@ -478,7 +321,7 @@ constraint-aware scheduling algorithm with eight animated scenarios:
         modes on the same stops.
 \end{enumerate}
 
-The page renders an SVG day timeline (08:00--21:00) with animated stop blocks,
+The page renders a Scalable Vector Graphics (SVG) day timeline (08:00--21:00 for demonstration) with animated stop blocks,
 an opening-hours bar, a real-time constraint info panel, and synchronised
 pseudocode highlighting. No API calls are required; all data is hardcoded.
 
@@ -551,7 +394,7 @@ inability to guarantee offline routing responses.
 Each day in a plan displays a weather forecast retrieved from the Open-Meteo
 API. The server fetches daily forecasts (temperature range, precipitation
 probability, and weather code) using the first stop's coordinates for each day,
-with a 30-minute TTL cache to reduce external requests. Historical data is
+with a 30-minute Time-To-Live (TTL) cache to reduce external requests. Historical data is
 fetched for past dates and forecast data for future dates.
 
 \subsection{Travel Alerts}
@@ -568,7 +411,7 @@ table.
 \subsection{Public Gallery with Pagination}
 The public gallery (\texttt{/ui/public}) displays trips that owners have
 marked as public. The listing supports sorting by recency or star count and
-is paginated at 12 trips per page using SQL \texttt{LIMIT}/\texttt{OFFSET}
+is paginated at 12 trips per page using Structured Query Language (SQL) \texttt{LIMIT}/\texttt{OFFSET}
 queries, preventing unbounded response sizes as the number of public trips
 grows.
 

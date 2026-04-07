@@ -596,7 +596,7 @@ export async function autoPlan({
       preferredDay: p.preferredDay,
     }));
 
-  if (!enabled.length) return { transport, days, overflow: [] };
+  if (!enabled.length) return { transport, activeHours: act, days, overflow: [] };
 
   // Travel matrix provides pairwise durations for ordering; transit skips it
   // because we need per-leg schedules rather than static matrices.
@@ -891,7 +891,7 @@ export async function autoPlan({
     dayCursors[dayIdx] = cursor;
   }
 
-  return { transport, days, overflow };
+  return { transport, activeHours: act, days, overflow };
 }
 
 // Exported for unit testing

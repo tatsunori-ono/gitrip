@@ -269,14 +269,18 @@
                         const m = parts[1] || 0;
                         return h * 60 + m;
                       };
-                      const actS = 8 * 60, actE = 22 * 60;
+                      const _ah = (snapshot.plan && snapshot.plan.activeHours) || {};
+                      const actS = _ah.start ? toMin(_ah.start) : 8 * 60;
+                      const actE = _ah.end ? toMin(_ah.end) : 21 * 60;
                       const span = actE - actS;
                       const scale = x => Math.max(0, Math.min(1000, (x - actS) / span * 1000));
+                      const startHour = Math.floor(actS / 60);
+                      const endHour = Math.ceil(actE / 60);
                     %>
 
                     <!-- background + axis -->
                     <rect x="0" y="26" width="1000" height="28" fill="#ffffff" stroke="#e0e0e6" />
-                  <% for (let h=8; h <=22; h +=1) {
+                  <% for (let h = startHour; h <= endHour; h += 1) {
                        const x=scale(h * 60); %>
                     <line x1="<%= x %>" y1="26" x2="<%= x %>" y2="54" stroke="#e5e7eb" />
                     <text x="<%= x + 4 %>" y="20" font-size="10" fill="#6b7280">
@@ -1002,7 +1006,12 @@
   const commitsData = <%- JSON.stringify(commits) %>;
   const branchesData = <%- JSON.stringify(branches) %>;
   const collaboratorsData = <%- JSON.stringify(collaborators || []) %>;
-  const ACT_START = 8 * 60, ACT_END = 22 * 60, SPAN = ACT_END - ACT_START;
+  // Derive active hours from the plan if available, otherwise default to 08:00–21:00
+  const _ah = snapshotPlan.activeHours || {};
+  function _toMin(t) { if (!t) return null; const p = String(t).split(':').map(Number); return (p[0]||0)*60 + (p[1]||0); }
+  const ACT_START = _toMin(_ah.start) || 8 * 60;
+  const ACT_END = _toMin(_ah.end) || 21 * 60;
+  const SPAN = ACT_END - ACT_START;
 
   // ---------- Repo tabs (View / Edit / Settings) ----------
   function getRepoTab() {

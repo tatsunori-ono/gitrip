@@ -1,6 +1,7 @@
 % !TEX root = ../Report.tex
 % ======================================================================
 \chapter{Evaluation}
+\label{ch:evaluation}
 % ======================================================================
 
 This chapter reports the evaluation conducted on Evaluation Day (Wednesday 25th
@@ -26,7 +27,7 @@ Two data sources were collected:
         time of 08:46 minutes.
 \end{itemize}
 
-The preliminary requirements survey (Chapter~3) collected 30 responses because it
+The preliminary requirements survey (Chapter~\ref{ch:requirements}) collected 30 responses because it
 only required participants to answer questions about their existing habits.
 The Evaluation Day survey collected fewer responses (13) because participants
 needed to actively try out the deployed system before responding, which required
@@ -260,6 +261,46 @@ achieved:
         interface consistency and onboarding as remaining improvement areas
         (SC3 partially met, with known limitations).
 \end{itemize}
+
+Table~\ref{tab:moscow-final} summarises the final completion status of all
+MoSCoW objectives defined in Chapter~\ref{ch:requirements}. The Progress
+Report presented an interim version of this table at the end of Term~1; the
+table below reflects the final state at submission.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{p{0.1\textwidth} c X p{0.22\textwidth}}
+\toprule
+\textbf{Priority} & \textbf{\#} & \textbf{Feature area} & \textbf{Status}\\
+\midrule
+Must & 1 & Repos/commits/branches \& history visualisation & Complete\\
+ & 2 & Auto-planner \& spillover \& key constraints & Complete\\
+ & 3 & Routing integration (ORS matrix \& Google transit) & Complete\\
+ & 4 & Timeline \& map visualisation and editing & Complete\\
+ & 5 & Merge \& conflict resolver (field-level) & Complete\\
+\midrule
+Should & 1 & Opening-hours validation and nudging & Complete\\
+ & 2 & Preferences (compact/sparse, focus, mode recompute) & Complete\\
+ & 3 & Branch productivity (compare, fork) & Complete\\
+\midrule
+Could & 1 & Command-line interface (CLI) along with the Web UI & Not Implemented\\
+ & 2 & Public trip repository \& gallery & Complete\\
+ & 3 & Real-time tracking & Partially Implemented\\
+ & 4 & Busy-time consideration & Not Implemented\\
+ & 5 & PWA/offline read-only and queued edits & Complete\\
+\bottomrule
+\end{tabularx}
+\caption{Final completion status of MoSCoW objectives.}
+\label{tab:moscow-final}
+\end{table}
+
+All Must-have and Should-have objectives were completed. The Could-have items
+marked ``Not Implemented'' (CLI and busy-time consideration) were deliberately
+deprioritised in the Project Specification to protect the MVP scope; they remain
+viable future extensions (Chapter~\ref{ch:conclusions}). ``Partially
+Implemented'' indicates that foundational support exists but the feature is not
+fully polished (e.g., real-time tracking provides weather and alert data per day
+but does not yet offer live GPS-based updates).
 
 \section{Threats to Validity}
 The evaluation has limitations typical of student project evaluations:

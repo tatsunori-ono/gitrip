@@ -1,6 +1,7 @@
 % !TEX root = ../Report.tex
 % ======================================================================
 \chapter{Conclusions and Future Work}
+\label{ch:conclusions}
 % ======================================================================
 
 This chapter summarises achievements, critiques the system against its goals,
@@ -75,13 +76,12 @@ mechanism.
 The current timeline and map editors rely on mouse-based drag interactions, which
 remain inaccessible to keyboard-only and screen-reader users. Future work should
 provide keyboard-operable alternatives for timeline edits (e.g.\ arrow keys with
-step increments), text-based route editing as a fallback, and stronger ARIA
+step increments), text-based route editing as a fallback, and stronger Accessible Rich Internet Applications (ARIA)
 landmark and live-region support throughout the application.
 
 \paragraph{Real-time collaboration.}
 GiTrip currently supports asynchronous collaboration via branches and merges.
-A natural extension is to explore Conflict-free Replicated Data Type (CRDT)
-based shared plan editing, enabling multiple users to edit the same itinerary
+A natural extension is to explore CRDT-based shared plan editing, enabling multiple users to edit the same itinerary
 simultaneously while preserving a mergeable history model for offline and
 divergent edits.
 
@@ -94,12 +94,13 @@ UI, and support partial merges where users accept some changes and defer others.
 \paragraph{Routing extensions.}
 The current routing integration supports driving, walking, cycling, and transit
 via ORS and Google Directions. Useful extensions include explicit support for
-ferries and flights as route legs, integration of GTFS-based transit data where
+ferries and flights as route legs, integration with General Transit Feed
+Specification (GTFS) data where
 applicable, and improved offline routing approximations for areas with limited
 API coverage.
 
 \paragraph{Optional ML/AI extensions.}
-AI-powered features were deliberately excluded from the MVP to preserve
+Machine learning (ML) and AI-powered features were deliberately excluded from the MVP to preserve
 determinism, explainability, and evaluation clarity (see
 Section~\ref{sec:ai_scope}). However, they represent a clearly interesting
 direction for future implementation. Potential applications include learning

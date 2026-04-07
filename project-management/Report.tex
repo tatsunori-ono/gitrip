@@ -76,7 +76,7 @@
     \end{center}
     \begin{center}
         {\large Supervisor: Professor Mike Joy}\\
-        {\large Second Assessor: Professor Charilaos Efthymiou}\\
+        {\large Second Assessor: Dr Charilaos Efthymiou}\\
         \vspace{5mm}
         \textbf{\large Department of Computer Science}\\
         {\large University of Warwick}\\
@@ -101,6 +101,7 @@
 \pagenumbering{arabic}
 
 \section{Introduction}
+
 This Project Management Report summarises how GiTrip was planned, organised and
 executed. It complements the Final Report by focusing on process rather than
 technical design. Evidence is drawn from the Project Specification, the
@@ -110,25 +111,14 @@ development methodology, time management, stakeholder relationships, risk
 management, unforeseen issues, and legal/ethical/professional considerations.
 
 \section{Development Methodology}
-The Project Specification defined a milestone-driven plan to match fixed
-university deadlines. The project followed an \emph{iterative waterfall}
-approach: milestones remained stable, while work within each milestone was
-refined through short feedback cycles. Supervisor meetings were held regularly
-throughout both terms --- Weeks 1, 2, 4, 5, 7, and 9 in Term~1, and Weeks 1,
-2, 4, 6, 8, and 10 in Term~2 (12 meetings total) --- with additional sessions
-near submission deadlines to review drafts and incorporate feedback. This
-balanced predictable progress reporting for supervision with early discovery of
-integration risks (routing providers, geocoding, and interactive editing). For
-example, in Term~1 Week~6, API quota exhaustion was identified during a
-supervisor meeting, prompting immediate caching and fallback implementation.
-This reduced technical risk by identifying integration issues early and ensuring
-the system remained demonstrable throughout Term~1.
+\label{sec:methodology}
+The Project Specification defined a milestone-driven plan to match fixed university deadlines. The project followed an \emph{iterative waterfall} approach: milestones remained stable, while work within each milestone was refined through short feedback cycles. Supervisor meetings were held regularly throughout both terms (Term~1 Weeks 1, 2, 4, 5, 7, 9 and Term~2 Weeks 1, 2, 4, 6, 8, 10), with additional sessions scheduled near submission deadlines to review drafts and incorporate feedback. This balanced predictable progress reporting for supervision with early discovery of integration risks (routing providers, geocoding, and interactive editing). Early prototypes validated feasibility of snapshot storage, server-rendered UI, and routing integration before committing to the full architecture. Must-haves were implemented first to reach an end-to-end MVP; Should-haves and hardening tasks followed. For example, in Term~1 Week~7, API quota exhaustion was identified during a supervisor meeting, prompting immediate caching and fallback implementation. The merge engine required three major rewrites as edge cases emerged during testing, which validated the decision to iterate early on high-risk components. This reduced technical risk by identifying integration issues early and ensuring the system remained demonstrable throughout Term~1.
 
 Development did not begin immediately. Early work (before substantial
 implementation) consisted of competitor analysis, a focused literature review
 (version control and three-way merge concepts, scheduling heuristics, and
-usability heuristics), and a preliminary survey in November 2025 (30 responses).
-These activities produced the Project Specification, MoSCoW objectives, and an
+usability heuristics), and a preliminary survey in November 2025. These
+activities produced the Project Specification, MoSCoW objectives, and an
 evaluation plan, reducing the risk of building features that did not address
 real user needs.
 
@@ -161,8 +151,9 @@ Progress was monitored using three artefacts:
 \begin{itemize}
   \item \textbf{Supervision notes:} each meeting used a prepared agenda recorded
         in Obsidian with a structure inspired by the Cornell note-taking
-        system~\cite{ref_cornell}: ``General Notes'', ``Questions to Ask and
-        Answers'', and ``Summary and To-dos''. Whenever questions arose between
+        system~\cite{ref_cornell}, splitting the note into three sections:
+        ``Updates from Last Meeting and General Notes'', ``Questions to Ask and
+        Answers'', and ``To-dos and Summary''. Whenever questions arose between
         meetings, they were recorded in the ``Questions to Ask'' section of the
         next meeting file. Notes were additionally backed up via an automated
         GitHub plugin sync (every 15 minutes) to reduce the risk of data loss.
@@ -185,6 +176,46 @@ Progress was monitored using three artefacts:
   \label{fig:github-commits}
 \end{figure}
 
+Table~\ref{tab:milestone-comparison} provides a detailed comparison of planned
+versus actual completion dates for major milestones. This milestone comparison
+is reproduced and updated from the Progress Report, which tracked Term~1
+delivery; the table below extends coverage to include Term~2 milestones.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{c X c c c}
+\toprule
+\textbf{\#} & \textbf{Milestone} & \textbf{Planned} & \textbf{Actual} & \textbf{Status}\\
+\midrule
+4 & Project Specification (Formative) & Oct 16 & Oct 15 & Complete\\
+5 & UX flows and wireframes & Mid Oct & Mid Oct & Complete\\
+6 & Seed data, data model, migrations & Late Oct & Late Oct & Complete\\
+7 & Commit, branch, merge operations & Late Oct & Late Oct & Complete\\
+8 & Place search via proxy & Late Oct & Late Oct & Complete\\
+9 & NN ordering \& constraints algorithm & Late Oct--Early Nov & Late Oct--Early Nov & Complete\\
+10 & Opening-hours ingestion \& parsing & Mid Nov & Late Jan & Complete\\
+11 & API Reliability hardening & Mid Nov & Mid Nov & Complete\\
+12 & ORS/Google routing integration & Mid Nov & Mid Nov & Complete\\
+13 & Multi-day spillover & Mid Nov & Mid Nov & Complete\\
+14 & Compact vs.\ sparse & Mid Nov & Mid Nov & Complete\\
+15 & Focus-time preference & Late Nov & Late Nov & Complete\\
+16 & Desired time windows & Late Nov & Late Nov & Complete\\
+17 & Strict ordering/start pin & Early Dec & Early Dec & Complete\\
+18 & Recompute travel by mode & Early Dec & Early Dec & Complete\\
+19 & Conflict resolver per stop/field & Early Dec & Late Jan & Complete\\
+20 & Commit edits from timeline/map & Early Dec & Early Dec & Complete\\
+21 & Progress Report & Jan 22 & Jan 21 & Complete\\
+22 & Progressive Web App (PWA) & Late Jan & Early Jan & Complete\\
+23 & Security check & Late Jan & Early Dec & Complete\\
+24 & Automated tests (unit \& merge) & Feb & Feb & Complete\\
+25 & Evaluation Day & Late Feb & Feb 25 & Complete\\
+26 & Final Report \& submission & Late Mar & Late Mar & Complete\\
+\bottomrule
+\end{tabularx}
+\caption{Planned vs.\ actual milestone completion (Terms~1 and~2).}
+\label{tab:milestone-comparison}
+\end{table}
+
 To sustain momentum, each week ended with an integrated build and a short review
 against the schedule (what was completed, what slipped, and why). This reduced
 the accumulation of partially integrated features and ensured that demonstrations
@@ -192,13 +223,15 @@ for supervision and Evaluation Day rehearsal were based on the current main
 branch.
 
 \section{Stakeholder Management}
-The key stakeholder was the supervisor (Professor Mike Joy). Meetings were held
-on a regular cadence across both terms (12 meetings total), with additional
-sessions near submission deadlines. Each meeting served as a checkpoint: questions were
-prepared in advance (e.g., ``questions to ask'' and ``updates since last
-meeting''), decisions were recorded, and action items were converted into weekly
-tasks. This reduced rework and helped keep scope aligned with the Project
-Specification.
+The key stakeholder was the supervisor, Professor Mike Joy. As described in
+Section~\ref{sec:methodology} (Development Methodology), 12 meetings were held
+across both terms. Each meeting followed a structured process: before the
+meeting, progress updates and questions were recorded in an Obsidian note under
+``Updates from Last Meeting'' and ``Questions to Ask'' sections. During the
+meeting, the supervisor's responses were noted beside each item. After the
+meeting, action items were summarised in a ``To-dos'' section and converted
+into the next week's tasks. This structured approach reduced rework and ensured
+progress stayed on track by systematically organising outstanding tasks.
 
 Due to the author's course transfer from MEng to BSc Computer Science, the
 supervision meeting recordings on Tabula are split across two pages
@@ -206,18 +239,14 @@ supervision meeting recordings on Tabula are split across two pages
 
 \begin{figure}[H]
   \centering
-  % \includegraphics[width=0.92\linewidth]{Figures/tabula-1.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the dissertation
-  supervisor record of meetings on Tabula (BSc page).}}
+  \includegraphics[width=0.85\linewidth]{Figures/tabula-1.png}
   \caption{Dissertation supervisor record of meetings on Tabula (BSc page).}
   \label{fig:tabula-bsc}
 \end{figure}
 
 \begin{figure}[H]
   \centering
-  % \includegraphics[width=0.92\linewidth]{Figures/tabula-2.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the dissertation
-  supervisor record of meetings on Tabula (MEng page).}}
+  \includegraphics[width=0.85\linewidth]{Figures/tabula-2.png}
   \caption{Dissertation supervisor record of meetings on Tabula (MEng page).}
   \label{fig:tabula-meng}
 \end{figure}
@@ -271,7 +300,7 @@ section.
 
 \section{Unforeseen Issues and How They Were Handled}
 The project remained broadly aligned to the Project Specification and MoSCoW
-priorities, but several unforeseen issues required adaptation.
+priorities, but several unforeseen issues required adaptation and divergence from the original Project Specification.
 
 \textbf{API quota exhaustion.} OpenRouteService rate limits were hit during
 intensive testing, causing the planner to return errors. This was addressed by
@@ -286,17 +315,12 @@ ordering differed between branches. This required a substantial rework of the
 merge engine to use deep structural equality and stable stop identifiers,
 completed before Evaluation Day and backed by 16 automated tests.
 
-\textbf{Geocoding fuzzy search.} Users reported that near-miss queries (e.g.\
-``stick n sushi'' for ``Sticks'n'Sushi'') returned no results from Nominatim,
-which performs exact index matching. This was resolved by adding Photon as a
-fuzzy-search fallback, called only when Nominatim returns zero results.
-
 \textbf{Place search typo sensitivity.} Nominatim search was sensitive to minor
-spelling errors (e.g.\ ``stick n sushi'' for ``Sticks'n'Sushi'') and often
-returned no results for near-miss queries. This was resolved by adding Photon
-as a fuzzy-search fallback, called only when Nominatim returns zero results.
-Photon uses the same OpenStreetMap data but with Elasticsearch-based
-typo-tolerant indexing.
+spelling variations (e.g.\ ``stick n sushi'' for ``Sticks'n'Sushi'') and often
+returned no results for near-miss queries, because Nominatim performs exact
+index matching. This was resolved by adding Photon as a fuzzy-search fallback,
+called only when Nominatim returns zero results. Photon uses the same
+OpenStreetMap data but with Elasticsearch-based typo-tolerant indexing.
 
 \textbf{Constraint-aware interactive editing.} Timeline drag-and-drop
 interactions could easily produce invalid plans (overlaps, insufficient travel

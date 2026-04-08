@@ -9,68 +9,58 @@ discusses limitations, and proposes future work.
 
 \section{Conclusions}
 GiTrip demonstrates that Git-like version control semantics can be meaningfully
-applied to collaborative trip planning. The completed system meets the Must-have
-objectives from the Project Specification:
-\begin{itemize}
-  \item repository-based trip storage with commits and branches,
-  \item constraint-aware automatic scheduling integrating routing data,
-  \item interactive timeline and map editing with commit saving,
-  \item three-way merge with a dedicated conflict-resolution UI.
-\end{itemize}
+applied to collaborative trip planning. The completed system meets all Must-have
+and Should-have objectives from the Project Specification, delivering
+repository-based trip storage with commits and branches, constraint-aware
+automatic scheduling integrating routing data, interactive timeline and map
+editing with commit saving, and three-way merge with a dedicated
+conflict-resolution UI.
 
-Evaluation results indicate that users can successfully
-generate feasible itineraries and resolve merge conflicts within target times.
-Survey feedback confirms perceived novelty and practical value, particularly for
-group trips and scenarios requiring careful coordination.
+Evaluation results indicate that users can successfully generate feasible
+itineraries (9/10 in UAT Task~T1) and resolve merge conflicts within target
+times (9/10 in Task~T2). The System Usability Scale score of 81.9 (Grade~A,
+Excellent) validates the overall approach, and survey feedback confirms perceived
+novelty and practical value, particularly for group trips and scenarios requiring
+careful coordination.
 
 \section{Critical Reflection and Lessons Learned}
-Several lessons emerged during development and evaluation:
-\begin{itemize}
-  \item \textbf{Git concepts are powerful but cognitively expensive.} During
-        Evaluation Day, even participants who understood the UI hesitated when
-        encountering terms like branch and merge. The Easy mode toggle proved
-        essential, but discoverability and mental model support remain ongoing
-        work.
-  \item \textbf{Structured merge is domain-specific.} Early iterations used
-        \texttt{JSON.stringify}-based comparison, which caused subtle bugs when
-        key ordering differed between branches. Switching to deep structural
-        equality, stable IDs, and explicit deletion semantics resolved these
-        issues but required substantial reworking of the merge engine.
-  \item \textbf{Constraint scheduling requires explainability.} Feedback from
-        testing showed that users trusted the auto-scheduler more when
-        adjustments (e.g., opening-hours nudges) were visibly annotated with
-        reasons.
-  \item \textbf{External dependency management matters.} During development,
-        OpenRouteService rate limits and occasional Google Directions failures
-        highlighted the need for Haversine-based fallback strategies to keep the
-        planner usable under degraded conditions.
-\end{itemize}
+Several lessons emerged during development and evaluation.
+
+First, Git concepts proved powerful but cognitively expensive. During Evaluation
+Day, even participants who understood the UI hesitated when encountering terms
+like branch and merge. The Easy mode toggle proved essential, but
+discoverability and mental model support remain ongoing work.
+
+Second, structured merge turned out to be highly domain-specific. Early
+iterations used \texttt{JSON.stringify}-based comparison, which caused subtle
+bugs when key ordering differed between branches. Switching to deep structural
+equality, stable IDs, and explicit deletion semantics resolved these issues but
+required substantial reworking of the merge engine.
+
+Third, constraint scheduling requires explainability. Feedback from testing
+showed that users trusted the auto-scheduler more when adjustments (e.g.,
+opening-hours nudges) were visibly annotated with reasons rather than applied
+silently.
+
+Finally, external dependency management matters more than anticipated. During development, OpenRouteService rate limits and occasional Google Directions failures highlighted the need for Haversine-based fallback strategies to keep the planner usable under degraded conditions.
 
 \section{Limitations}
-Key limitations include:
-\begin{itemize}
-  \item \textbf{Accessibility of interactive components:} maps and drag-based
-        timelines remain challenging for keyboard-only and screen-reader users.
-  \item \textbf{Merge granularity trade-offs:} while field-level conflicts are
-        supported for selected fields, a fully general per-field resolver could
-        overwhelm users.
-  \item \textbf{No real-time collaboration:} GiTrip supports asynchronous
-        collaboration via branches and merges, but not simultaneous live editing
-        (CRDT/OT).
-  \item \textbf{Heuristic scheduling:} the planner prioritises feasibility and
-        responsiveness over global optimality.
-\end{itemize}
+Several limitations remain. The accessibility of interactive components is the
+most significant: maps and drag-based timelines remain challenging for
+keyboard-only and screen-reader users. Merge granularity presents a trade-off ---
+while field-level conflicts are supported for selected fields, a fully general
+per-field resolver could overwhelm users rather than help them. GiTrip supports
+asynchronous collaboration via branches and merges but does not offer
+simultaneous live editing (CRDT/OT), limiting its suitability for real-time
+co-planning sessions. Finally, the scheduler prioritises feasibility and
+responsiveness over global optimality, meaning that the generated itineraries are
+valid but not necessarily optimal with respect to total travel time or cost.
 
-Future work opportunities are substantial, spanning usability, collaboration
-infrastructure, and algorithmic extensions.
+\section{Future Work}
+Future work opportunities are substantial, spanning usability, collaboration infrastructure, and algorithmic extensions.
 
 \paragraph{Improved onboarding and guidance.}
-Evaluation Day feedback consistently identified Git terminology as a source of
-confusion, even among technically literate participants. Future iterations should
-introduce in-product tutorials for branching and merging, contextual tooltips
-that explain versioning actions in plain language, and clearer ``Save'' semantics
-that reduce the gap between the user's mental model and the underlying commit
-mechanism.
+Evaluation Day feedback consistently identified Git terminology as confusing. Future iterations should add in-product tutorials for branching and merging, contextual tooltips explaining versioning in plain language, and clearer ``Save'' semantics bridging the mental-model gap.
 
 \paragraph{Accessibility enhancements.}
 The current timeline and map editors rely on mouse-based drag interactions, which
@@ -81,9 +71,7 @@ landmark and live-region support throughout the application.
 
 \paragraph{Real-time collaboration.}
 GiTrip currently supports asynchronous collaboration via branches and merges.
-A natural extension is to explore CRDT-based shared plan editing, enabling multiple users to edit the same itinerary
-simultaneously while preserving a mergeable history model for offline and
-divergent edits.
+A natural extension is to explore CRDT-based shared plan editing, enabling multiple users to edit the same itinerary simultaneously while preserving a mergeable history model for offline and divergent edits.
 
 \paragraph{Richer merge resolution.}
 The merge engine currently detects conflicts on a fixed set of fields (times,
@@ -100,13 +88,7 @@ applicable, and improved offline routing approximations for areas with limited
 API coverage.
 
 \paragraph{Optional ML/AI extensions.}
-Machine learning (ML) and AI-powered features were deliberately excluded from the MVP to preserve
-determinism, explainability, and evaluation clarity (see
-Section~\ref{sec:ai_scope}). However, they represent a clearly interesting
-direction for future implementation. Potential applications include learning
-user preferences (pace, activity types) to suggest better scheduling defaults,
-predicting realistic dwell times and travel-time uncertainty from historical
-data, and recommending destinations based on context. Any such extensions should
+ML/AI features were excluded to preserve determinism and explainability (Section~\ref{sec:ai_scope}) but represent a promising future direction: learning user preferences for scheduling defaults, predicting dwell times from historical data, and context-based destination recommendations. Any such extensions should
 be implemented cautiously to maintain the explainability and deterministic
 feasibility guarantees that the current system provides.
 
@@ -137,4 +119,4 @@ guidance.
 
 \textbf{What are the limitations?} The main limitations are accessibility for
 interactive controls, dependence on external routing providers, and the absence
-of real-time collaboration and AI-based recommendation within the MVP scope.
+of real-time collaboration and AI-based recommendation within the current project scope.

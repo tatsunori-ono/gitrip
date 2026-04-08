@@ -67,7 +67,8 @@
         \vspace{5mm}
     \end{center}
     \begin{center}
-        {\large Project Management Report}\\
+        {\large CS310 Computer Science Project}\\
+        {\large Project Management Report}
         \vspace{20mm}
     \end{center}
     \begin{center}
@@ -76,7 +77,6 @@
     \end{center}
     \begin{center}
         {\large Supervisor: Professor Mike Joy}\\
-        {\large Second Assessor: Dr Charilaos Efthymiou}\\
         \vspace{5mm}
         \textbf{\large Department of Computer Science}\\
         {\large University of Warwick}\\
@@ -102,17 +102,26 @@
 
 \section{Introduction}
 
-This Project Management Report summarises how GiTrip was planned, organised and
-executed. It complements the Final Report by focusing on process rather than
-technical design. Evidence is drawn from the Project Specification, the
-maintained schedule, supervision records, and the project's version control
-history (over 200 commits on GitHub). The report addresses six key questions:
-development methodology, time management, stakeholder relationships, risk
-management, unforeseen issues, and legal/ethical/professional considerations.
+This report documents the project management of GiTrip, complementing the
+Final Report's technical content with evidence of planning, execution, and
+reflective practice.
 
 \section{Development Methodology}
 \label{sec:methodology}
-The Project Specification defined a milestone-driven plan to match fixed university deadlines. The project followed an \emph{iterative waterfall} approach: milestones remained stable, while work within each milestone was refined through short feedback cycles. Supervisor meetings were held regularly throughout both terms (Term~1 Weeks 1, 2, 4, 5, 7, 9 and Term~2 Weeks 1, 2, 4, 6, 8, 10), with additional sessions scheduled near submission deadlines to review drafts and incorporate feedback. This balanced predictable progress reporting for supervision with early discovery of integration risks (routing providers, geocoding, and interactive editing). Early prototypes validated feasibility of snapshot storage, server-rendered UI, and routing integration before committing to the full architecture. Must-haves were implemented first to reach an end-to-end MVP; Should-haves and hardening tasks followed. For example, in Term~1 Week~7, API quota exhaustion was identified during a supervisor meeting, prompting immediate caching and fallback implementation. The merge engine required three major rewrites as edge cases emerged during testing, which validated the decision to iterate early on high-risk components. This reduced technical risk by identifying integration issues early and ensuring the system remained demonstrable throughout Term~1.
+
+\section{Development Approach}
+GiTrip was developed using an iterative process combining:
+\begin{itemize}
+  \item \textbf{Risk-driven prototyping:} early prototypes validated feasibility
+        of snapshot storage, server-rendered User Interface (UI), and routing integration.
+  \item \textbf{Incremental feature delivery aligned to MoSCoW:} Must-haves were
+        implemented first to reach an end-to-end Minimum Viable Product (MVP); Should-haves and hardening
+        tasks followed.
+  \item \textbf{Continuous feedback:} weekly supervisor meetings provided
+        checkpoints for scope, presentation, and evaluation readiness.
+\end{itemize}
+
+The project adopted an \emph{iterative waterfall} approach. Milestones remained stable to match fixed university deadlines (Project Specification, Progress Report, Evaluation Day, final submission), while work within each milestone was refined through short feedback cycles. Supervisor meetings were held regularly throughout both terms (Term~1 Weeks 1, 2, 4, 5, 7, 9 and Term~2 Weeks 1, 2, 4, 6, 8, 10), with additional sessions scheduled near submission deadlines to review drafts and incorporate feedback. This balanced predictable progress reporting for supervision with early discovery of integration risks (routing providers, geocoding, and interactive editing). Early prototypes validated feasibility of snapshot storage, server-rendered UI, and routing integration before committing to the full architecture. Must-haves were implemented first to reach an end-to-end MVP; Should-haves and hardening tasks followed. For example, in Term~1 Week~7, Application Programming Interface (API) quota exhaustion was identified during a supervisor meeting, prompting immediate caching and fallback implementation. The merge engine required three major rewrites as edge cases emerged during testing, which validated the decision to iterate early on high-risk components. This reduced technical risk by identifying integration issues early and ensuring the system remained demonstrable throughout Term~1.
 
 Development did not begin immediately. Early work (before substantial
 implementation) consisted of competitor analysis, a focused literature review
@@ -122,10 +131,21 @@ activities produced the Project Specification, MoSCoW objectives, and an
 evaluation plan, reducing the risk of building features that did not address
 real user needs.
 
+This approach maps onto a conventional software life cycle as described by
+Sommerville~\cite{ref_sommerville}: requirements analysis (survey and competitor
+review), design (architecture and data model), implementation (iterative
+feature delivery), testing (unit and functional tests), and deployment (Fly.io
+hosting and Evaluation Day). Rather than executing these phases strictly in
+sequence, GiTrip's iterative waterfall approach revisited earlier phases when
+feedback demanded it (e.g., the merge engine design was revised three times in
+response to testing). This hybrid model retained the predictability of
+milestone-driven planning while incorporating the adaptability that
+Sommerville identifies as a key advantage of iterative life cycle
+models~\cite{ref_sommerville}.
+
 \section{Time Management and Work Tracking}
 Time management combined a Gantt-style plan with weekly goal-setting and review.
-The plan was organised around Term~1 delivery of the end-to-end minimum viable
-product (MVP) and Term~2 hardening (tests, robustness, deployment, and evaluation
+The plan was organised around Term~1 delivery of the end-to-end MVP and Term~2 hardening (tests, robustness, deployment, and evaluation
 readiness). Weekly work was prioritised using MoSCoW (Must/Should/Could/Won't),
 protecting Must-have items first.
 
@@ -156,15 +176,20 @@ Progress was monitored using three artefacts:
         Answers'', and ``To-dos and Summary''. Whenever questions arose between
         meetings, they were recorded in the ``Questions to Ask'' section of the
         next meeting file. Notes were additionally backed up via an automated
-        GitHub plugin sync (every 15 minutes) to reduce the risk of data loss.
+        GitHub plugin sync (every 15 minutes) to reduce the risk of data loss,
+        as shown in Appendix~\ref{appx:github-backup}. A sample meeting
+        note demonstrating this structure is included in
+        Appendix~\ref{appx:meeting-note}.
   \item \textbf{Source control history:} all work was committed to GitHub for
-        backup and traceability; by completion the repository contained well over
-        200 commits and feature branches for experimentation.
+        backup and traceability. By completion the repository contained over
+        200 commits across multiple feature branches
+        (Figure~\ref{fig:github-commits}).
   \item \textbf{Living schedule:} the original Gantt chart from the Project
         Specification was reviewed weekly. When a three-day delay emerged due to
         API quota exhaustion, the timetable was revised to absorb the delay
         through buffer time and tasks were re-prioritised.
 \end{itemize}
+
 
 \begin{figure}[H]
   \centering
@@ -174,6 +199,24 @@ Progress was monitored using three artefacts:
   commit activity across the project timeline.}}
   \caption{GitHub commit history showing regular development activity.}
   \label{fig:github-commits}
+\end{figure}
+
+Figure~\ref{fig:gantt-updated} shows the updated Gantt chart reflecting the
+actual project timeline. The original Gantt chart from the Progress Report is
+included in Appendix~\ref{appx:original-gantt} for comparison.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{Figures/gantt-final.png}
+  \caption{Updated Gantt chart showing the final project timeline with completed status for all phases in Terms~1 and 2.}
+  \label{fig:gantt-updated}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.25\textwidth]{Figures/gantt-key.png}
+  \caption{Gantt chart keys with status indicators.}
+  \label{fig:gantt-key}
 \end{figure}
 
 Table~\ref{tab:milestone-comparison} provides a detailed comparison of planned
@@ -188,14 +231,14 @@ delivery; the table below extends coverage to include Term~2 milestones.
 \textbf{\#} & \textbf{Milestone} & \textbf{Planned} & \textbf{Actual} & \textbf{Status}\\
 \midrule
 4 & Project Specification (Formative) & Oct 16 & Oct 15 & Complete\\
-5 & UX flows and wireframes & Mid Oct & Mid Oct & Complete\\
+5 & User Experience (UX) flows and wireframes & Mid Oct & Mid Oct & Complete\\
 6 & Seed data, data model, migrations & Late Oct & Late Oct & Complete\\
 7 & Commit, branch, merge operations & Late Oct & Late Oct & Complete\\
 8 & Place search via proxy & Late Oct & Late Oct & Complete\\
-9 & NN ordering \& constraints algorithm & Late Oct--Early Nov & Late Oct--Early Nov & Complete\\
+9 & Nearest Neighbour (NN) ordering \& constraints algorithm & Late Oct--Early Nov & Late Oct--Early Nov & Complete\\
 10 & Opening-hours ingestion \& parsing & Mid Nov & Late Jan & Complete\\
 11 & API Reliability hardening & Mid Nov & Mid Nov & Complete\\
-12 & ORS/Google routing integration & Mid Nov & Mid Nov & Complete\\
+12 & OpenRouteService (ORS)/Google routing integration & Mid Nov & Mid Nov & Complete\\
 13 & Multi-day spillover & Mid Nov & Mid Nov & Complete\\
 14 & Compact vs.\ sparse & Mid Nov & Mid Nov & Complete\\
 15 & Focus-time preference & Late Nov & Late Nov & Complete\\
@@ -304,7 +347,7 @@ priorities, but several unforeseen issues required adaptation and divergence fro
 
 \textbf{API quota exhaustion.} OpenRouteService rate limits were hit during
 intensive testing, causing the planner to return errors. This was addressed by
-implementing a TTL cache, bounded concurrency (maximum four simultaneous
+implementing a Time-To-Live (TTL) cache, bounded concurrency (maximum four simultaneous
 requests), and a Haversine-based fallback so the planner degrades gracefully
 rather than failing entirely. The fix required schedule adjustment but was
 absorbed by buffer time.
@@ -330,9 +373,9 @@ during edits, while server-side validation performs full feasibility checks on
 commit.
 
 \textbf{Increased operational work.} Deployment hardening (security headers,
-CSP, HTTPS enforcement, rate limiting) and public deployment on Fly.io were not
+Content Security Policy (CSP), HTTPS enforcement, rate limiting) and public deployment on Fly.io were not
 originally scoped but proved necessary to support reliable demonstrations and
-remote testing. The Project Specification boundary excluding generative AI
+remote testing. The Project Specification boundary excluding generative Artificial Intelligence (AI)
 remained unchanged to avoid scope creep.
 
 \section{Legal, Ethical, Social and Professional Issues}
@@ -369,7 +412,7 @@ data is displayed in the UI \cite{ref_osm_tiles}. API keys are stored as
 environment variables and never exposed to clients.
 
 \subsection{Accessibility}
-Accessibility considerations followed WCAG~2.2 guidance \cite{ref_wcag22}. The
+Accessibility considerations followed Web Content Accessibility Guidelines (WCAG)~2.2 guidance \cite{ref_wcag22}. The
 application provides font-size adjustment, a high-contrast mode, and a
 read-aloud mode for key content, as shown in Figure~\ref{fig:accessibility}.
 Labelled form controls and semantic HTML are used throughout. Remaining
@@ -403,7 +446,62 @@ compliance for third-party services, and accessibility expectations.
 % ========================================================================
 % REFERENCES (IEEE style)
 % ========================================================================
+\addcontentsline{toc}{section}{References}
 \bibliographystyle{ieeetr}
 \bibliography{bibliography}
+
+% ========================================================================
+% APPENDIX
+% ========================================================================
+\begin{appendices}
+
+\section{Original Gantt Chart (Progress Report)}
+\label{appx:original-gantt}
+
+The following Gantt chart was included in the Progress Report, showing the
+planned and actual progress at the end of Term~1. It is reproduced here for
+comparison with the updated timeline in the main body
+(Figure~\ref{fig:gantt-updated}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{Figures/gantt-progress-report.png}
+  \caption{Gantt chart from the Progress Report showing Term~1 progress and
+           remaining work.}
+  \label{fig:gantt-original}
+\end{figure}
+
+\section{GitHub Notes Backup}
+\label{appx:github-backup}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Figures/github-backup.png}
+  \caption{Supervisor meeting notes backed up on GitHub every 15 minutes
+           (if any changes are made).}
+  \label{fig:github-backup}
+\end{figure}
+
+\section{Sample Supervision Meeting Note}
+\label{appx:meeting-note}
+
+The following screenshot shows a representative supervision meeting note in
+Obsidian, using the Cornell-inspired three-section structure described in the
+main body. Questions are recorded before the meeting; answers and action items
+are filled in during and after.
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.85\linewidth]{Figures/meeting-note-sample.png}
+  \fbox{\parbox{0.85\linewidth}{\centering TODO: screenshot of one Obsidian
+  meeting note showing the three sections: ``Updates from Last Meeting and
+  General Notes'', ``Questions to Ask and Answers'', and ``To-dos and
+  Summary''.}}
+  \caption{Sample supervision meeting note in Obsidian (Cornell-inspired
+           structure).}
+  \label{fig:meeting-note}
+\end{figure}
+
+\end{appendices}
 
 \end{document}

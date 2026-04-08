@@ -6,8 +6,7 @@
 
 This chapter describes GiTrip's architecture, data model, and major subsystems:
 repository semantics, planner, routing, merging, UI interaction surfaces, and
-supporting features. Each section explains not only what was built but why that
-approach was chosen over alternatives.
+supporting features. Each section explains not only what was built but why that approach was chosen over alternatives.
 
 \section{High-level Architecture}
 GiTrip is a server-rendered web application with the following architecture:
@@ -18,7 +17,7 @@ GiTrip is a server-rendered web application with the following architecture:
   \item \textbf{Mapping:} Leaflet with OpenStreetMap tiles.
 \end{itemize}
 
-As illustrated in Figure~\ref{fig:architecture}, UI routes under \texttt{/ui/...} render pages such as the repo view, planner, merge UI, and explore mode. API routes under \texttt{/api/...} handle operations including commits, branches, merges, routing geometry, and quick route optimisation. API routes delegate to the Planner, Merge, Routing, and Geo Search modules. The Planner consults the Opening Hours Parser, a local utility that validates time intervals against OSM opening-hours strings supplied by Nominatim via Geo Search. When Nominatim returns no results, Geo Search falls back to Photon for fuzzy matching. Authentication middleware enforces session management, rate-limiting, and Content Security Policy headers across all routes. Server route handlers also fetch weather forecasts from Open-Meteo and travel alerts from GNews.
+As illustrated in Figure~\ref{fig:architecture}, UI routes (\texttt{/ui/...}) render the repo view, planner, merge UI, and explore mode. API routes (\texttt{/api/...}) handle commits, branches, merges, routing geometry, and quick route optimisation, delegating to the Planner, Merge, Routing, and Geo Search modules. The Planner consults the Opening Hours Parser, a local utility that validates time intervals against OSM opening-hours strings supplied by Nominatim via Geo Search. When Nominatim returns no results, Geo Search falls back to Photon for fuzzy matching. Authentication middleware enforces session management, rate-limiting, and Content Security Policy (CSP) headers across all routes. Server route handlers also fetch weather forecasts from Open-Meteo and travel alerts from GNews.
 
 \begin{figure}[H]
   \centering
@@ -58,8 +57,17 @@ as JSON within each commit row. Solid-bordered entities are persisted as SQLite 
   \label{fig:erd}
 \end{figure}
 
+Figure~\ref{fig:ui-history-sidebar} shows the UI sidebar: branch heads, a scrollable commit list with restore actions, and a workflow graph visualising the DAG.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\linewidth]{Chapter5/ui-history.png}
+  \caption{Repository sidebar: branch heads, commit history, and workflow graph.}
+  \label{fig:ui-history-sidebar}
+\end{figure}
+
 \subsection{Snapshot Storage}
-Commits store complete plan snapshots. Snapshot versioning was selected over delta storage (method to store only the differences between versions) because it (i) simplifies branch switching and rollback (no delta replay), (ii) simplifies three-way merge (each tip contains a complete state), and (iii) remains feasible for the expected scale~\cite{ref_progit_snapshots}. Delta compression is noted as future work for production-scale repositories. Each snapshot contains:
+Commits store complete plan snapshots. Snapshot versioning was selected over delta storage because it (i) simplifies branch switching and rollback (no delta replay), (ii) simplifies three-way merge (each tip contains a complete state), and (iii) remains feasible at the expected scale~\cite{ref_progit_snapshots}. Each snapshot contains:
 \begin{itemize}
   \item \texttt{snapshot.plan}: the itinerary (days and stops).
   \item \texttt{snapshot.planInput}: planner inputs for reproducibility and UI defaults.
@@ -74,6 +82,16 @@ A plan includes:
         \texttt{stops[]},
   \item each stop includes identity, location, scheduling, and routing metadata.
 \end{itemize}
+
+Figure~\ref{fig:snapshot-tree} shows the hierarchical structure of a commit
+snapshot as stored in the database.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{Chapter5/commit-snapshot.png}
+  \caption{Hierarchical structure of a commit snapshot.}
+  \label{fig:snapshot-tree}
+\end{figure}
 
 Stops also carry planner constraint fields such as strict ordering, time windows,
 fixed-time flags, and opening-hours strings. A \texttt{\_\_nudged} marker records
@@ -98,14 +116,12 @@ codebase; all other modules use the CommonJS \texttt{module.exports} pattern. In
 
 \section{Routing and Geocoding Design}
 \subsection{Place Search}
-GiTrip proxies Nominatim~\cite{ref_nominatim} search/lookup via server endpoints to enable caching and rate limiting. Results are re-ranked using approximate string matching to prioritise substring matches and reduce diacritic/punctuation sensitivity \cite{ref_navaro_string_matching}. Since Nominatim performs exact matching against its index, near-miss queries (e.g.\ ``stick n sushi'' for ``Sticks'n'Sushi'') can return zero results. To address this, GiTrip falls back to Photon~\cite{ref_photon} when Nominatim returns no matches. Photon is an open-source geocoder built on Elasticsearch that indexes the same OpenStreetMap data with n-gram tokenisation and typo tolerance, providing fuzzy search without requiring a separate dataset. The fallback is transparent: Photon results are returned in the same shape, with \texttt{opening\_hours} set to null since Photon does not expose that field.
+GiTrip proxies Nominatim search/lookup via server endpoints to enable caching and rate limiting. Results are re-ranked using approximate string matching to prioritise substring matches and reduce diacritic/punctuation sensitivity. Since Nominatim performs exact matching against its index, near-miss queries (e.g.\ ``stick n sushi'' for ``Sticks'n'Sushi'') can return zero results. To address this, GiTrip falls back to Photon when Nominatim returns no matches. Photon is an open-source geocoder built on Elasticsearch that indexes the same OpenStreetMap data with n-gram tokenisation and typo tolerance, providing fuzzy search without requiring a separate dataset. The fallback is transparent: Photon results are returned in the same shape, with \texttt{opening\_hours} set to null since Photon does not expose that field.
 
 \subsection{Routing Providers and Fallback}
 Routing serves two purposes. First, ORS matrix endpoints compute pairwise travel durations for route ordering (driving/cycling/walking). The matrix endpoint reduces API calls from $O(n^2)$ pairwise requests to a single request per optimisation run. Second, per-leg routing provides geometries for map visualisation; Google Directions is used for transit legs, including decoding polylines and extracting step-level sub-modes to distinguish walking approach segments.
 
-For non-transit modes, GiTrip requests a travel-time matrix from OpenRouteService~\cite{ref_ors_matrix}. For transit, GiTrip uses Google Directions API~\cite{ref_google_directions_api} for
-sequential legs. When providers fail or are
-unavailable, GiTrip falls back to Haversine-based time estimates (computing approximate travel duration from straight-line distance with mode-dependent speed assumptions) for ordering, and constant default travel gaps per mode (e.g., 15 minutes for driving, 30 minutes for transit) as a safety margin when no routing data is available at all. This design ensures the planner remains usable even in degraded conditions, which is important for evaluation environments and offline/limited-connectivity contexts.
+For non-transit modes, GiTrip requests a travel-time matrix from ORS. For transit, GiTrip uses Google Directions API for sequential legs. When providers fail or are unavailable, GiTrip falls back to Haversine-based time estimates (computing approximate travel duration from straight-line distance with mode-dependent speed assumptions) for ordering, and constant default travel gaps per mode (e.g., 15 minutes for driving, 30 minutes for transit) as a safety margin when no routing data is available at all. This design ensures the planner remains usable even in degraded conditions, which is important for evaluation environments and offline/limited-connectivity contexts.
 
 \section{Auto-scheduler Design}
 The scheduler must construct a feasible plan that respects constraints. GiTrip's
@@ -115,15 +131,24 @@ scheduler is designed around four stages:
         available).
   \item \textbf{Ordering:} determine visit order using strict order constraints
         when provided; otherwise use Held-Karp exact solver for small instances
-        ($N \leq 12$) \cite{ref_tsp_study} or Nearest Neighbour with 2-Opt
-        refinement for larger instances
-        \cite{ref_nn_tsp,ref_nn_2opt_hybrid}.
+        ($N \leq 12$) \cite{ref_tsp_study} or Nearest Neighbour~\cite{ref_nn_tsp}
+        with 2-Opt refinement~\cite{ref_nn_2opt_hybrid} for larger instances.
   \item \textbf{Packing into days:} greedily place stops into day windows while
         maintaining non-overlap and travel gaps.
   \item \textbf{Constraint enforcement:} apply opening hours, desired windows,
         and fixed-time constraints; if a stop cannot fit, spill it to a
         subsequent day or overflow.
 \end{enumerate}
+
+Figure~\ref{fig:ui-scheduler-form} shows the auto-scheduler input form,
+annotated with each configurable parameter.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{Chapter5/annotated-scheduler-new.png}
+  \caption{Auto-scheduler input form with annotated parameters.}
+  \label{fig:ui-scheduler-form}
+\end{figure}
 
 Given ordered stops $S_1,\dots,S_n$, per-leg travel $T_i$ (minutes from $S_{i-1}$ to $S_i$), stay durations $D_i$, active window $[A,B]$, break $b$, and focus offset $f$:
 \[
@@ -157,17 +182,10 @@ uses:
   \item a merge engine producing a merged snapshot plus a list of conflicts.
 \end{itemize}
 
-The fundamental principle, inherited from Git's merge model, is that a conflict
-only arises when \textbf{both} branches express a different opinion about the
-same data relative to the base. If only one branch changes a stop (or deletes
-it) and the other leaves it untouched, the merge engine cleanly accepts the
-change---just as \texttt{git merge} auto-resolves one-sided edits. For example,
-if one branch deletes a stop and the other never touched it, the deletion is
-accepted; a conflict is raised only if the other branch also \textit{edited}
-that stop, creating a genuine disagreement.
+Following Git's merge model, a conflict arises only when \textbf{both} branches change the same data differently relative to the base. One-sided changes (including deletions) are auto-resolved; a conflict is raised only when the other branch also \textit{edited} the same stop.
 
 Figure~\ref{fig:merge_flow} illustrates the full decision logic of the merge
-engine. The engine first iterates all file keys, recording conflicts or taking the changed side, then checks plan divergence. If both sides changed the plan identically, either is taken. If both changed the plan structure and their stop-key Jaccard similarity is below~0.4, a whole-plan conflict is raised. Otherwise, per-stop merging chains through deletion, time, and field checks. The result is stabilised by deterministic ordering before output.
+engine. The engine iterates file keys (recording conflicts or accepting one-sided changes), then checks plan divergence. Identical plan changes are accepted; Jaccard similarity below~0.4 triggers a whole-plan conflict; otherwise per-stop merging chains through deletion, time, and field checks. Output is stabilised by deterministic ordering.
 
 \begin{figure}[H]
   \centering
@@ -182,9 +200,7 @@ because key insertion order may differ and \texttt{undefined} values are dropped
 The final implementation uses deep structural equality, making comparisons
 key-order independent.
 
-Additionally, merged ordering is stabilised by sorting days by ISO date and
-sorting stops by arrival time (then name). This reduces surprising reordering
-after merges.
+Additionally, merged ordering is stabilised by sorting days by ISO date and sorting stops by arrival time (then name). This reduces surprising reordering after merges.
 
 \subsection{Conflict Types}
 Conflicts surfaced include:
@@ -200,8 +216,18 @@ Conflicts surfaced include:
         stop-key sets below 0.4), requiring whole-plan selection.
 \end{itemize}
 
-This set is intentionally constrained to keep the UI manageable for non-experts
-while still preventing silent data loss.
+This set is intentionally constrained to keep the UI manageable for non-experts while preventing silent data loss. Figure~\ref{fig:ui-merge} shows the merge conflict resolution page: per-stop version picker
+(Base/Source/Target), side-by-side plan comparison, a diff map with
+colour-coded markers, three-way timeline compare, and a live-updating merged timeline preview.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.7\linewidth]{Chapter5/merge-ui.png}
+  \caption{Merge conflict resolution UI: conflict status, per-stop version
+           picker, side-by-side plan comparison, diff map, timeline compare,
+           and merged timeline preview.}
+  \label{fig:ui-merge}
+\end{figure}
 
 \section{User Interface Design}
 GiTrip uses server-rendered pages enhanced by client-side JavaScript. Two
@@ -213,21 +239,33 @@ interactive surfaces support editing:
         and update route geometry.
 \end{itemize}
 
-\subsection{Easy Mode vs Git Mode}
-In Q8 of the survey, asking if there are any concerns with this project, 6/11 respondents mentioned that \textit{Git} concept may be complicated for users without a technical background. To reduce this cognitive overhead while preserving versioning power for advanced users, the ``Git mode'' toggle button was invented. When turned off, the UI replaces \textit{Git}-related terminologies with task-oriented wording (e.g., ``Save trip'' rather than ``Commit''), while keeping the functionality same. In addition, when turned off, the advanced auto-scheduler workflow is complemented by an easy-mode scheduling path (Appendix~\ref{appx:diagrams}), where users can create a trip by entering a bullet-point stop list and letting the system generate and commit a feasible itinerary. This design keeps the novice workflow ``single-track'' (plan $\rightarrow$ save $\rightarrow$ refine) while allowing expert users to opt into full version-control semantics without losing compatibility with the stored data.
+Figure~\ref{fig:ui-edit-tab} shows the main editing workspace, combining the
+timeline editor (left) with the interactive map (right). Additional UI
+screenshots are provided in Appendix~\ref{appx:diagrams}.
 
-GiTrip therefore includes a mode toggle:
-\begin{itemize}
-  \item \textbf{Easy mode:} hides branches/commits/merge; offers ``Save trip''
-        with non-fast-forward friendly behaviour.
-  \item \textbf{Git mode:} exposes full repository semantics and merge UI.
-\end{itemize}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{Appendices/UI/edit-tab.png}
+  \caption{Edit tab: timeline editor (left) and interactive map (right).}
+  \label{fig:ui-edit-tab}
+\end{figure}
+
+\subsection{Easy Mode vs Git Mode}
+In Q8 of the preliminary survey, 6/11 respondents raised concerns that Git concepts may be complicated for non-technical users. The ``Git mode'' toggle addresses this: when turned off, Git terminology is replaced with task-oriented wording (e.g., ``Save trip'' instead of ``Commit'') and an easy-mode scheduling path lets users create a trip from a bullet-point stop list (Appendix~\ref{appx:diagrams}).
 
 This design supports two user personas without splitting the product into
-separate applications.
+separate applications. A visual comparison of the two modes is provided in
+Appendix~\ref{appx:diagrams}.
 
 \subsection{Quick Explore Mode}
-The ``Quick route'' page adopts a \textit{Google Maps}-like interaction style to minimise onboarding friction: the primary surface is a map plus a simple stop list, and the user can immediately compute an optimised order and per-leg travel times without first understanding repositories, branches, or commits. This design matches a common mental model for trip planning (enter places $\rightarrow$ see route $\rightarrow$ iterate), and it also includes a bookmark feature that lets users save places and immediately compute the entire route when pressed. Crucially, \textit{GiTrip} connects this streamlined workflow back to the full versioned system via ``Save as Repository'': once the user is satisfied with a route, the system creates a repository and an initial snapshot commit containing the generated plan. This provides a low-friction entry point for new users, while still enabling the richer repository workflow (timeline editing, map refinement, branching, and merging) when needed.
+The ``Quick route'' page adopts a \textit{Google Maps}-like style: a map plus a simple stop list where users compute an optimised order and per-leg travel times without understanding repositories or branches. A bookmark feature lets users save places and compute the route instantly. ``Save as Repository'' connects this workflow to the full versioned system, creating a repository with an initial snapshot commit---providing a low-friction entry point that still enables the richer repository workflow when needed. Figure~\ref{fig:ui-quick-route} shows the Quick route interface.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{Chapter5/ui-quick-route.png}
+  \caption{Quick route mode: stop list (left), optimised route on map (right), and bookmark panel.}
+  \label{fig:ui-quick-route}
+\end{figure}
 
 \section{Security, Privacy, and Accessibility Design}
 GiTrip includes several practical web security measures:
@@ -243,7 +281,7 @@ GiTrip includes several practical web security measures:
         or stack traces.
 \end{itemize}
 
-Accessibility is guided by WCAG 2.2~\cite{ref_wcag22}. The UI uses labelled
+Accessibility is guided by WCAG 2.2. The UI uses labelled
 controls and avoids information conveyed only by colour; however, interactive
 map/timeline controls remain a known accessibility challenge and are discussed as
 a limitation.

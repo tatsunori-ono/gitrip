@@ -171,7 +171,11 @@ export async function gmapsTransitLegs(points, opts = {}) {
 
   const base = 'https://maps.googleapis.com/maps/api/directions/json';
   const key = `&key=${GMAPS}`;
-  const departEpochSeconds = opts.departEpochSeconds ?? null;
+  // Google Directions requires departure_time to be in the future for transit.
+  // If the requested time is in the past, omit it so Google uses "now".
+  const rawDepart = opts.departEpochSeconds ?? null;
+  const departEpochSeconds =
+    rawDepart && rawDepart > Math.floor(Date.now() / 1000) ? rawDepart : null;
   const collectStops = !!opts.collectStops;
 
   const legs = [];

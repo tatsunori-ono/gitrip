@@ -74,6 +74,120 @@ As displaying each of the responses individually would take up space, the aggreg
 \caption{Q8: Free-text concerns and perceived flaws.}
 \end{figure}
 
+\chapter{Additional Diagrams and Screenshots}
+\label{appx:diagrams}
+
+% Detailed flowchart from the Progress Report, included for completeness.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{Appendices/UI/autoscheduler-flowchart-full.png}
+  \caption{Detailed end-to-end auto-scheduler workflow from the Progress Report,
+           showing the full UI-to-database flow including browser UI, Express
+           server, external services, and SQLite interactions. A simplified
+           version is presented in Chapter~\ref{ch:implementation}
+           (Figure~\ref{fig:planner_flow}).}
+  \label{fig:planner-flow-full}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/schedule-demo.png}
+  \caption{Constraint-aware scheduling visualisation demo page.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/merge-demo.png}
+  \caption{Three-way merge visualisation demo page.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/view-tab.png}
+    \subcaption{Easy mode (Git mode off)}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/view-tab-git-mode.png}
+    \subcaption{Git mode on}
+  \end{minipage}
+  \caption{Easy mode vs Git mode comparison --- addressing survey feedback on
+           Git complexity. Easy mode hides branches, commits, and merge controls.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/edit-tab.png}
+    \subcaption{Edit tab (Git mode off)}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/edit-tab-git-mode.png}
+    \subcaption{Edit tab (Git mode on)}
+  \end{minipage}
+  \caption{Repository edit page --- evidence of M1 completion. The edit tab
+           shows place search, stop list, and commit controls.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/public-repo.png}
+  \caption{Public gallery with starring --- Could-have objective completed.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/about.png}
+  \caption{About page.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/repo.png}
+  \caption{Repositories page showing the user's trip repositories.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.64\linewidth]{Appendices/UI/long-trip-repo.png}
+  \caption{Long trip example (16 stops across 3 days).}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/ical-export.png}
+  \caption{iCalendar export to Google Calendar.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Appendices/UI/pwa-offline-app.png}
+  \caption{PWA installation for offline support.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/settings-tab.png}
+    \subcaption{Settings tab (Git mode off)}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{Appendices/UI/settings-tab-git-mode.png}
+    \subcaption{Settings tab (Git mode on)}
+  \end{minipage}
+  \caption{Settings tab comparison with Git mode off and on.}
+\end{figure}
+
+\noindent\textit{Note: Screenshots show the deployed system at the time of
+final submission. Where screenshots have been updated since the Progress Report,
+the latest version is shown.}
+
 \chapter{Post-demo Survey (Evaluation Day) Results}
 \label{appx:eval_survey}
 
@@ -103,6 +217,11 @@ As displaying each of the responses individually would take up space, the aggreg
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q2.png}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Appendices/DemoSurvey/survey-q2-detail.png}
 \caption{Q2) Which parts of GiTrip did you personally try?}
 \end{figure}
 
@@ -156,6 +275,22 @@ As displaying each of the responses individually would take up space, the aggreg
 
 \chapter{User Acceptance Test (Evaluation Day) Results}
 \label{appx:uat}
+
+Figure~\ref{fig:eval-day-setup} shows the demonstration setup on Evaluation Day.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{Appendices/eval-day-setup-1.png}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{Appendices/eval-day-setup-2.png}
+  \end{subfigure}
+  \caption{Evaluation Day demonstration setup (25th February 2026, CS0.03,
+           Table B01): four Linux machines and the author's laptop running
+           GiTrip for parallel testing.}
+  \label{fig:eval-day-setup}
+\end{figure}
 
 This appendix reproduces the full UAT results from Evaluation Day for archival
 completeness. Summary statistics are presented in Chapter~\ref{ch:evaluation}; the raw data is
@@ -234,271 +369,31 @@ P10 & Y & -- \\
 \end{tabular}
 \end{table}
 
-\chapter{Additional Diagrams and Screenshots}
-\label{appx:diagrams}
-
-% Screenshots from the deployed system. Where images are available they use
-% \includegraphics; remaining placeholders are marked TODO.
-
-\begin{figure}[H]
-  \centering
-  % \includegraphics[width=0.92\linewidth]{Appendices/merge-ui.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the merge
-  conflict resolution UI from the deployed system, showing ours/theirs choices
-  per stop/field and the resolve button. Evidence that M5 (merge and conflicts)
-  is complete.}}
-  \caption{Merge conflict resolution UI --- evidence of M5 completion.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  % \includegraphics[width=0.92\linewidth]{Appendices/timeline-editor.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the timeline
-  editor from the deployed system, with draggable stop blocks showing
-  arrival/departure times and travel segments. Evidence that M4 (interactive
-  visualisation) is complete.}}
-  \caption{Timeline editor with draggable stop blocks --- evidence of M4
-           completion.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  % \includegraphics[width=0.92\linewidth]{Appendices/map-editor.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the map editor
-  from the deployed system, showing numbered markers, route polylines, and
-  transit leg styling. Evidence that M3 (routing integration) and M4 are
-  complete.}}
-  \caption{Map editor with numbered markers and route geometry --- evidence of
-           M3 and M4 completion.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \begin{minipage}[t]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{Appendices/UI/view-tab.png}
-    \subcaption{Easy mode (Git mode off)}
-  \end{minipage}\hfill
-  \begin{minipage}[t]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{Appendices/UI/view-tab-git-mode.png}
-    \subcaption{Git mode on}
-  \end{minipage}
-  \caption{Easy mode vs Git mode comparison --- addressing survey feedback on
-           Git complexity. Easy mode hides branches, commits, and merge controls.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  % \includegraphics[width=0.92\linewidth]{Appendices/algo-visualisation.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the algorithm
-  visualisation page from the deployed system, showing the map, pseudocode
-  highlighting, and playback controls.}}
-  \caption{Algorithm visualisation page.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  % \includegraphics[width=0.92\linewidth]{Appendices/quick-explore.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the quick
-  explore mode from the deployed system, showing the optimised route with
-  summary stats.}}
-  \caption{Quick explore mode with optimised route.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  % \includegraphics[width=0.92\linewidth]{Appendices/auto-scheduler-form.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the
-  auto-scheduler form from the deployed system, showing constraint inputs
-  (active hours, stay durations, ordering, preferences). Evidence that M2
-  (optimised automatic scheduler) is complete.}}
-  \caption{Auto-scheduler form with constraint inputs --- evidence of M2
-           completion.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \begin{minipage}[t]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{Appendices/UI/edit-tab.png}
-    \subcaption{Edit tab (Git mode off)}
-  \end{minipage}\hfill
-  \begin{minipage}[t]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{Appendices/UI/edit-tab-git-mode.png}
-    \subcaption{Edit tab (Git mode on)}
-  \end{minipage}
-  \caption{Repository edit page --- evidence of M1 completion. The edit tab
-           shows place search, stop list, and commit controls.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.92\linewidth]{Appendices/UI/public-repo.png}
-  \caption{Public gallery with starring --- Could-have objective completed.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.92\linewidth]{Appendices/UI/about.png}
-  \caption{About page.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.92\linewidth]{Appendices/UI/repo.png}
-  \caption{Repositories page showing the user's trip repositories.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.92\linewidth]{Appendices/UI/long-trip-repo.png}
-  \caption{Long trip example (16 stops across 3 days).}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.92\linewidth]{Appendices/UI/ical-export.png}
-  \caption{iCalendar export to Google Calendar.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.92\linewidth]{Appendices/UI/pwa-offline-app.png}
-  \caption{PWA installation for offline support.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \begin{minipage}[t]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{Appendices/UI/settings-tab.png}
-    \subcaption{Settings tab (Git mode off)}
-  \end{minipage}\hfill
-  \begin{minipage}[t]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{Appendices/UI/settings-tab-git-mode.png}
-    \subcaption{Settings tab (Git mode on)}
-  \end{minipage}
-  \caption{Settings tab comparison with Git mode off and on.}
-\end{figure}
-
-\noindent\textit{Note: These screenshots are reproduced from the Progress Report,
-showing the system state at the end of Term~1.}
-
-\chapter{Project Schedule}
-\label{appx:schedule}
-
-Figure~\ref{fig:gantt} shows the project timeline across the two terms of the
-2025/26 academic year. Table~\ref{tab:schedule_detail} provides a breakdown of
-deliverables per phase.
-
-\begin{figure}[H]
-  \centering
-  \resizebox{\textwidth}{!}{%
-  \begin{tikzpicture}[
-    every node/.style={font=\small},
-    bar/.style={fill=#1, draw=black!40, rounded corners=1pt, minimum height=0.5cm},
-    bar/.default={blue!30},
-    phaselabel/.style={font=\small, anchor=east},
-    monthlabel/.style={font=\scriptsize, anchor=north},
-  ]
-    % Time axis: Oct 2025 to Mar 2026 = 6 months, 1cm per week (26 weeks)
-    % Oct=4w, Nov=4w, Dec=4w, Jan=5w, Feb=4w, Mar=5w (approx)
-    \def\wk{0.6}  % cm per week
-
-    % Month boundaries (cumulative weeks)
-    \def\octStart{0}
-    \def\novStart{4}
-    \def\decStart{8}
-    \def\janStart{13}
-    \def\febStart{17}
-    \def\marStart{21}
-    \def\totalWk{26}
-
-    % Grid lines
-    \foreach \m/\lbl in {\octStart/Oct,\novStart/Nov,\decStart/Dec,\janStart/Jan,\febStart/Feb,\marStart/Mar} {
-      \draw[black!20] (\m*\wk, 0.6) -- (\m*\wk, -7.8);
-      \node[monthlabel] at (\m*\wk + 2*\wk, 0.8) {\lbl};
-    }
-    \draw[black!20] (\totalWk*\wk, 0.6) -- (\totalWk*\wk, -7.8);
-
-    % Phase bars (y positions)
-    \def\yA{0}
-    \def\yB{-1.1}
-    \def\yC{-2.2}
-    \def\yD{-3.3}
-    \def\yE{-4.4}
-    \def\yF{-5.5}
-    \def\yG{-6.6}
-
-    % Labels
-    \node[phaselabel] at (-0.3, \yA) {Research \& specification};
-    \node[phaselabel] at (-0.3, \yB) {Core repository model};
-    \node[phaselabel] at (-0.3, \yC) {Planner integration};
-    \node[phaselabel] at (-0.3, \yD) {Merge engine \& UI};
-    \node[phaselabel] at (-0.3, \yE) {UX hardening};
-    \node[phaselabel] at (-0.3, \yF) {Testing \& evaluation};
-    \node[phaselabel] at (-0.3, \yG) {Deployment};
-
-    % Bars: (start week * wk, y) rectangle (end week * wk, y + 0.5)
-    % Research: Oct wk1 - Nov wk2 (weeks 0-6)
-    \fill[bar=teal!35] (0*\wk, \yA) rectangle (6*\wk, \yA+0.5);
-    % Core repo: Nov wk1 - Dec wk2 (weeks 4-10)
-    \fill[bar=blue!35] (4*\wk, \yB) rectangle (10*\wk, \yB+0.5);
-    % Planner: Nov wk3 - Jan wk2 (weeks 6-15)
-    \fill[bar=purple!30] (6*\wk, \yC) rectangle (15*\wk, \yC+0.5);
-    % Merge: Dec wk2 - Jan wk4 (weeks 10-17)
-    \fill[bar=orange!35] (10*\wk, \yD) rectangle (17*\wk, \yD+0.5);
-    % UX: Jan wk2 - Feb wk3 (weeks 14-20)
-    \fill[bar=yellow!40] (14*\wk, \yE) rectangle (20*\wk, \yE+0.5);
-    % Testing: Jan wk4 - Feb wk4 (weeks 17-21)
-    \fill[bar=green!30] (17*\wk, \yF) rectangle (21*\wk, \yF+0.5);
-    % Deployment: Feb wk2 - Mar wk2 (weeks 19-23)
-    \fill[bar=red!25] (19*\wk, \yG) rectangle (23*\wk, \yG+0.5);
-
-    % Milestone markers
-    \node[font=\scriptsize, fill=white, draw=black, rounded corners=2pt,
-          inner sep=2pt] at (6*\wk, \yA+0.5+0.3) {Survey};
-    \node[font=\scriptsize, fill=white, draw=black, rounded corners=2pt,
-          inner sep=2pt] at (17*\wk, \yD+0.5+0.3) {Progress Report};
-    \node[font=\scriptsize, fill=white, draw=black, rounded corners=2pt,
-          inner sep=2pt] at (21*\wk, \yF+0.5+0.3) {Eval Day};
-
-    % Bottom axis
-    \draw[thick] (0, -7.8) -- (\totalWk*\wk, -7.8);
-
-  \end{tikzpicture}%
-  }%
-  \caption{Project Gantt chart showing the timeline for each development phase.
-           Phases overlap where integration dependencies allowed parallel work.
-           Key milestones are marked above the relevant bars.}
-  \label{fig:gantt}
-\end{figure}
-
 \begin{table}[H]
 \centering
-\caption{Schedule detail: deliverables and status per phase.}
-\label{tab:schedule_detail}
-\begin{tabular}{@{}p{0.22\linewidth}p{0.55\linewidth}p{0.18\linewidth}@{}}
+\caption{Individual SUS scores ($n = 13$).}
+\label{tab:sus_scores}
+\begin{tabular}{@{}lc@{}}
 \toprule
-\textbf{Phase} & \textbf{Deliverables} & \textbf{Status} \\
+\textbf{Respondent} & \textbf{SUS Score} \\
 \midrule
-Research \& specification & Competitor analysis; MoSCoW objectives; survey
-  & Complete \\
-Core repository model & Repos/branches/commits; snapshot storage
-  & Complete \\
-Planner integration & Routing matrix; ordering; constraints; spillover
-  & Complete \\
-Merge engine \& UI & Three-way merge; conflicts; resolver UI
-  & Complete \\
-UX hardening & Easy mode; discoverability; visual polish
-  & Complete \\
-Testing \& evaluation & Unit tests; UAT; survey analysis
-  & Complete \\
-Deployment & Containerisation; hosted instance; security checks
-  & Complete \\
+R1  & 62.5 \\
+R2  & 60.0 \\
+R3  & 72.5 \\
+R4  & 90.0 \\
+R5  & 87.5 \\
+R6  & 90.0 \\
+R7  & 82.5 \\
+R8  & 82.5 \\
+R9  & 90.0 \\
+R10 & 77.5 \\
+R11 & 85.0 \\
+R12 & 95.0 \\
+R13 & 90.0 \\
+\midrule
+\textbf{Mean} & \textbf{81.9} \\
+\textbf{Median} & \textbf{85.0} \\
+\textbf{SD} & \textbf{10.5} \\
 \bottomrule
 \end{tabular}
 \end{table}

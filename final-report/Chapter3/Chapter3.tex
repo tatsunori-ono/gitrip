@@ -6,8 +6,8 @@
 
 This chapter describes the requirements that guided GiTrip's development, how
 they were derived, and how they map to success criteria and evaluation. It also
-documents scope boundaries, including the explicit decision to exclude AI-powered
-itinerary generation from the MVP.
+documents scope boundaries, including the explicit decision to exclude Artificial Intelligence (AI)-powered
+itinerary generation from the Minimum Viable Product (MVP).
 
 \section{Requirements Elicitation}
 Requirements were formed using two complementary inputs:
@@ -52,7 +52,7 @@ Could-haves would enhance the user experience but were deprioritised to protect 
 \subsection*{Won't-haves (W)}
 These were excluded to keep the project focused on deterministic, inspectable scheduling and version control semantics. Each would introduce substantial scope expansion without strengthening the core contribution:
 \begin{enumerate}[label=\textbf{W\arabic*}]
-  \item \textbf{Real-time collaborative editing:} simultaneous live editing via CRDT or OT.
+  \item \textbf{Real-time collaborative editing:} simultaneous live editing via Conflict-free Replicated Data Type (CRDT) or Operational Transformation (OT).
   \item \textbf{Booking/reservation integration:} interfacing with hotel, restaurant, or ticket systems.
   \item \textbf{Budget tracking and expense splitting:} cost estimates, shared expenses, and currency conversion.
   \item \textbf{Social features:} chat, reviews, and ratings within the app.
@@ -85,11 +85,11 @@ The Project Specification defined three success criteria, each tied to a Must-ha
 \begin{enumerate}[label=\textbf{SC\arabic*}]
   \item \textbf{Merge usability (M5):} create two alternative plans, merge, and resolve at least one timing conflict in $<5$ minutes on average by 80\% of 10--30 test participants.
   \item \textbf{Scheduling feasibility (M2):} automatic scheduler produces a non-overlapping sequence of activities for $\ge 6$ stops across 1--2 days with non-zero, realistic travel gaps.
-  \item \textbf{Usability and accessibility (M4):} no critical issues with accessibility and follows WCAG 2.2~\cite{ref_wcag22}.
+  \item \textbf{Usability and accessibility (M4):} no critical issues with accessibility and follows WCAG 2.2.
 \end{enumerate}
 
 \section{Non-functional Requirements}
-In addition to the functional objectives above, the following non-functional requirements were maintained throughout development given external API dependencies and deployment needs:
+In addition to the functional objectives above, the following non-functional requirements were maintained throughout development given external Application Programming Interface (API) dependencies and deployment needs:
 
 \begin{enumerate}[label=\textbf{NF\arabic*}]
   \item \textbf{Reliability:} graceful fallback when routing APIs fail; avoid
@@ -97,7 +97,7 @@ In addition to the functional objectives above, the following non-functional req
   \item \textbf{Performance:} responsive UI; reasonable planning time for
         typical stop counts (single-digit to low-teens).
   \item \textbf{Security and privacy:} session cookies; rate limiting; input
-        validation; avoid collecting unnecessary personal data; GDPR~\cite{ref_gdpr} awareness.
+        validation; avoid collecting unnecessary personal data; General Data Protection Regulation (GDPR)~\cite{ref_gdpr} awareness.
   \item \textbf{Deployability:} simple deployment model with persistent storage
         (SQLite) and environment variables for API keys.
 \end{enumerate}

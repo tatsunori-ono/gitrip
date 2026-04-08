@@ -10,31 +10,10 @@ acceptance test results and subjective survey findings, and interprets them
 against the project's success criteria.
 
 \section{Evaluation Day Setup}
-Evaluation Day took place in the Department of Computer Science, Room CS0.03,
-Table B01, slot 13:05--13:45, with the project titled ``GiTrip --- Git for
-Collaborative Trip Planning''. The demonstration environment used four Linux
-machines plus the author's laptop so that multiple participants could test
-branching and merging behaviours in parallel. Additionally, the application was
-deployed publicly so attendees could also use their own laptops and devices.
+Evaluation Day took place in CS0.03 (Table B01, 13:05--13:45). Four Linux machines plus the author's laptop were used so multiple participants could test in parallel; the application was also deployed publicly for attendees' own devices.
 
 \section{Participants}
-Two data sources were collected:
-\begin{itemize}
-  \item \textbf{User Acceptance Test (UAT):} 10 in-person participants (P1--P10)
-        with observer-recorded results.
-  \item \textbf{Survey responses:} 13 responses collected via Microsoft Forms
-        (including remote responses). The survey reported an average completion
-        time of 08:46 minutes.
-\end{itemize}
-
-The preliminary requirements survey (Chapter~\ref{ch:requirements}) collected 30 responses because it
-only required participants to answer questions about their existing habits.
-The Evaluation Day survey collected fewer responses (13) because participants
-needed to actively try out the deployed system before responding, which required
-more time and effort within the constrained 40-minute demonstration slot.
-
-Survey respondents had mixed Git familiarity: 2 not familiar, 5 somewhat
-familiar, 3 comfortable, and 3 very comfortable.
+Two data sources were collected: a UAT with 10 in-person participants (P1--P10) recorded by an observer, and 13 survey responses via Microsoft Forms (average completion 08:46 minutes, including remote responses). Fewer responses than the preliminary survey (30) were expected because participants needed to try the deployed system within the 40-minute slot.
 
 \section{User Acceptance Testing Tasks}
 Three tasks were measured using an observer checklist to provide objective
@@ -43,113 +22,39 @@ evidence.
 \subsection{Task T1: Auto-schedule Feasibility}
 Scenario: at least six stops across one to two days. Evidence recorded:
 completion, time-to-finish, non-overlap, and non-zero travel gaps.
-
-\begin{table}[H]
-\centering
-\caption{UAT Task T1 --- Auto-schedule feasibility.}
-\label{tab:uat_t1}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-\textbf{Participant} & \textbf{Completed?} & \textbf{Time} &
-\textbf{Non-overlapping?} & \textbf{Non-zero travel gaps?} \\
-\midrule
-P1  & Y & 3:12  & Y & Y \\
-P2  & Y & 4:45  & Y & Y \\
-P3  & Y & 2:58  & Y & Y \\
-P4  & Y & 5:30  & Y & Y \\
-P5  & Y & 3:44  & Y & Y \\
-P6  & Y & 6:02  & Y & Y \\
-P7  & N & 8:00* & -- & -- \\
-P8  & Y & 4:11  & Y & Y \\
-P9  & Y & 3:55  & Y & Y \\
-P10 & Y & 4:28  & Y & Y \\
-\bottomrule
-\end{tabular}
-
-\vspace{0.3em}
-{\footnotesize *P7 timed out due to difficulty locating the auto-scheduler
-button without a hint.}
-\end{table}
-
-Across successful completions (9/10), the mean completion time was 4:18 (median
-4:11), and all successful outputs were non-overlapping with non-zero travel gaps.
-This supports Success Criterion SC2.
+9/10 participants completed the task successfully, with a mean completion time of
+4:18 (median 4:11). All successful outputs were non-overlapping with non-zero
+travel gaps. One participant (P7) timed out due to difficulty locating the
+auto-scheduler button without a hint. Full per-participant results are provided
+in Appendix~\ref{appx:uat}. This supports Success Criterion SC2.
 
 \subsection{Task T2: Merge Conflict Resolution}
 Scenario: pre-seeded repository with two branches producing at least one timing
 conflict. Evidence recorded: resolved or not, time-to-resolve, and number of
 hints given.
+9/10 participants resolved the conflict within 5 minutes, with a mean time of
+3:44 and an average of 0.6 hints per participant. One participant (P6) selected
+the wrong branch and ran out of time. Full per-participant results are provided
+in Appendix~\ref{appx:uat}. This supports Success Criterion SC1.
 
-\begin{table}[H]
-\centering
-\caption{UAT Task T2 --- Merge conflict resolution.}
-\label{tab:uat_t2}
-\begin{tabular}{@{}lccc@{}}
-\toprule
-\textbf{Participant} & \textbf{Resolved?} & \textbf{Time} &
-\textbf{Hints given} \\
-\midrule
-P1  & Y & 2:34  & 0 \\
-P2  & Y & 4:50  & 1 \\
-P3  & Y & 1:58  & 0 \\
-P4  & Y & 3:22  & 0 \\
-P5  & Y & 4:47  & 1 \\
-P6  & N & 6:10* & 2 \\
-P7  & Y & 3:05  & 1 \\
-P8  & Y & 2:41  & 0 \\
-P9  & Y & 4:33  & 1 \\
-P10 & Y & 3:18  & 0 \\
-\bottomrule
-\end{tabular}
-
-\vspace{0.3em}
-{\footnotesize *P6 selected the wrong branch and ran out of time.}
-\end{table}
-
-Overall, 9/10 participants resolved the conflict; 9/10 achieved a resolution
-within 5 minutes. The mean time across all participants was 3:44 (mean hints
-0.6). This supports Success Criterion SC1.
-
-\subsection{Task T3: Quick Edit + Save Without Git Explanation}
+\subsection{Task T3: Quick Edit and Save Without Git Explanation}
 Task T3 measured whether a participant could make a small timeline/map edit and
 save without requiring Git vocabulary explanation.
-
-\begin{table}[H]
-\centering
-\caption{UAT Task T3 --- Quick edit and save without Git explanation.}
-\label{tab:uat_t3}
-\begin{tabular}{@{}lcp{0.60\linewidth}@{}}
-\toprule
-\textbf{Participant} & \textbf{Completed?} & \textbf{Notes} \\
-\midrule
-P1  & Y & Edited timeline stop duration naturally \\
-P2  & Y & Used ``Save'' without prompting \\
-P3  & Y & -- \\
-P4  & N & Asked ``does saving here create a version?'' \\
-P5  & Y & -- \\
-P6  & Y & -- \\
-P7  & Y & -- \\
-P8  & N & Hesitated; unsure if edit was auto-saved \\
-P9  & Y & -- \\
-P10 & Y & -- \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-8/10 completed without needing Git explanation. This supports the value of Easy
-mode and indicates that versioning concepts can still raise questions (notably
-around mental models of saving).
+8/10 completed without needing Git explanation. Two participants hesitated around
+the mental model of saving and versioning (e.g., asking whether saving creates a
+version, or being unsure whether edits were auto-saved). Full per-participant
+results are provided in Appendix~\ref{appx:uat}. This supports the value of
+Easy mode and indicates that versioning concepts can still raise questions for
+some users.
 
 \section{Survey Results}
-The Evaluation Day survey collected 13 responses. Key quantitative findings
-included:
-\begin{itemize}
-  \item Git familiarity was mixed: 15\% not familiar (2/13), 38\% somewhat
-        familiar (5/13), 23\% comfortable (3/13), 23\% very comfortable (3/13).
-  \item Participants tried a range of features: 11 created/opened a repository,
-        9 ran the auto-scheduler, 5 attempted branch/compare and merge/conflict
-        resolution, and 4 used quick route mode.
-\end{itemize}
+The Evaluation Day survey collected 13 responses; full per-question results are
+reproduced in Appendix~\ref{appx:eval_survey}. Git familiarity among
+respondents was mixed: 15\% were not familiar (2/13), 38\% somewhat familiar
+(5/13), 23\% comfortable (3/13), and 23\% very comfortable (3/13). Participants
+tried a range of features during the session: 11 created or opened a repository,
+9 ran the auto-scheduler, 5 attempted branch/compare and merge/conflict
+resolution, and 4 used quick route mode.
 
 Likert responses across Core Functionality and Overall Impression were strongly
 positive, with responses concentrated in Agree/Strongly Agree. The Git Concept
@@ -157,43 +62,9 @@ Understanding section was also positive but showed more neutral responses,
 suggesting that the conceptual model is understandable but still benefits from
 guidance for some users.
 
-\subsection{System Usability Scale (SUS)}
-The survey included the ten standard SUS items introduced by
-Brooke~\cite{ref_brooke_sus}. SUS is a widely used post-test questionnaire that
-yields a single score between 0 and 100, with higher scores indicating better
-perceived usability. Although only 13 responses were collected (constrained by
-the 40-minute Evaluation Day slot), Sauro and Lewis demonstrate in their
-large-scale benchmarking study that SUS produces usable estimates with as few as
-8--12 respondents~\cite{ref_sauro_lewis_sus}.
-
-\begin{table}[H]
-\centering
-\caption{Individual SUS scores ($n = 13$).}
-\label{tab:sus_scores}
-\begin{tabular}{@{}lc@{}}
-\toprule
-\textbf{Respondent} & \textbf{SUS Score} \\
-\midrule
-R1  & 62.5 \\
-R2  & 60.0 \\
-R3  & 72.5 \\
-R4  & 90.0 \\
-R5  & 87.5 \\
-R6  & 90.0 \\
-R7  & 82.5 \\
-R8  & 82.5 \\
-R9  & 90.0 \\
-R10 & 77.5 \\
-R11 & 85.0 \\
-R12 & 95.0 \\
-R13 & 90.0 \\
-\midrule
-\textbf{Mean} & \textbf{81.9} \\
-\textbf{Median} & \textbf{85.0} \\
-\textbf{SD} & \textbf{10.5} \\
-\bottomrule
-\end{tabular}
-\end{table}
+\subsection{System Usability Scale (SUS) Results}
+The survey included the ten standard SUS items~\cite{ref_brooke_sus}, yielding a score between 0 and 100. Although only 13 responses were collected, Sauro and Lewis show SUS produces usable estimates with as few as 8--12 respondents~\cite{ref_sauro_lewis_sus}. Individual SUS scores are
+provided in Appendix~\ref{appx:uat} (Table~\ref{tab:sus_scores}).
 
 The mean SUS score of \textbf{81.9} (SD~=~10.5) corresponds to an
 \textbf{Excellent} adjective rating and a \textbf{Grade~A} on the curved grading
@@ -223,44 +94,22 @@ definitive subgroup analysis.
 
 \subsection{Qualitative Feedback}
 Free-text responses provide additional evidence of perceived value and pain
-points. Representative themes include:
+points.
 
-\textbf{Most useful/impressive:}
-\begin{itemize}
-  \item Auto-scheduler usefulness and edge-case handling (e.g., clearly showing
-        unscheduled stops with reasons).
-  \item Novelty of Git-style planning and merge conflict resolution in a non-code
-        context.
-  \item Educational value of algorithm visualisation.
-\end{itemize}
+Respondents most frequently praised the auto-scheduler's usefulness and edge-case handling (e.g., clearly showing unscheduled stops with reasons). Several highlighted the novelty of Git-style merge conflict resolution in a non-code context and the educational algorithm visualisation.
 
-\textbf{Most frustrating:}
-\begin{itemize}
-  \item Some users perceived Git concepts as requiring learning overhead.
-  \item Merge conflicts can be confusing without guidance (consistent with UAT
-        hint patterns).
-  \item A routing limitation was reported for special transport modes (e.g.,
-        ferries), reflecting dependency on external routing providers.
-\end{itemize}
+Some users found Git concepts required learning overhead, and merge conflicts were confusing without guidance---consistent with UAT hint patterns. One respondent identified a routing limitation for special transport modes (e.g., ferries).
 
-\textbf{Would users adopt GiTrip?} Most respondents indicated ``yes'' or
-``maybe'', with collaboration and ``keeping everything in one place'' cited as
-major benefits. The strongest blockers were perceived complexity for casual trips
-and routing-provider constraints for niche transport types.
+Most respondents indicated they would adopt GiTrip, citing collaboration and ``keeping everything in one place'' as key benefits. Blockers were perceived complexity for casual trips and routing constraints for niche transport.
 
 \section{Discussion Against Success Criteria}
 Overall, the evaluation provides strong evidence that core objectives were
-achieved:
-\begin{itemize}
-  \item The auto-scheduler reliably produced feasible plans for typical scenarios
-        (SC2 met).
-  \item Merge conflict resolution was achievable by most participants within the
-        target time (SC1 met).
-  \item The SUS score of 81.9 (Grade~A, Excellent) validates the Easy mode
-        approach and overall usability, while per-question analysis highlights
-        interface consistency and onboarding as remaining improvement areas
-        (SC3 partially met, with known limitations).
-\end{itemize}
+achieved. The auto-scheduler reliably produced feasible plans for typical
+scenarios, supporting SC2. Merge conflict resolution was achievable by most
+participants within the target time, supporting SC1. The SUS score of 81.9
+(Grade~A, Excellent) validates the Easy mode approach and overall usability,
+while per-question analysis highlights interface consistency and onboarding as
+remaining improvement areas (SC3 partially met, with known limitations).
 
 Table~\ref{tab:moscow-final} summarises the final completion status of all
 MoSCoW objectives defined in Chapter~\ref{ch:requirements}. The Progress
@@ -269,6 +118,8 @@ table below reflects the final state at submission.
 
 \begin{table}[H]
 \centering
+\caption{Final completion status of MoSCoW objectives.}
+\label{tab:moscow-final}
 \begin{tabularx}{\textwidth}{p{0.1\textwidth} c X p{0.22\textwidth}}
 \toprule
 \textbf{Priority} & \textbf{\#} & \textbf{Feature area} & \textbf{Status}\\
@@ -283,24 +134,16 @@ Should & 1 & Opening-hours validation and nudging & Complete\\
  & 2 & Preferences (compact/sparse, focus, mode recompute) & Complete\\
  & 3 & Branch productivity (compare, fork) & Complete\\
 \midrule
-Could & 1 & Command-line interface (CLI) along with the Web UI & Not Implemented\\
+Could & 1 & Command-line interface (CLI) along with the Web UI & Descoped\\
  & 2 & Public trip repository \& gallery & Complete\\
- & 3 & Real-time tracking & Partially Implemented\\
- & 4 & Busy-time consideration & Not Implemented\\
+ & 3 & Real-time tracking & Partial (foundation)\\
+ & 4 & Busy-time consideration & Descoped\\
  & 5 & PWA/offline read-only and queued edits & Complete\\
 \bottomrule
 \end{tabularx}
-\caption{Final completion status of MoSCoW objectives.}
-\label{tab:moscow-final}
 \end{table}
 
-All Must-have and Should-have objectives were completed. The Could-have items
-marked ``Not Implemented'' (CLI and busy-time consideration) were deliberately
-deprioritised in the Project Specification to protect the MVP scope; they remain
-viable future extensions (Chapter~\ref{ch:conclusions}). ``Partially
-Implemented'' indicates that foundational support exists but the feature is not
-fully polished (e.g., real-time tracking provides weather and alert data per day
-but does not yet offer live GPS-based updates).
+All Must-have and Should-have objectives were completed. The two descoped Could-haves (CLI and busy-time) were deprioritised to protect Must/Should delivery; they remain viable future extensions (Chapter~\ref{ch:conclusions}). ``Partial (foundation)'' means weather forecasts and travel alerts exist per day but live GPS updates are not yet implemented.
 
 \section{Threats to Validity}
 The evaluation has limitations typical of student project evaluations:
@@ -317,5 +160,4 @@ The evaluation has limitations typical of student project evaluations:
         trip planning over longer time horizons.
 \end{itemize}
 
-Despite these limitations, the objective task results and consistent qualitative
-themes together support the conclusion that the core objectives were met.
+Despite these limitations, the objective task results and consistent qualitative themes together support the conclusion that the core objectives were met.

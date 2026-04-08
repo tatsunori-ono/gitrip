@@ -8,7 +8,7 @@ This chapter documents how the design was realised in code, covering major
 implementation modules and the reasoning behind key decisions.
 
 \section{Backend Structure}
-The backend is a Node.js and Express application \cite{ref_node_about,ref_express}.
+The backend is a Node.js and Express application.
 The main server file configures:
 \begin{itemize}
   \item EJS templating for UI routes,
@@ -37,27 +37,28 @@ dependency details that could aid reconnaissance.
 
 \section{Planner Implementation}
 \label{sec:planner-impl}
-The auto-scheduler is implemented in \texttt{server/planner.js}. Key components
-include:
-\begin{itemize}
-  \item \textbf{Time helpers:} \texttt{toMin} and \texttt{toHHMM}.
-  \item \textbf{Matrix building:} ORS matrix for non-transit; null for transit.
-  \item \textbf{Ordering logic:} strict order handling (absolute or relative);
-        when no strict orders exist, Held-Karp exact solver for $N \leq 12$
-        \cite{ref_tsp_study}, otherwise Nearest Neighbour with 2-Opt refinement
-        \cite{ref_nn_tsp,ref_nn_2opt_hybrid}.
-  \item \textbf{Constraint fit check:} \texttt{applyOpeningHours} integrates
-        active hours, desired windows, fixed-time behaviour, and opening-hours
-        nudging.
-  \item \textbf{Packing loop:} schedules preferred-day buckets first, then
-        unassigned stops, spilling to later days or overflow when necessary.
-\end{itemize}
+The auto-scheduler is implemented in \texttt{server/planner.js}, following the
+four-stage design from Chapter~\ref{ch:design}. Implementation-specific details
+include time conversion helpers (\texttt{toMin}, \texttt{toHHMM}), ORS matrix
+building for non-transit modes (null for transit, which uses per-leg routing),
+and the ordering algorithms presented in
+Algorithms~\ref{alg:nn}--\ref{alg:heldkarp}.
 
 The planner records travel minutes (\texttt{prevTravelMin}) and effective route
 mode per leg, including detection of transit vs walking in cases where the
 transit provider returns walking-only legs.
 
-The ordering stage uses three strategies depending on instance size, presented in Algorithms~\ref{alg:nn}--\ref{alg:heldkarp}. The NN heuristic (Algorithm~\ref{alg:nn}) greedily selects the closest unvisited stop; if no finite edge exists from the current node, remaining stops are appended in their original input order. The 2-Opt refinement (Algorithm~\ref{alg:twoopt}) iteratively reverses sub-segments to reduce total cost, keeping the origin fixed and running up to 4 sweeps or until no improvement is found. The Held-Karp solver (Algorithm~\ref{alg:heldkarp}) solves for the shortest \emph{path} (open tour), not a cycle, unlike the classic TSP formulation.
+Figure~\ref{fig:autoplan-seq} shows the sequence of interactions between
+system components during an auto-plan request.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{Chapter6/sequence-diagram.png}
+  \caption{UML sequence diagram for the auto-plan workflow.}
+  \label{fig:autoplan-seq}
+\end{figure}
+
+The ordering stage uses three strategies (Algorithms~\ref{alg:nn}--\ref{alg:heldkarp}): NN (Algorithm~\ref{alg:nn}) greedily selects the closest unvisited stop, appending remaining stops in input order if no finite edge exists; 2-Opt (Algorithm~\ref{alg:twoopt}) iteratively reverses sub-segments to reduce cost, fixing the origin for up to 4 sweeps; Held-Karp (Algorithm~\ref{alg:heldkarp}) solves for the shortest \emph{path} (open tour), not a cycle.
 
 \begin{algorithm}[H]
   \caption{Nearest Neighbour heuristic - greedy $O(N^2)$ path construction.}
@@ -109,7 +110,7 @@ The ordering stage uses three strategies depending on instance size, presented i
 \end{algorithm}
 
 \begin{algorithm}[H]
-  \caption{Held-Karp exact solver - bitmask DP in $O(2^N \cdot N^2)$, used for $N \leq 12$.}
+  \caption{Held-Karp exact solver - bitmask dynamic programming (DP) in $O(2^N \cdot N^2)$, used for $N \leq 12$.}
   \label{alg:heldkarp}
   \begin{algorithmic}[1]
     \Require travel-time matrix $M$, start index $s$
@@ -148,12 +149,14 @@ The ordering stage uses three strategies depending on instance size, presented i
   \end{algorithmic}
 \end{algorithm}
 
-Figure~\ref{fig:planner_flow} shows the auto-scheduler flowchart. The algorithm builds an ORS travel-time matrix (with Haversine fallback), orders stops (strict constraints, Held-Karp for $N \leq 12$, or NN and 2-Opt), then partitions them into preferred-day buckets and an unassigned pool. Phase~1 schedules preferred-day stops on their assigned day, sending unfitting stops directly to overflow. Phase~2 schedules unassigned stops greedily, spilling to subsequent days (retrying the same stop) or overflow when no days remain. The cursor is initialised with a focus-dependent shift (morning, midday, or afternoon).
+Figure~\ref{fig:planner_flow} shows the auto-scheduler flowchart, simplified from the Progress Report version following second-assessor feedback. The algorithm builds a travel-time matrix (ORS or Haversine fallback), orders stops (Held-Karp for $N \leq 12$, otherwise NN + 2-Opt), then partitions them into preferred-day buckets and an unassigned pool. Phase~1 schedules preferred-day stops, sending misfits to overflow. Phase~2 greedily schedules unassigned stops, spilling to subsequent days or overflow. The cursor is initialised with a focus-dependent shift.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\textwidth]{Chapter6/auto-scheduler-flowchart.png}
-  \caption{Auto-scheduler flowchart.}
+  \caption{Auto-scheduler flowchart (simplified). The original detailed end-to-end workflow
+           diagram is provided in Appendix~\ref{appx:diagrams}
+           (Figure~\ref{fig:planner-flow-full}).}
   \label{fig:planner_flow}
 \end{figure}
 
@@ -244,7 +247,7 @@ after the Progress Report address known risks:
 
 Structural divergence is detected using a Jaccard similarity heuristic over
 stop-key sets; if the Jaccard index falls below 0.4, a \texttt{plan-whole}
-conflict is produced and the UI requires choosing an entire plan. Without this check, per-stop merging would attempt to align two largely unrelated itineraries, producing a nonsensical hybrid plan. For example, one collaborator completely replacing the plan with 5 new stops in Tokyo while the other completely replaces it with 5 new stops in Paris.
+conflict is produced and the UI requires choosing an entire plan. Without this check, per-stop merging would attempt to align unrelated itineraries, producing a nonsensical hybrid (e.g., one collaborator replacing all stops with Tokyo locations while the other replaces them with Paris locations).
 
 \begin{figure}[H]
   \centering
@@ -256,93 +259,62 @@ conflict is produced and the UI requires choosing an entire plan. Without this c
 \section{Routing Implementation}
 Routing integration is implemented in \texttt{server/routing.js}:
 \begin{itemize}
-  \item ORS~\cite{ref_ors_matrix} matrix requests use the matrix endpoint and return durations in
+  \item ORS matrix requests use the matrix endpoint and return durations in
         minutes.
   \item ORS directions requests fetch per-leg geometry for map rendering.
-  \item Google Directions~\cite{ref_google_directions_api} transit routes provide detailed per-step segments,
+  \item Google Directions transit routes provide detailed per-step segments,
         including polylines decoded via the standard polyline algorithm.
   \item Fallback estimates use Haversine distance with mode-dependent speed assumptions (approximately 5~km/h walking, 15~km/h cycling, 50~km/h driving, and 30~km/h transit).
 \end{itemize}
 
 \section{Quick Explore Mode}
-Quick explore mode provides a Google-Maps-like workflow where users quickly enter
-destinations, optimise an order, and optionally start a repository from the
-result. This is implemented via \texttt{server/quickroute.js}:
+Quick explore mode (\texttt{server/quickroute.js}) lets users enter destinations, optimise order, and optionally start a repository:
 \begin{itemize}
   \item for small instances (N $\leq$ 12), an exact Held-Karp dynamic programming
-        solver is used \cite{ref_tsp_study,ref_tsp_local_search};
+        solver is used \cite{ref_tsp_study};
   \item for larger instances, NN is used with 2-Opt refinement
-        \cite{ref_nn_2opt_hybrid}.
+        \cite{ref_nn_2opt_hybrid}. Local search improvements for TSP heuristics
+        are discussed by Johnson and McGeoch~\cite{ref_tsp_local_search}.
 \end{itemize}
 
-The quick route engine builds a travel-time matrix using ORS, transit pairwise
-calls for small transit sets (limited to N~$\leq$~7 to control API cost), or
-Haversine fallback. Concurrency is bounded to a pool of four simultaneous
-requests to reduce API burst risk. The ordering logic reuses the same NN, 2-Opt, and Held-Karp strategies described in Section~\ref{sec:planner-impl} (Algorithms~\ref{alg:nn}--\ref{alg:heldkarp}).
+The engine builds a travel-time matrix via ORS, pairwise transit calls (N~$\leq$~7 to control API cost), or Haversine fallback, with concurrency bounded to four simultaneous requests. Ordering reuses the strategies from Section~\ref{sec:planner-impl}.
 
 \section{Algorithm Visualisation}
 GiTrip includes an educational algorithm visualisation page
 (\texttt{server/public/algorithm.js}) that demonstrates three route-ordering
 algorithms with step-by-step animation on a Leaflet map:
 \begin{enumerate}
-  \item \textbf{Nearest Neighbour (NN):} greedy selection of the closest
+  \item \textbf{NN:} greedy selection of the closest
         unvisited stop; $O(N^2)$ time.
   \item \textbf{NN and 2-Opt:} starts from an NN solution and iteratively reverses
         sub-segments to shorten the route; used for instances with more than 12
         stops.
-  \item \textbf{Held-Karp dynamic programming (DP):} exact bitmask DP solver in
+  \item \textbf{Held-Karp DP:} exact bitmask DP solver in
         $O(2^N \cdot N^2)$ time; guarantees optimality but is limited to
         N~$\leq$~12 stops due to exponential growth.
 \end{enumerate}
 
-The visualisation fetches real routing geometry from the server
-(\texttt{/api/algo-matrix} and \texttt{/api/algo-geometry}), supports multiple
-transport modes, and includes playback controls (play, pause, step, reset, speed
-slider), synchronised pseudocode highlighting, animated scan lines showing which
-edges are being evaluated, and a cost comparison panel.
+The visualisation fetches real routing geometry from the server, supports multiple transport modes, and includes playback controls, synchronised pseudocode highlighting, animated scan lines for evaluated edges, and a cost comparison panel.
 
 \subsection{Constraint-Aware Scheduling Visualisation}
-A second educational page (\texttt{/ui/schedule-demo}) demonstrates the
-constraint-aware scheduling algorithm with eight animated scenarios:
-\begin{enumerate}
-  \item \textbf{Basic Schedule:} cursor-based packing with travel gaps.
-  \item \textbf{Opening Hours:} nudging stops forward when proposed before
-        opening time.
-  \item \textbf{Fixed Time:} immovable stops that other stops pack around.
-  \item \textbf{Time Windows:} soft desired-window preferences (e.g.\ lunch
-        slot).
-  \item \textbf{Day Overflow:} stops spilling to the next day when the active
-        window is full.
-  \item \textbf{Multi-Constraint:} opening hours, desired window, and fixed
-        time combined in a single scenario.
-  \item \textbf{Focus Shift:} comparing morning, midday, and afternoon start
-        offsets side by side.
-  \item \textbf{Compact vs Sparse:} comparing tight and distributed packing
-        modes on the same stops.
-\end{enumerate}
-
-The page renders a Scalable Vector Graphics (SVG) day timeline (08:00--21:00 for demonstration) with animated stop blocks,
-an opening-hours bar, a real-time constraint info panel, and synchronised
-pseudocode highlighting. No API calls are required; all data is hardcoded.
+A second educational page (\texttt{/ui/schedule-demo}) demonstrates constraint-aware scheduling with eight animated scenarios (basic packing, opening-hours nudging, fixed-time stops, desired windows, day overflow, multi-constraint combinations, focus shifts, and compact vs sparse). It renders an SVG timeline with animated stop blocks and synchronised pseudocode; all data is hardcoded.
 
 \subsection{Three-Way Merge Visualisation}
 A third educational page (\texttt{/ui/merge-demo}) demonstrates the three-way
-merge algorithm with eight scenarios covering all merge outcomes:
-\begin{itemize}
-  \item \textbf{Auto-resolved:} clean merge (one side changed), identical
-        changes (both made the same edit), and both-delete (both removed the
-        same stop).
-  \item \textbf{Conflicts:} stop-time conflict, delete-vs-edit conflict,
-        field conflict (e.g.\ name differs), file conflict (e.g.\ trip
-        description), and whole-plan conflict (Jaccard similarity below~0.4).
-\end{itemize}
+merge algorithm with eight scenarios covering both auto-resolved merges (clean
+merge, identical changes, both-delete) and conflicts (stop-time, delete-vs-edit,
+field, file, and whole-plan). The page shows four plan panels (Base, Source,
+Target, Merged Result) with colour-coded stop cards and animated per-stop
+comparison. All three educational pages share the same visual design and
+are accessible via a ``How it works'' dropdown in the navigation bar.
+Figure~\ref{fig:ui-algo-vis} shows the route-ordering visualisation page.
 
-The page shows four plan panels (Base, Source, Target, Merged Result) with
-colour-coded stop cards, animated per-stop comparison, and a file-level
-description display for file-conflict scenarios. All three educational pages
-share the same visual design, dark colour scheme, playback controls, and
-pseudocode highlighting pattern, and are accessible via a ``How it works''
-dropdown in the navigation bar.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{Chapter6/algo-vis.png}
+  \caption{Algorithm visualisation page: step-by-step route-ordering animation with synchronised pseudocode.}
+  \label{fig:ui-algo-vis}
+\end{figure}
 
 \section{Frontend Implementation}
 GiTrip's pages are server-rendered with EJS templates and enhanced with
@@ -366,7 +338,7 @@ increments. It clamps edits based on travel constraints:
   \item minimum stop duration is enforced.
 \end{itemize}
 
-The map editor uses Leaflet markers with numbered pins \cite{ref_leaflet}. In
+The map editor uses Leaflet markers with numbered pins. In
 edit mode, markers are draggable and route polylines are updated. Transit legs
 display additional stop markers and per-leg mode styling (e.g., dashed walking
 segments).
@@ -392,13 +364,13 @@ inability to guarantee offline routing responses.
 \section{Supporting Features}
 \subsection{Weather Integration}
 Each day in a plan displays a weather forecast retrieved from the Open-Meteo
-API. The server fetches daily forecasts (temperature range, precipitation
+API~\cite{ref_open_meteo}. The server fetches daily forecasts (temperature range, precipitation
 probability, and weather code) using the first stop's coordinates for each day,
 with a 30-minute Time-To-Live (TTL) cache to reduce external requests. Historical data is
 fetched for past dates and forecast data for future dates.
 
 \subsection{Travel Alerts}
-GiTrip retrieves travel disruption news via the GNews API. City names are
+GiTrip retrieves travel disruption news via the GNews API~\cite{ref_gnews}. City names are
 extracted from stop names in the plan, and a search query combining those
 cities with disruption keywords (strike, closure, protest, etc.) is issued.
 Because articles about upcoming disruptions are typically published before

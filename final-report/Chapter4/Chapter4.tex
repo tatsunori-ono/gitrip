@@ -4,8 +4,11 @@
 \label{ch:methodology}
 % ======================================================================
 
-This chapter explains the tool selection, testing
-methodology, and evaluation design used to deliver GiTrip. The development process and methodology are discussed in the Project Management Report.
+This chapter explains the tool selection, testing methodology, and evaluation
+design used to deliver GiTrip. The project followed an iterative waterfall
+approach: fixed milestones aligned to university deadlines provided structure,
+while work within each milestone was refined through short feedback cycles and
+regular supervisor meetings. The full development process and schedule are discussed in the Project Management Report.
 
 \section{Choice of Tools and Technologies}
 GiTrip's major technology choices were guided by the requirement to deliver a
@@ -16,7 +19,7 @@ planning/merge operations.
 GiTrip uses a JavaScript full-stack to reduce development overhead in a
 single-developer project and share data models and validation logic across
 client/server. Node.js'~\cite{ref_node_about} non-blocking I/O suits the I/O-heavy workload (routing/geocoding calls plus repository
-read/write operations). Express provides a minimal server and API layer since EJS supports rapid iteration on key UX
+read/write operations). Express provides a minimal server and API layer since Embedded JavaScript (EJS) supports rapid iteration on key User Experience (UX)
 flows without a complex front-end build chain~\cite{ref_express}. This combination
 enables server-rendered views (for fast initial load and discoverability) while
 still allowing interactive enhancements via client-side JavaScript.
@@ -72,13 +75,11 @@ Evaluation was conducted via:
         (including SUS), Git familiarity, and free-text feedback.
 \end{itemize}
 
-This design intentionally combines objective evidence (task completion and time)
-with subjective user perception (usability and perceived value), aligning with a
-pragmatic interpretation of TAM in small-sample contexts.
+This design intentionally combines objective evidence (task completion and time) with subjective user perception (usability and perceived value), aligning with a pragmatic interpretation of TAM in small-sample contexts.
 
 \section{Ethics and Data Handling}
 The evaluation collected minimal personal data. Survey responses were anonymous,
 and the system does not require real personal identity information for most
 features. Where authentication is used, sessions are stored via random
-identifiers and protected by HttpOnly cookies. GDPR~\cite{ref_gdpr} considerations are discussed
+identifiers and protected by HttpOnly cookies. GDPR considerations are discussed
 in Chapter~\ref{ch:design}.

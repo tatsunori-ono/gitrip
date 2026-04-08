@@ -493,13 +493,13 @@ body.map-fullscreen-active{
   color:#000;
   border-color:#f97316;
 }
-.high-contrast .about-node{
+.high-contrast .about-card{
   background:#1b2228;
   border-color:#f97316;
   color:#f8f8f8;
 }
-.high-contrast .about-node h2,
-.high-contrast .about-node p{
+.high-contrast .about-card h2,
+.high-contrast .about-card p{
   color:#f8f8f8;
 }
 
@@ -582,17 +582,19 @@ pre.code{
 .gallery-grid .card + .card{ margin-top:0; }
 .gallery-grid .card{
   cursor:pointer;
-  transition:border-color 0.15s ease;
+  transition:transform 0.2s, box-shadow 0.2s, border-color 0.15s ease;
 }
 .gallery-grid .card:hover{
   border-color:var(--primary);
+  transform:translateY(-3px);
+  box-shadow:0 6px 30px rgba(0,0,0,0.10);
 }
 
 /* Branch / workflow graph */
 .branch-graph{
   position:relative;
   padding:10px 8px;
-  overflow-x:auto;
+  overflow:auto;
   max-width:100%;
   background:#f8fafc;
   border:1px solid #e5e7eb;
@@ -632,80 +634,139 @@ pre.code{
   fill:var(--primary);
 }
 
+/* ── About page: hero ── */
 .about-hero{
   position:relative;
   overflow:hidden;
-  background:#233331;
+  background:#1a2b29;
   color:#fff;
-  padding:80px 18px;
-  margin-bottom:48px;
+  padding:48px 24px 40px;
+}
+.about-hero__routes{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+.about-hero__svg{
+  width:100%;
+  height:100%;
 }
 .about-hero__content{
+  position:relative;
   max-width:980px;
   margin:0 auto;
   display:flex;
-  flex-wrap:wrap;
-  gap:40px;
   align-items:center;
-  justify-content:space-between;
+  justify-content:center;
+  gap:60px;
 }
-.logo-frame{
-  width:240px;
-  height:240px;
+.about-logo{
+  flex-shrink:0;
+  width:400px;
+  height:400px;
   display:flex;
   align-items:center;
   justify-content:center;
 }
-.logo-frame img{
-  width:500px;
-  height:500px;
+.about-logo img{
+  width:400px;
+  height:400px;
+  object-fit:contain;
 }
-.about-hero h1{
-  font-size:48px;
-  margin:0 0 12px;
+.about-hero__text{
+  flex:1;
+  min-width:0;
 }
-.about-hero .lead{
-  font-size:18px;
-  max-width:520px;
-  color:rgba(255,255,255,0.7);
-}
-.eyebrow{
+.about-eyebrow{
   text-transform:uppercase;
   letter-spacing:0.2em;
-  font-size:12px;
-  color:rgba(255,255,255,0.7);
-  margin-bottom:8px;
+  font-size:11px;
+  font-weight:600;
+  color:rgba(255,255,255,0.5);
+  margin:0 0 16px;
 }
-.about-body{
-  padding-bottom:80px;
+.about-headline{
+  font-size:48px;
+  font-weight:700;
+  line-height:1.08;
+  letter-spacing:-0.5px;
+  margin:0 0 16px;
 }
-.about-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-  gap:24px;
-  padding:40px 0 20px;
+.about-lead{
+  font-size:16px;
+  line-height:1.47;
+  color:rgba(255,255,255,0.72);
+  max-width:520px;
+  margin:0 0 24px;
 }
-.about-node{
-  background:#fff;
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:24px;
-  text-align:left;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-}
-.about-node p{
+.about-cta{
+  display:inline-block;
+  background:var(--primary);
+  color:#fff;
   font-size:14px;
-  line-height:1.5;
-  margin:12px 0 0;
+  font-weight:600;
+  padding:10px 24px;
+  border-radius:980px;
+  text-decoration:none;
+  transition:background 0.2s;
 }
-.about-node h2{
-  margin-top:0;
+.about-cta:hover{
+  background:var(--primary-ink);
+}
+
+/* ── About page: features ── */
+.about-features{
+  background:#f5f5f7;
+  padding:40px 24px 48px;
+}
+.about-features__inner{
+  max-width:980px;
+  margin:0 auto;
+}
+.about-features__grid{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:24px;
+}
+.about-features__grid .about-card{
+  width:calc((100% - 48px) / 3);
+}
+.about-card{
+  background:#fff;
+  border-radius:12px;
+  padding:24px 22px;
+  box-shadow:0 3px 20px rgba(0,0,0,0.06);
+  transition:transform 0.2s, box-shadow 0.2s;
+}
+.about-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 6px 30px rgba(0,0,0,0.10);
+}
+.about-card__icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:var(--chip);
+  color:var(--primary);
+  margin-bottom:12px;
+}
+.about-card h2{
+  font-size:16px;
+  font-weight:600;
+  line-height:1.2;
+  letter-spacing:-0.1px;
+  margin:0 0 6px;
   color:var(--text);
 }
-.about-node:hover{
-  border-color:var(--primary);
+.about-card p{
+  font-size:13px;
+  line-height:1.5;
+  color:var(--muted);
+  margin:0;
 }
 .read-aloud-active .card{
   outline:2px dashed rgba(236,86,67,0.5);
@@ -716,9 +777,6 @@ pre.code{
   display:none;
 }
 
-/* Orbs hidden — kept as no-ops so about.ejs classes don't break */
-.orb, .orb-one, .orb-two, .orb-three,
-.orb-connectors, .orb-path, .orb-path-second, .orb-track{ display:none; }
 
 /* Easy vs advanced tool visibility */
 
@@ -1363,12 +1421,13 @@ main{animation:pageIn .3s ease-out both}
   .gallery-grid{ grid-template-columns:1fr; }
 
   /* About hero */
-  .about-hero{ padding:48px 16px; }
-  .about-hero h1{ font-size:32px; }
-  .about-hero__content{ gap:24px; }
-  .logo-frame{ width:160px; height:160px; }
-  .logo-frame img{ width:300px; height:300px; }
-  .about-node{ padding:20px; }
+  .about-hero{ padding:150px 18px 36px; }
+  .about-hero__content{ flex-direction:column; text-align:center; gap:24px; }
+  .about-logo{ width:160px; height:160px; }
+  .about-logo img{ width:320px; height:320px; }
+  .about-lead{ margin:0 auto 24px; }
+  .about-headline{ font-size:36px; }
+  .about-card{ padding:24px 20px; }
 
   /* Section actions wrap */
   .section-actions{ gap:8px; }
@@ -1437,15 +1496,13 @@ main{animation:pageIn .3s ease-out both}
   }
 
   /* About page */
-  .about-node{ padding:16px; }
-  .about-node h2{ font-size:16px; }
-  .about-node p{ font-size:13px; }
-  .about-hero h1{ font-size:26px; }
-  .about-hero .lead{ font-size:15px; }
-  .about-hero{ padding:36px 14px; }
-  .logo-frame{ width:120px; height:120px; }
-  .logo-frame img{ width:200px; height:200px; }
-  .about-grid{ gap:24px; padding:20px 0 10px; }
+  .about-hero{ padding:56px 16px 48px; }
+  .about-headline{ font-size:32px; }
+  .about-lead{ font-size:15px; }
+  .about-features{ padding:48px 16px; }
+  .about-card{ padding:20px 16px; }
+  .about-card h2{ font-size:16px; }
+  .about-card p{ font-size:13px; }
 }
 
 /* --- 880px: Repo grid (extend existing) --- */

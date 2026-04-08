@@ -21,7 +21,31 @@ route planning and shared lists, but do not provide structured multi-version
 change management such as branching/merging alternatives, nor conflict
 resolution at the stop/field level. Itinerary feasibility constraints (dwell
 times, active hours, opening hours) are not treated as first-class constraints
-during collaborative editing.
+during collaborative editing. Figure~\ref{fig:google-maps-limits} illustrates key limitations: Google Maps
+does not support multi-stop directions in transit mode at all, and in driving
+mode users must manually reorder stops with no automatic optimisation. Reordering
+by visual proximity on the map does not account for actual transit times, which
+may differ significantly from straight-line distance. There is also no constraint
+awareness (opening hours, stay durations) and no way to save trips or track
+changes.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[t]{\linewidth}
+    \includegraphics[width=\linewidth]{Chapter2/google-maps-annotated-1.png}
+    \caption{Transit mode: multi-stop directions are not supported at all.}
+  \end{subfigure}
+
+  \vspace{0.5em}
+  \begin{subfigure}[t]{\linewidth}
+    \includegraphics[width=\linewidth]{Chapter2/google-maps-annotated-2.png}
+    \caption{Driving mode: no automatic reordering, no constraint awareness,
+             no version history, and shorter physical distance does not
+             necessarily mean shorter transit time.}
+  \end{subfigure}
+  \caption{Annotated Google Maps limitations for multi-stop trip planning.}
+  \label{fig:google-maps-limits}
+\end{figure}
 
 \subsection{Generic Collaboration}
 Google Docs, Notion~\cite{ref_notion}, and
@@ -51,6 +75,8 @@ from the analysis initially presented in the Progress Report.
 \begin{table}[H]
 \small
 \renewcommand{\arraystretch}{1.2}
+\caption[Competitor differentiation.]{Competitor differentiation across the four capabilities central to GiTrip. Examples listed are a representative sample of 20+ competitor tools observed and analysed throughout the market research process.}
+\label{tab:competitor-diff}
 \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Tool Category} &
@@ -84,24 +110,22 @@ Yes, most of them can share itinerary \\
 \textbf{Yes} \\
 \hline
 \end{tabularx}
-\caption[Competitor differentiation.]{Competitor differentiation across the four capabilities central to GiTrip. Examples listed are a representative sample of 20+ competitor tools observed and analysed throughout the market research process.}
-\label{tab:competitor-diff}
 \end{table}
 
-Overall, existing trip planning tools provide routing and itinerary management
-but lack robust version control semantics. Existing collaboration tools provide
-sharing but lack domain structure. Version control systems provide branching and
-merging but do not operate on itinerary semantics. GiTrip's novelty is that it
-combines these approaches into a coherent system: a version-controlled,
-constraint-aware, user-editable itinerary planner.
+Existing trip planners lack version control; collaboration tools lack domain structure; VCS systems do not operate on itinerary semantics. GiTrip combines all three into a version-controlled, constraint-aware, user-editable itinerary planner.
+Figure~\ref{fig:problem-solution} contrasts the conventional fragmented workflow
+with GiTrip's integrated approach.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{Chapter2/with-without.png}
+  \caption{Conventional fragmented trip planning (top) versus GiTrip's
+           integrated workflow (bottom).}
+  \label{fig:problem-solution}
+\end{figure}
 
 \section{Version Control Concepts and Applicability}
-Git is the dominant distributed VCS in software development. Its key semantics include commits (immutable versions), branches
-(named pointers to commits), and merges (reconciling divergent commit histories).
-Git's internal model stores snapshots rather than deltas: each commit represents
-a complete view of the repository state~\cite{ref_progit_snapshots}. This is
-particularly relevant for GiTrip because a trip plan can be represented naturally
-as a JavaScript Object Notation (JSON) document. Snapshot storage enables instant branch switching (render the
+Git is the dominant distributed VCS. Its key semantics---commits (immutable snapshots), branches (named pointers), and merges (reconciling divergent histories)---store complete state rather than deltas~\cite{ref_progit_snapshots}. This is relevant because a trip plan maps naturally to a JSON document. Snapshot storage enables instant branch switching (render the
 head snapshot), version restoring (create a new commit from an older snapshot),
 and three-way merges (compare a base snapshot against two branch snapshots).
 
@@ -161,7 +185,7 @@ GiTrip must balance power-user semantics (branches, merges) with novice
 usability. Nielsen's~\cite{ref_nielsen} usability engineering framework provides well-established
 heuristics for evaluating interfaces and diagnosing common usability problems. Nielsen's heuristics were preferred over heavier frameworks
 because they are practical for small teams, support rapid iteration, and directly
-map to UI design decisions such as visibility of system state, consistency, error
+map to User Interface (UI) design decisions such as visibility of system state, consistency, error
 prevention, and recognition over recall. These heuristics motivated visual workflows (graphs and side-by-side comparisons) rather than command-line interactions.
 
 Accessibility was guided by Web Content Accessibility Guidelines (WCAG) 2.2~\cite{ref_wcag22} principles, particularly

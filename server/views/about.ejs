@@ -1,83 +1,105 @@
 <!-- server/views/about.ejs -->
 <section class="about-hero" data-readable="true">
+  <!-- Decorative route network (orbs + dotted paths) -->
+  <div class="about-hero__routes" aria-hidden="true">
+    <svg class="about-hero__svg" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
+      <!-- Dotted route paths -->
+      <path d="M80 120 C 280 40, 400 320, 600 260 S 920 440, 1100 360"
+            stroke="rgba(255,255,255,0.18)" stroke-width="2.5" fill="none"
+            stroke-linecap="round" stroke-dasharray="8 14" />
+      <path d="M40 400 C 200 320, 360 100, 560 160 S 880 80, 1140 200"
+            stroke="rgba(236,86,67,0.22)" stroke-width="2" fill="none"
+            stroke-linecap="round" stroke-dasharray="10 16" />
+      <path d="M160 500 C 340 440, 500 200, 700 300 S 1000 500, 1160 420"
+            stroke="rgba(255,255,255,0.10)" stroke-width="1.5" fill="none"
+            stroke-linecap="round" stroke-dasharray="6 12" />
+      <!-- Orange stop nodes — placed on path start/end/anchor points -->
+      <!-- Path 1: M80,120 ... 600,260 ... 1100,360 -->
+      <circle cx="80"  cy="120" r="6" fill="#ec5643" opacity="0.7" />
+      <circle cx="600" cy="260" r="8" fill="#ec5643" opacity="0.85" />
+      <circle cx="1100" cy="360" r="5" fill="#ec5643" opacity="0.6" />
+      <!-- Path 2: M40,400 ... 560,160 ... 1140,200 -->
+      <circle cx="40"  cy="400" r="4" fill="#ec5643" opacity="0.4" />
+      <circle cx="560" cy="160" r="5" fill="#ec5643" opacity="0.5" />
+      <circle cx="1140" cy="200" r="7" fill="#ec5643" opacity="0.75" />
+      <!-- Path 3: M160,500 ... 700,300 ... 1160,420 -->
+      <circle cx="160" cy="500" r="4" fill="#ec5643" opacity="0.35" />
+      <circle cx="700" cy="300" r="6" fill="#ec5643" opacity="0.65" />
+      <circle cx="1160" cy="420" r="5" fill="#ec5643" opacity="0.5" />
+    </svg>
+  </div>
+
   <div class="about-hero__content">
-    <div class="logo-frame">
+    <div class="about-logo">
       <img src="/public/gitrip-logo-transparent.svg" alt="GiTrip emblem" />
     </div>
-    <div>
-      <p class="eyebrow">Version-controlled trip planning</p>
-      <h1>What is GiTrip?</h1>
-      <p class="lead">
-        Planning trips can be challenging at times, especially when itineraries shift or involve
-        multiple people. GiTrip is a web-based trip-planning platform that integrates Git-style
-        version control to travel scheduling.
+    <div class="about-hero__text">
+      <p class="about-eyebrow">Version-controlled trip planning</p>
+      <!-- <h1 class="about-headline">What is GiTrip?</h1> -->
+      <h1 class="about-headline">Plan together.<br>Travel better.</h1>
+      <p class="about-lead">
+        GiTrip brings Git-style version control to collaborative trip planning.
+        Branch, merge, and resolve conflicts on shared itineraries,
+        with constraint-aware scheduling that builds feasible plans automatically.
       </p>
-      <a class="btn btn-primary" href="/ui/login" style="text-decoration:none">Start planning</a>
+      <a class="about-cta" href="/ui/login">Start planning</a>
     </div>
   </div>
-  <div class="orb orb-one"></div>
-  <div class="orb orb-two"></div>
-  <div class="orb orb-three"></div>
-  <svg class="orb-connectors" viewBox="0 0 600 300" aria-hidden="true">
-    <path class="orb-path"
-          d="M40 60 C 180 20, 220 180, 360 140 S 540 240, 560 200"
-          stroke="rgba(255,255,255,0.25)"
-          stroke-width="4"
-          fill="none"
-          stroke-linecap="round"
-          stroke-dasharray="12 18" />
-    <path class="orb-path orb-path-second"
-          d="M20 200 C 120 160, 200 60, 320 80 S 520 120, 580 40"
-          stroke="rgba(236,86,67,0.35)"
-          stroke-width="3"
-          fill="none"
-          stroke-linecap="round"
-          stroke-dasharray="14 20" />
-  </svg>
 </section>
 
-<section class="about-body container">
-  <div class="about-grid">
-    <article class="about-node" data-readable="true">
-      <h2>Collaborate professionally</h2>
-      <p>
-        For example, a group of friends can initialise a shared repo for their London trip.
-        Then, they can branch it so each person can edit the trip plan as they like
-        (e.g. Afternoon tea-route). Finally, they can merge the trip plans
-        into one by resolving conflicts to finalise their trip.
-      </p>
-    </article>
-    <article class="about-node" data-readable="true">
-      <h2>Always recoverable</h2>
-      <p>
-        Users can rollback to any previous version if plans change, and they can also fork trip
-        plans from public repositories to customise pre-existing itineraries. GiTrip keeps every
-        iteration safe.
-      </p>
-    </article>
-    <article class="about-node" data-readable="true">
-      <h2>Visual workflows</h2>
-      <p>
-        GiTrip visualises the version history of trip plans on a workflow graph, allowing all
-        users to intuitively understand the journey even if they are not familiar with Git.
-      </p>
-    </article>
-    <article class="about-node" data-readable="true">
-      <h2>Constraint-aware scheduling</h2>
-      <p>
-        The auto-scheduler builds feasible day-by-day itineraries that respect real-world
-        constraints: opening hours, desired time windows, fixed-time events, and travel gaps. Choose compact packing for action-packed days, or sparse mode for a relaxed pace with
-        built-in breathing room.
-      </p>
-    </article>
-    <article class="about-node" data-readable="true">
-      <h2>Feasible timelines</h2>
-      <p>
-        GiTrip visualises trip plans via interactive timelines and workflow graphs (DAGs) by
-        automatically calculating the travel time between successive stops to keep the schedule
-        feasible. Drag blocks on the timeline to adjust times, or drag markers on the map to
-        reposition stops.
-      </p>
-    </article>
+<section class="about-features">
+  <div class="about-features__inner">
+    <div class="about-features__grid">
+      <article class="about-card" data-readable="true">
+        <div class="about-card__icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h2>Collaborate</h2>
+        <p>
+          Initialise a shared repo for your trip. Branch it so each person can edit freely,
+          then merge plans into one by resolving conflicts.
+        </p>
+      </article>
+      <article class="about-card" data-readable="true">
+        <div class="about-card__icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        </div>
+        <h2>Always recoverable</h2>
+        <p>
+          Roll back to any previous version. Fork public itineraries to customise them.
+          Every iteration is safe.
+        </p>
+      </article>
+      <article class="about-card" data-readable="true">
+        <div class="about-card__icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>
+        </div>
+        <h2>Visual workflows</h2>
+        <p>
+          Version history rendered as an interactive workflow graph.
+          Understand the journey even without knowing Git.
+        </p>
+      </article>
+      <article class="about-card" data-readable="true">
+        <div class="about-card__icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <h2>Constraint-aware scheduling</h2>
+        <p>
+          The auto-scheduler respects opening hours, time windows, and travel gaps.
+          Choose compact packing or sparse mode for your pace.
+        </p>
+      </article>
+      <article class="about-card" data-readable="true">
+        <div class="about-card__icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h2>Feasible timelines</h2>
+        <p>
+          Interactive timelines with calculated travel times between stops.
+          Drag blocks to adjust times, or drag map markers to reposition stops.
+        </p>
+      </article>
+    </div>
   </div>
 </section>

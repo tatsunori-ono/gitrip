@@ -85,22 +85,40 @@ pinpoints exactly which external service is misconfigured, rather than
 requiring manual investigation of silent routing fallbacks.
 
 \subsection{Unit Test Results}
-All 64 unit tests pass. Figure~\ref{fig:unit-test-results} shows the terminal output from running the full test suite. The test runner is invoked via \texttt{npm test}, which executes \texttt{node --test 'test/*.test.js'} across all five test files. Individual test files can also be run in isolation (e.g., \texttt{node --test test/merge.test.js}) to debug specific modules.
+All 64 unit tests pass. The full suite can be run via \texttt{npm test}, which executes \texttt{node --test `test/*.test.js'} across all five files. Figure~\ref{fig:unit-test-results} shows the terminal output from running each test file individually via \texttt{node --test test/<file>.test.js}, confirming that every test in each module passes independently.
 
 \begin{figure}[H]
   \centering
-  % \includegraphics[width=0.92\linewidth]{Chapter7/unit-test-results.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of terminal output after running \texttt{npm test} showing all 64 tests passing. Run from the project root.}}
-  \caption{Unit test results: all 64 tests passing.}
+  \begin{subfigure}[t]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{Chapter7/test-openhours.png}
+    \caption{\texttt{openhours.test.js} (11 tests)}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{Chapter7/test-merge.png}
+    \caption{\texttt{merge.test.js} (16 tests)}
+  \end{subfigure}
+
+  \vspace{0.5em}
+  \begin{subfigure}[t]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{Chapter7/test-planner.png}
+    \caption{\texttt{planner.test.js} (13 tests)}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{Chapter7/test-routing.png}
+    \caption{\texttt{routing.test.js} (11 tests)}
+  \end{subfigure}
+
+  \vspace{0.5em}
+  \begin{subfigure}[t]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{Chapter7/test-apikeys.png}
+    \caption{\texttt{api-keys.test.js} (13 tests)}
+  \end{subfigure}
+  \caption{Unit test results: all 64 tests passing across five test files.}
   \label{fig:unit-test-results}
 \end{figure}
 
 \section{Functional Testing}
-Functional testing verified that core workflows operate end-to-end.
-Table~\ref{tab:functional_tests} summarises key cases. These workflows were
-verified manually during iterative development and re-confirmed on the deployed
-instance before Evaluation Day to ensure no regressions were present in the
-production environment.
+Table~\ref{tab:functional_tests} summarises functional test cases, verified manually during development and re-confirmed on the deployed instance before Evaluation Day.
 
 \begin{table}[H]
 \centering
@@ -125,22 +143,10 @@ Export iCalendar (ICS)                          & Pass & Calendar import works \
 
 \section{Non-functional Testing and Checks}
 \subsection{Security Checks}
-GiTrip includes:
-\begin{itemize}
-  \item Content Security Policy headers and anti-framing headers,
-  \item four-tier rate limiting (global, API, geo search, and authentication
-        endpoints),
-  \item prepared statements for all database access,
-  \item conservative input normalisation for user-provided fields,
-  \item generic error messages in all user-facing responses (internal details
-        logged server-side only, preventing information leakage).
-\end{itemize}
-
-These checks are not a substitute for a full penetration test, but they provide
-reasonable baseline hardening for a deployed student project.
+The security measures from Chapter~\ref{ch:design} (CSP headers, rate limiting, prepared statements, generic error messages) were verified during deployment with input normalisation. These provide baseline hardening but are not a substitute for a full penetration test.
 
 \subsection{Accessibility Checks}
-Accessibility was guided by WCAG 2.2~\cite{ref_wcag22}. Checks included consistent labelling of controls, avoiding information conveyed only via colour, readable typography and spacing, and basic keyboard navigation for non-map interactions. A more formal audit using automated tools such as Lighthouse is recommended for future work \cite{ref_lighthouse_overview}. The interactive map and timeline
+Accessibility was guided by WCAG 2.2. Checks included consistent labelling of controls, avoiding information conveyed only via colour, readable typography and spacing, and basic keyboard navigation for non-map interactions. A more formal audit using automated tools such as Lighthouse is recommended for future work \cite{ref_lighthouse_overview}. The interactive map and timeline
 remain difficult to fully validate for accessibility within the project scope.
 
 \subsection{Resilience to External API Failures}

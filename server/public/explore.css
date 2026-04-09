@@ -583,3 +583,40 @@
   .explore-sidebar{ max-height:35%; }
   .bookmark-list{ padding:6px; }
 }
+
+/* ── High-contrast overrides ── */
+.high-contrast .explore-sidebar__content {
+  background: #0f1418;
+  color: #f8f8f8;
+  border-color: #f97316;
+}
+.high-contrast .bookmark-list {
+  background: #1b2228;
+  border-color: #f97316;
+  color: #f8f8f8;
+}
+.high-contrast .bookmark-items li {
+  color: #f8f8f8;
+}
+.high-contrast .bookmark-menu {
+  background: #0f1418;
+  border-color: #f97316;
+}
+.high-contrast .bookmark-menu button {
+  color: #f8f8f8;
+}
+.high-contrast .bookmark-menu button:hover {
+  background: #1b2228;
+}
+.high-contrast .explore-bookmarks {
+  border-top-color: #f97316;
+}
+.high-contrast .icon-picker__menu {
+  background: #0f1418;
+  border-color: #f97316;
+}
+.high-contrast .icon-picker__menu button {
+  background: #1b2228;
+  border-color: #f97316;
+  color: #f8f8f8;
+}

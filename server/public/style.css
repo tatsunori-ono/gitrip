@@ -465,6 +465,25 @@ body.map-fullscreen-active{
 .high-contrast a{
   color:#f97316;
 }
+.high-contrast header a{
+  color:#f97316;
+}
+.high-contrast .nav-dropdown-trigger{
+  color:#f97316;
+}
+.high-contrast .nav-dropdown-menu-inner{
+  background:#0f1418;
+  border-color:#f97316;
+}
+.high-contrast .nav-dropdown-menu-inner a{
+  color:#f97316;
+}
+.high-contrast .nav-dropdown-menu::before{
+  border-bottom-color:#0f1418;
+}
+.high-contrast .row .switch{
+  color:#f8f8f8;
+}
 .high-contrast .day{
   background:#13191f;
   border-color:#f97316;

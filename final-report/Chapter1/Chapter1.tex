@@ -4,13 +4,11 @@
 \label{ch:intro}
 % ======================================================================
 
-This report presents the design, implementation, testing, and evaluation of GiTrip, a web application for collaborative trip planning via Git~\cite{ref_git}-style version control system (VCS) combined with constraints-aware auto-scheduler.
+This report presents the design, implementation, testing, and evaluation of GiTrip, a web application for collaborative trip planning via Git~\cite{ref_git}-style version control system (VCS) combined with constraint-aware auto-scheduler.
 
 \section{Problem Context and Motivation}
 \label{sec:motivation}
-Trip planning is time-consuming because a feasible schedule must satisfy
-multiple constraints simultaneously, including travel time between destinations,
-opening hours, stay durations, and daily activity limits. The process becomes more complex for group trips, where edits distributed across chat messages, screenshots, and shared documents increase the likelihood of duplicated work, accidental overwrites, and lost rationale.
+Trip planning is time-consuming because the schedule must satisfy time feasibility constraints (travel time by different transport modes, per-stop duration, and daily active hours window) and real-world constraints (opening hours, weather conditions, and traffic news). This becomes more complex for group trip planning because participants propose alternative routes and schedules, with edits distributed across chat messages, screenshots, and documents. This fragmented approach increases duplicated work, accidental overwrites, and loss of rationale for changes.
 
 While existing route planners can optimise a single itinerary and generic collaboration tools can support shared documents, optimising the entire trip schedule and supporting change management in group trip planning remain insufficient.
 

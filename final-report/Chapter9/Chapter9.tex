@@ -57,8 +57,6 @@ responsiveness over global optimality, meaning that the generated itineraries ar
 valid but not necessarily optimal with respect to total travel time or cost.
 
 \section{Future Work}
-Future work opportunities are substantial, spanning usability, collaboration infrastructure, and algorithmic extensions.
-
 \paragraph{Improved onboarding and guidance.}
 Evaluation Day feedback consistently identified Git terminology as confusing. Future iterations should add in-product tutorials for branching and merging, contextual tooltips explaining versioning in plain language, and clearer ``Save'' semantics bridging the mental-model gap.
 
@@ -70,7 +68,6 @@ step increments), text-based route editing as a fallback, and stronger Accessibl
 landmark and live-region support throughout the application.
 
 \paragraph{Real-time collaboration.}
-GiTrip currently supports asynchronous collaboration via branches and merges.
 A natural extension is to explore CRDT-based shared plan editing, enabling multiple users to edit the same itinerary simultaneously while preserving a mergeable history model for offline and divergent edits.
 
 \paragraph{Richer merge resolution.}
@@ -117,6 +114,5 @@ end-to-end deployed application combining routing integration, a scheduler, and 
 merge UI; evaluation shows users can complete core tasks successfully with limited
 guidance.
 
-\textbf{What are the limitations?} The main limitations are accessibility for
-interactive controls, dependence on external routing providers, and the absence
-of real-time collaboration and AI-based recommendation within the current project scope.
+\textbf{What are the limitations?} The main limitations are heavy dependence on external routing providers and the absence
+of AI-based recommendation within the current project scope.

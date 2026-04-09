@@ -112,7 +112,6 @@ Yes, most of them can share itinerary \\
 \end{tabularx}
 \end{table}
 
-Existing trip planners lack version control; collaboration tools lack domain structure; VCS systems do not operate on itinerary semantics. GiTrip combines all three into a version-controlled, constraint-aware, user-editable itinerary planner.
 Figure~\ref{fig:problem-solution} contrasts the conventional fragmented workflow
 with GiTrip's integrated approach.
 
@@ -125,9 +124,7 @@ with GiTrip's integrated approach.
 \end{figure}
 
 \section{Version Control Concepts and Applicability}
-Git is the dominant distributed VCS. Its key semantics---commits (immutable snapshots), branches (named pointers), and merges (reconciling divergent histories)---store complete state rather than deltas~\cite{ref_progit_snapshots}. This is relevant because a trip plan maps naturally to a JSON document. Snapshot storage enables instant branch switching (render the
-head snapshot), version restoring (create a new commit from an older snapshot),
-and three-way merges (compare a base snapshot against two branch snapshots).
+Git is the dominant distributed VCS. Its key semantics---commits (immutable snapshots), branches (named pointers), and merges (reconciling divergent histories)---store complete state rather than deltas~\cite{ref_progit_snapshots}. This is relevant because a trip plan maps naturally to a JSON document. Snapshot storage enables instant branch switching, version restoring, and three-way merges.
 
 However, applying Git semantics to structured itinerary data introduces
 challenges: traditional line-based diff/merge strategies (e.g., \texttt{diff3})

@@ -8,7 +8,7 @@ This chapter provides evidence that GiTrip was tested systematically at unit,
 functional, and non-functional levels. The goal is to demonstrate correctness for
 core algorithms (merge and scheduler) and reliability for user-facing workflows.
 
-The Project Specification planned three testing categories: unit tests for opening-hours parsing, time arithmetic, merge functions, and CLI command parsing; integration tests for end-to-end auto-plan with mocked routing and merge workflows; and UAT via a survey on Evaluation Day. The final testing approach deviates in three justified ways. First, CLI command parsing tests were dropped because the CLI was descoped as a Could-have (C1) that was not implemented. Second, integration tests use real routing APIs with fallback verification rather than mocked routing, which provides stronger evidence of production correctness at the cost of requiring API keys during testing. Third, UAT results are presented separately in Chapter~\ref{ch:evaluation} alongside the post-demo survey analysis, rather than in this chapter.
+The Project Specification planned three testing categories: unit tests for opening-hours parsing, time arithmetic, merge functions, and CLI command parsing; integration tests for end-to-end auto-plan with mocked routing and merge workflows; and UAT via a survey on Evaluation Day. The final approach deviates in three ways: CLI parsing tests were dropped (C1 was descoped), integration tests use real routing APIs rather than mocked routing, and UAT results are presented in Chapter~\ref{ch:evaluation}.
 
 \section{Unit Testing}
 GiTrip includes five unit test files with 64 test cases total, executed using

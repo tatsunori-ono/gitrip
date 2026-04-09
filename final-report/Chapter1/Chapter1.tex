@@ -10,10 +10,7 @@ This report presents the design, implementation, testing, and evaluation of GiTr
 \label{sec:motivation}
 Trip planning is time-consuming because a feasible schedule must satisfy
 multiple constraints simultaneously, including travel time between destinations,
-opening hours, stay durations, and daily activity limits. The process becomes
-more complex for group trips, where participants propose alternative routes and
-schedules, with edits often distributed across chat messages, screenshots, and
-shared documents. This fragmented approach increases the likelihood of duplicated work, accidental overwrites, and loss of rationale for changes.
+opening hours, stay durations, and daily activity limits. The process becomes more complex for group trips, where edits distributed across chat messages, screenshots, and shared documents increase the likelihood of duplicated work, accidental overwrites, and lost rationale.
 
 While existing route planners can optimise a single itinerary and generic collaboration tools can support shared documents, optimising the entire trip schedule and supporting change management in group trip planning remain insufficient.
 
@@ -39,7 +36,7 @@ Chapter~\ref{ch:background}.
 \label{sec:overview}
 GiTrip applies Git-style VCS semantics to trip planning. A trip is represented as a repository containing the users’ commits (changes made to the trip). Users can branch (make alternative routes) and merge branches via structured conflict resolution to make the final trip plan. This version-controlled plan is integrated with an automatic scheduler that produces a non-overlapping itinerary while respecting constraints such as active hours, per-stop stay duration, user preferences, and opening hours.
 
-The key design goal is usability for non-experts. Git concepts are surfaced through a clear web interface (buttons for branching/merging, workflow graph, conflict resolver screens). Trip plans are visualised using an interactive timeline (editable by dragging) and a map view showing ordered stops and route geometries. The ``Git mode'' toggle, when turned off, hides Git-specific vocabulary for non-technical users. The feature-ranking results (Q5) of the survey reinforce this requirement: concrete itinerary features such as timeline/map visualisation, travel-time estimation, and automatic optimisation are perceived as most helpful, while Git-style trip repository concepts are less directly valued by some respondents (Appendix~\ref{app:agg-res}). Therefore, Git-style semantics should be implemented to enable VCS, but presented through an approachable interface that does not assume prior Git knowledge.
+The key design goal is usability for non-experts. Git concepts are surfaced through a clear web interface (buttons for branching/merging, workflow graph, conflict resolver screens). Trip plans are visualised using an interactive timeline (editable by dragging) and a map view showing ordered stops and route geometries. The ``Git mode'' toggle, when turned off, hides Git-specific vocabulary for non-technical users. The survey feature ranking (Q5, Appendix~\ref{app:agg-res}) reinforces this: concrete features such as timeline/map visualisation and automatic optimisation are valued most, so Git semantics must be implemented to enable VCS, but presented through an approachable interface that does not assume prior Git knowledge.
 
 Figure~\ref{fig:gitrip-concept} illustrates GiTrip's core concept: collaborators branch a trip plan, the auto-scheduler produces feasible itineraries under real-world constraints, and branches merge via structured conflict resolution into a final plan.
 
@@ -61,4 +58,4 @@ their rationale are detailed in Chapter~\ref{ch:requirements}.
 
 GiTrip is a suitably challenging 3rd-year Computer Science project because it combines: (i) VCS semantics over structured data, (ii) constraint-aware scheduling with external routing services, and (iii) interactive visualisation with editable timelines and maps. The project makes a novel contribution by applying VCS semantics to collaborative trip planning, addressing a documented gap in existing tools that are further discussed in Chapter~\ref{ch:background}.
 
-The practical significance extends beyond casual holidays. Constraint-aware trip planning is particularly valuable for large-scale group trips: university society trips, school excursions respecting venue hours and group size, or corporate retreats where sub-groups explore different options. In each case, branching, auto-scheduling, and merging address coordination failures that currently rely on ad-hoc spreadsheets and group chats. More broadly, the approach generalises to other collaborative planning domains such as event logistics and resource allocation.
+The significance extends beyond casual holidays to university society trips, school excursions, and corporate retreats, and generalises to other collaborative planning domains such as event logistics and resource allocation.

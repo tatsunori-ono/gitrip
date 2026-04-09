@@ -343,23 +343,16 @@ edit mode, markers are draggable and route polylines are updated. Transit legs
 display additional stop markers and per-leg mode styling (e.g., dashed walking
 segments).
 
-\section{Exports and PWA Features}
-\subsection{PDF Export}
-PDF export is implemented using browser printing (\texttt{window.print()}),
-which is robust and avoids server-side rendering complexity.
-
-\subsection{iCalendar Export}
-GiTrip generates \texttt{text/calendar} content in iCalendar format and serves
-it as an \texttt{.ics} download. The iCalendar format is defined by RFC 5545
-\cite{ref_rfc5545}.
-
-\subsection{PWA and Offline}
-GiTrip includes PWA support through a web application manifest and a service
-worker. The manifest standard is specified by W3C \cite{ref_appmanifest}, and
-service workers are defined by W3C as an event-driven background worker model
-enabling offline caching \cite{ref_service_workers}. Offline behaviour focuses
-on caching core assets and recently accessed pages; limitations include the
-inability to guarantee offline routing responses.
+\section{Exports and PWA Offline Features}
+PDF export uses browser printing (\texttt{window.print()}) to avoid server-side
+rendering complexity. iCalendar (\texttt{.ics}) export follows
+RFC 5545~\cite{ref_rfc5545}. GiTrip includes PWA support through a web
+application manifest and a service worker. The manifest is specified by
+W3C~\cite{ref_appmanifest}, and service workers are defined by W3C as enabling
+offline caching~\cite{ref_service_workers}. Offline behaviour focuses on caching
+core assets and recently accessed pages; limitations include the inability to
+guarantee offline routing responses. Screenshots of the PDF/iCalendar export and
+PWA installation are provided in Appendix~\ref{appx:diagrams}.
 
 \section{Supporting Features}
 \subsection{Weather Integration}

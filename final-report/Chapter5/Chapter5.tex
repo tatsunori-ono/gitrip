@@ -6,8 +6,7 @@
 
 This chapter describes GiTrip's architecture, data model, and major subsystems:
 repository semantics, planner, routing, merging, UI interaction surfaces, and
-supporting features. Each section explains not only what was built but why that approach was chosen over alternatives.
-
+supporting features.
 \section{High-level Architecture}
 GiTrip is a server-rendered web application with the following architecture:
 \begin{itemize}
@@ -48,7 +47,7 @@ growth.
 Figure~\ref{fig:erd} shows the entity relationship (ER) diagram for GiTrip's data
 model using Crow's foot notation. The core version-control triad (Repo, Branch, Commit) mirrors Git
 semantics, while the embedded Snapshot structure captures itinerary-specific data
-as JSON within each commit row. Solid-bordered entities are persisted as SQLite tables; dashed-bordered entities represent JSON structures embedded within the \texttt{snapshot} column of each Commit. Primary keys are underlined in the diagram. Crow's foot endpoints: double bar = exactly one, circle--bar = zero or one, fork--bar = one or many, fork--circle = zero or many.
+as JSON within each commit row. Solid-bordered entities are SQLite tables; dashed-bordered entities are JSON structures within each Commit's \texttt{snapshot} column. Primary keys are underlined.
 
 \begin{figure}[H]
   \centering
@@ -71,7 +70,7 @@ Commits store complete plan snapshots. Snapshot versioning was selected over del
 \begin{itemize}
   \item \texttt{snapshot.plan}: the itinerary (days and stops).
   \item \texttt{snapshot.planInput}: planner inputs for reproducibility and UI defaults.
-  \item \texttt{snapshot.files}: a key-value map for branch-level metadata. For example, the trip description (\texttt{files.description}), which collaborators can edit independently on separate branches. The merge engine performs per-key three-way merging on this map, detecting conflicts when both sides change the same key.
+  \item \texttt{snapshot.files}: a key-value map for branch-level metadata. For example, the trip description (\texttt{files.description}), which collaborators edit independently and the merge engine reconciles per-key.
 \end{itemize}
 
 \subsection{Plan Schema}
@@ -155,20 +154,7 @@ Given ordered stops $S_1,\dots,S_n$, per-leg travel $T_i$ (minutes from $S_{i-1}
 a_1 = A+f,\quad d_1=a_1+D_1,\quad
 a_i = d_{i-1}+b+T_i,\quad d_i=a_i+D_i \ (i>1).
 \]
-If $(a_i,d_i)$ violates a desired window or opening-hours constraint, the scheduler shifts to the nearest valid interval inside $[A,B]$; otherwise, it spills to the next day's $A+f$. The user preference (compact vs.\ sparse) controls additional free time after each stop.
-
-\subsection{Opening Hours Nudging}
-Opening hours are treated as a hard-ish constraint: if the proposed interval
-falls in a closed period, the scheduler nudges to the next open slot where
-feasible; otherwise the stop is rejected for that day. This is crucial for
-feasibility and directly addresses common itinerary failures in real planning.
-
-\subsection{Compact vs Sparse Modes}
-To improve user control over schedule density, the scheduler supports
-``compact'' and ``sparse'' modes. Compact mode packs stops tightly, while sparse
-mode distributes stops across the active window by inserting additional gap time.
-This preference improves perceived usefulness because different trip styles (e.g.,
-city sprint vs relaxed exploration) require different pacing.
+If $(a_i,d_i)$ violates a desired window or opening-hours constraint, the scheduler shifts to the nearest valid interval inside $[A,B]$; otherwise, it spills to the next day's $A+f$. The user preference (compact vs.\ sparse) controls additional free time after each stop: compact mode packs stops tightly, while sparse mode distributes them with additional gaps. Opening hours are a hard constraint: if the proposed interval falls in a closed period, the scheduler nudges to the next open slot; otherwise the stop is rejected for that day.
 
 \subsection{Design Trade-offs and Pseudocode}
 A key design trade-off in the scheduler is the choice of NN ordering over more sophisticated approaches such as exact TSP solvers~\cite{ref_tsp_study} or meta-heuristics~\cite{ref_tsp_local_search}. NN was selected because: (i) it runs in $O(n^2)$ time and performs acceptably for typical trip sizes ($n \le 50$ stops), (ii) it avoids the implementation complexity and computational cost of exact solvers, and (iii) API quota constraints make it infeasible to request large distance matrices repeatedly during interactive editing. For trips with more than 50 stops, the scheduler divides the itinerary into day-sized chunks and optimises each independently, which maintains reasonable performance while accepting some suboptimality in cross-day transitions. The full pseudocode for the auto-scheduler is presented in Chapter~\ref{ch:implementation} (Algorithm~\ref{alg:planner}).
@@ -216,7 +202,7 @@ Conflicts surfaced include:
         stop-key sets below 0.4), requiring whole-plan selection.
 \end{itemize}
 
-This set is intentionally constrained to keep the UI manageable for non-experts while preventing silent data loss. Figure~\ref{fig:ui-merge} shows the merge conflict resolution page: per-stop version picker
+Figure~\ref{fig:ui-merge} shows the merge conflict resolution page: per-stop version picker
 (Base/Source/Target), side-by-side plan comparison, a diff map with
 colour-coded markers, three-way timeline compare, and a live-updating merged timeline preview.
 

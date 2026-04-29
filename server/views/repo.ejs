@@ -3025,28 +3025,31 @@
     }
 
     // Assign lanes (columns) newest → oldest.
-    // Build a set of commit IDs reachable via first-parent from each branch
-    // head so we can keep the current branch on lane 0 (straight vertical).
+    // Build a set of commit IDs reachable via first-parent from main's HEAD.
+    // We keep main's trunk on lane 0 (straight vertical) regardless of which
+    // branch the user is currently viewing — this matches git's convention
+    // of treating main as the stable trunk.
     const commitSet = new Map(commits.map(c => [c.id, c]));
-    // Build set of commit IDs that are heads of OTHER branches (not current)
+    // Heads of branches OTHER than main; used to pick the trunk-side parent
+    // when walking through merge commits.
     const otherBranchHeads = new Set();
     (branchesData || []).forEach(b => {
-      if (b.name !== currentBranch && b.head_commit_id) {
+      if (b.name !== 'main' && b.head_commit_id) {
         otherBranchHeads.add(b.head_commit_id);
       }
     });
-    const currentBranchIds = new Set();
+    const mainBranchIds = new Set();
     {
-      const currentHead = (branchesData || []).find(b => b.name === currentBranch);
-      let walk = currentHead ? currentHead.head_commit_id : null;
+      const mainHead = (branchesData || []).find(b => b.name === 'main');
+      let walk = mainHead ? mainHead.head_commit_id : null;
       while (walk && commitSet.has(walk)) {
-        currentBranchIds.add(walk);
+        mainBranchIds.add(walk);
         const parents = commitSet.get(walk).parents || [];
         if (parents.length <= 1) {
           walk = parents[0] || null;
         } else {
-          // Merge commit: pick the parent that is NOT a head of another branch.
-          // That parent is the one that was on the current branch before the merge.
+          // Merge commit: prefer the parent that is NOT a head of another
+          // branch — that parent is the one that was on main before the merge.
           const mainParent = parents.find(p => !otherBranchHeads.has(p)) || parents[0];
           walk = mainParent;
         }
@@ -3067,7 +3070,7 @@
 
       // If not reserved, prefer lane 0 for current-branch commits
       if (lane === -1) {
-        if (currentBranchIds.has(c.id) && (activeLanes[0] === null || activeLanes[0] === undefined)) {
+        if (mainBranchIds.has(c.id) && (activeLanes[0] === null || activeLanes[0] === undefined)) {
           lane = 0;
           if (activeLanes.length === 0) activeLanes.push(null);
         } else {
@@ -3088,8 +3091,8 @@
       // Sort parents so that the one on the current branch comes first
       // (inherits this commit's lane → stays straight)
       const sorted = [...parents].sort((a, b) => {
-        const aMain = currentBranchIds.has(a) ? 0 : 1;
-        const bMain = currentBranchIds.has(b) ? 0 : 1;
+        const aMain = mainBranchIds.has(a) ? 0 : 1;
+        const bMain = mainBranchIds.has(b) ? 0 : 1;
         return aMain - bMain;
       });
       sorted.forEach((pid, pi) => {
@@ -3121,11 +3124,18 @@
 
     const laneCount = activeLanes.length || 1;
     const rowCount = commits.length;
-    const laneGap = 36;
+    const laneGap = 48;
     const rowGap = 38;
     const radius = 7;
     const margin = 16;
     const labelSpace = 180;
+    // One stable colour per side-lane so two overlapping curves can be told
+    // apart even when their midpoints coincide. Lane 0 (main) stays neutral.
+    const LANE_COLOURS = ['', '#2563eb', '#7c3aed', '#db2777', '#0d9488', '#b45309', '#059669'];
+    function laneColour(laneIdx) {
+      if (!laneIdx) return null;
+      return LANE_COLOURS[laneIdx % LANE_COLOURS.length] || '#6b7280';
+    }
     const width = margin * 2 + laneGap * (laneCount - 1) + radius * 2 + labelSpace;
     const height = margin * 2 + rowGap * (rowCount - 1) + radius * 2;
 
@@ -3146,10 +3156,18 @@
     // Edges from commit → parents (curved when crossing lanes)
     commits.forEach(c => {
       const parents = Array.isArray(c.parents) ? c.parents : [];
+      const childInfo = nodeInfo.get(c.id);
       parents.forEach(pid => {
         if (!nodeInfo.has(pid)) return;
         const childPos = posForId(c.id);
         const parentPos = posForId(pid);
+        const parentInfo = nodeInfo.get(pid);
+        // Use the side-lane endpoint to pick a colour: if either end is on
+        // a side lane (not 0), colour the edge by that lane so overlapping
+        // curves into different branches stay distinguishable.
+        const sideLane = Math.max(childInfo?.lane || 0, parentInfo?.lane || 0);
+        const colour = laneColour(sideLane);
+
         if (childPos.x === parentPos.x) {
           // Same lane — straight line
           const line = document.createElementNS(ns, 'line');
@@ -3158,6 +3176,7 @@
           line.setAttribute('x2', parentPos.x);
           line.setAttribute('y2', parentPos.y - radius);
           line.setAttribute('class', 'branch-edge');
+          if (colour) line.setAttribute('stroke', colour);
           svg.appendChild(line);
         } else {
           // Cross-lane — smooth cubic bezier
@@ -3170,6 +3189,7 @@
           );
           path.setAttribute('class', 'branch-edge');
           path.setAttribute('fill', 'none');
+          if (colour) path.setAttribute('stroke', colour);
           svg.appendChild(path);
         }
       });
@@ -3178,9 +3198,11 @@
     // Nodes + branch labels
     commits.forEach(c => {
       const pos = posForId(c.id);
+      const info = nodeInfo.get(c.id);
       const headNames = branchHeadsByCommit.get(c.id) || null;
       const isHead = !!headNames && headNames.length > 0;
       const isCurrent = isHead && headNames.includes(currentBranch);
+      const colour = laneColour(info?.lane || 0);
 
       const circle = document.createElementNS(ns, 'circle');
       circle.setAttribute('cx', pos.x);
@@ -3192,6 +3214,8 @@
       if (isCurrent) cls += ' branch-node-current';
       circle.setAttribute('class', cls);
       circle.setAttribute('data-id', c.id);
+      // Tint side-lane nodes so the label/dot/edge share a colour.
+      if (colour && !isCurrent) circle.setAttribute('stroke', colour);
 
       const title = document.createElementNS(ns, 'title');
       title.textContent = `${c.id.slice(0, 8)} — ${c.message}`;
@@ -3207,6 +3231,7 @@
         if (isCurrent) lcls += ' branch-label-current';
         label.setAttribute('class', lcls);
         label.textContent = headNames.join(', ');
+        if (colour && !isCurrent) label.setAttribute('fill', colour);
         svg.appendChild(label);
       }
     });

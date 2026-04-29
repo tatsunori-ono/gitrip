@@ -464,12 +464,22 @@
       </details>
 
       <!-- Hidden data (not visible to user) -->
+      <input type="hidden" id="placeId_${idx}" />
       <input type="hidden" id="lat_${idx}" />
       <input type="hidden" id="lng_${idx}" />
       <input type="hidden" id="osmType_${idx}" />
       <input type="hidden" id="osmId_${idx}" />
       <input type="hidden" id="openingHours_${idx}" />
     `;
+  }
+
+  // Stable globally-unique stop id; survives across branches so that
+  // unrelated stops in different branches don't collide on positional ids.
+  function newPlaceId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return 'p-' + crypto.randomUUID();
+    }
+    return 'p-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
   }
 
   function addRow() {
@@ -479,6 +489,8 @@
     block.id = 'rowBlock_' + idx;
     block.innerHTML = rowTemplate(idx);
     root.appendChild(block);
+    const pidEl = document.getElementById('placeId_' + idx);
+    if (pidEl) pidEl.value = newPlaceId();
     wireNameInput(idx);
     initRowMap(idx);
     updateDayOptions();
@@ -646,6 +658,9 @@
     addRow();
     const idx = i - 1;
     if (!place) return;
+
+    const pidEl = document.getElementById('placeId_' + idx);
+    if (pidEl && place.id) pidEl.value = String(place.id);
 
     const nameEl = document.getElementById('name_' + idx);
     if (nameEl && place.name) nameEl.value = place.name;
@@ -1152,8 +1167,11 @@
       const latRaw = el('lat')?.value;
       const lngRaw = el('lng')?.value;
 
+      const pidVal = (el('placeId')?.value || '').trim();
+      const stableId = pidVal || newPlaceId();
+
       places.push({
-        id: 'p' + k,
+        id: stableId,
         name,
         lat: latRaw === '' || latRaw == null ? undefined : Number(latRaw),
         lng: lngRaw === '' || lngRaw == null ? undefined : Number(lngRaw),

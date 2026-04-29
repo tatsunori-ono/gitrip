@@ -330,6 +330,7 @@ const deleteStarsForRepo = db.prepare(
 // deletion helpers
 const deleteRepo = db.prepare('DELETE FROM repos WHERE id=?');
 const deleteBranchesForRepo = db.prepare('DELETE FROM branches WHERE repo_id=?');
+const deleteBranchById = db.prepare('DELETE FROM branches WHERE id=?');
 const deleteCommitsForRepo = db.prepare('DELETE FROM commits WHERE repo_id=?');
 const deleteCollaboratorsForRepo = db.prepare(
   'DELETE FROM repo_collaborators WHERE repo_id=?'
@@ -2040,6 +2041,22 @@ app.get('/ui/repos/:repoId', (req, res) => {
 
   const canEdit = !requireWriteAccess(repo, req.user);
 
+  // Determine which branches are already merged into main: a branch is
+  // considered merged when its HEAD commit is reachable from main's HEAD.
+  const mergedBranchNames = (() => {
+    const mainBr = branches.find((b) => b.name === 'main');
+    if (!mainBr || !mainBr.head_commit_id) return [];
+    const mainAncestors = ancestorsSet(mainBr.head_commit_id);
+    return branches
+      .filter(
+        (b) =>
+          b.name !== 'main' &&
+          b.head_commit_id &&
+          mainAncestors.has(b.head_commit_id)
+      )
+      .map((b) => b.name);
+  })();
+
   res.render('repo', {
     repo,
     branches,
@@ -2054,6 +2071,7 @@ app.get('/ui/repos/:repoId', (req, res) => {
     forkedFromRestricted,
     starCount,
     isStarred,
+    mergedBranchNames,
     pageTitle: repo.title,
     pageDescription: `View and edit the "${repo.title}" trip itinerary on GiTrip. Branch, merge, and collaborate on this travel plan.`,
     canonicalUrl: canonical(req, `/ui/repos/${repo.id}`),
@@ -2715,6 +2733,39 @@ app.post('/api/repos/:repoId/branches', (req, res) => {
   const id = uuid();
   insertBranch.run(id, repo.id, name, fromCommitId || null, nowISO());
   res.json({ ok: true, id });
+});
+
+// Delete a branch — only allowed when its HEAD is already reachable from main
+// (i.e. merged), so we don't silently lose unmerged work. main itself can
+// never be deleted.
+app.post('/ui/repos/:repoId/branches/:name/delete', (req, res) => {
+  const repo = getRepo.get(req.params.repoId);
+  if (!repo) return res.status(404).send('Repo not found');
+  const writeErr = requireWriteAccess(repo, req.user);
+  if (writeErr) return res.status(403).send(writeErr);
+
+  const name = String(req.params.name || '');
+  if (name === 'main') return res.status(400).send('Cannot delete main');
+
+  const br = getBranch.get(repo.id, name);
+  if (!br) return res.status(404).send('Branch not found');
+
+  const mainBr = getBranch.get(repo.id, 'main');
+  const mainHeadId = mainBr?.head_commit_id || null;
+  const mainAncestors = mainHeadId ? ancestorsSet(mainHeadId) : new Set();
+  if (br.head_commit_id && !mainAncestors.has(br.head_commit_id)) {
+    return res
+      .status(409)
+      .send(
+        'Branch has unmerged commits. Merge it into main before deleting.'
+      );
+  }
+
+  deleteBranchById.run(br.id);
+  if (repo.current_branch === name) {
+    updateRepoCurrentBranch.run('main', repo.id);
+  }
+  res.redirect(`/ui/repos/${repo.id}?branch=main`);
 });
 
 // Save trip description (auto-save from edit tab)
@@ -3431,6 +3482,18 @@ app.get('/ui/repos/:repoId/merge', (req, res) => {
     mergedPlan = resMerge.snapshot?.plan || null;
   }
 
+  const mainBr = branches.find((b) => b.name === 'main');
+  const mainHeadId = mainBr?.head_commit_id || null;
+  const mainAncestors = mainHeadId ? ancestorsSet(mainHeadId) : new Set();
+  const mergedBranchNames = branches
+    .filter(
+      (b) =>
+        b.name !== 'main' &&
+        b.head_commit_id &&
+        mainAncestors.has(b.head_commit_id)
+    )
+    .map((b) => b.name);
+
   res.render('merge', {
     repo,
     branches,
@@ -3446,6 +3509,7 @@ app.get('/ui/repos/:repoId/merge', (req, res) => {
     pageTitle: `Merge – ${repo.title}`,
     pageDescription: `Merge branches for the "${repo.title}" trip on GiTrip. Compare plans, resolve conflicts, and unify your itinerary.`,
     mergedPlan,
+    mergedBranchNames,
   });
 });
 

@@ -117,11 +117,9 @@ The project adopted an \emph{iterative waterfall} approach combining three princ
     \item \textbf{Incremental feature delivery aligned to MoSCoW (Must/Should/Could/Won't)}, where Must-haves were implemented first to reach an end-to-end Minimum Viable Product (MVP) before Should-haves and hardening.
     \item \textbf{Continuous feedback} through regular supervisor meetings (Term~1 Weeks 1, 2, 4, 5, 7, 9; Term~2 Weeks 1, 2, 4, 6, 8, 10).
 \end{enumerate}
-Milestones remained stable to match university deadlines (Project Specification, Progress Report, Evaluation Day, final submission), while work within each milestone was refined through short feedback cycles. For example, Application Programming Interface (API) quota exhaustion identified in Term~1 Week~7 prompted immediate caching and fallback implementation, and the merge engine required three rewrites as edge cases emerged during testing. This reduced technical risk by identifying integration issues early and ensuring the system remained demonstrable throughout Term~1.
+Milestones remained stable to match university deadlines (Project Specification, Progress Report, Evaluation Day, final submission), while work within each milestone was refined through short feedback cycles. For example, Application Programming Interface (API) quota exhaustion in Term~1 Week~7 prompted immediate caching and fallback implementation. This maps onto a conventional software life cycle~\cite{ref_sommerville} but revisited earlier phases when feedback demanded it (e.g., the merge engine was revised three times), retaining milestone-driven predictability while incorporating iterative adaptability~\cite{ref_sommerville}.
 
 Early work consisted of competitor analysis, literature review, and a preliminary survey (November 2025), producing the Project Specification, MoSCoW objectives, and an evaluation plan.
-
-This maps onto a conventional software life cycle~\cite{ref_sommerville}: requirements analysis, design, implementation, testing, and deployment. Rather than executing these strictly in sequence, the iterative waterfall approach revisited earlier phases when feedback demanded it (e.g., the merge engine was revised three times). This retained milestone-driven predictability while incorporating the adaptability that Sommerville identifies as a key advantage of iterative models~\cite{ref_sommerville}.
 
 \section{Time Management and Work Tracking}
 Time management combined a Gantt-style plan with weekly goal-setting and review.
@@ -156,7 +154,7 @@ Progress was monitored using three artefacts:
         Answers'', and ``To-dos and Summary''. Whenever questions arose between
         meetings, they were recorded in the ``Questions to Ask'' section of the
         next meeting file. Notes were additionally backed up via an automated
-        GitHub plugin sync (every 15 minutes) to reduce the risk of data loss,
+        GitHub~\cite{ref_github} plugin sync (every 15 minutes) to reduce the risk of data loss,
         as shown in Appendix~\ref{appx:github-backup}. A sample meeting
         note demonstrating this structure is included in
         Appendix~\ref{appx:meeting-note}.
@@ -173,11 +171,12 @@ Progress was monitored using three artefacts:
 
 \begin{figure}[H]
   \centering
-  % \includegraphics[width=0.92\linewidth]{Figures/github-commits.png}
-  \fbox{\parbox{0.92\linewidth}{\centering TODO: screenshot of the GitHub
-  repository commit history or network graph showing branching and regular
-  commit activity across the project timeline.}}
-  \caption{GitHub commit history showing regular development activity.}
+  \includegraphics[width=0.92\linewidth]{Figures/github-commits.png}
+  \caption{GitHub contribution heatmap for 2025--2026. This shows the author's
+           overall GitHub activity; GiTrip development accounts for the
+           majority of contributions from August 2025 onwards. Contributions
+           span multiple GiTrip repositories as the project was restructured
+           across iterations.}
   \label{fig:github-commits}
 \end{figure}
 
@@ -236,10 +235,10 @@ Table~\ref{tab:milestone-comparison} compares planned versus actual completion d
 \label{tab:milestone-comparison}
 \end{table}
 
-To sustain momentum, each week ended with an integrated build and a short review against the schedule, recording what was completed, what slipped, and why. This reduced the accumulation of partially integrated features and ensured that demonstrations for supervision and Evaluation Day rehearsal were based on the current main branch.
+To sustain momentum, each week ended with an integrated build and a short review against the schedule, recording what was completed and what slipped. This ensured that demonstrations for supervision and Evaluation Day were always based on the current main branch.
 
 \section{Stakeholder Management}
-The key stakeholder was the supervisor, Professor Mike Joy, with whom 12 meetings were held across both terms using the structured Cornell-inspired Obsidian notes described in Section~\ref{sec:methodology}. Each meeting followed a repeatable process: before the meeting, progress updates and questions were recorded under ``Updates from Last Meeting'' and ``Questions to Ask''; during the meeting, the supervisor's responses were noted beside each item; after the meeting, action items were summarised in the ``To-dos'' section and converted into the next week's tasks. This structured approach reduced rework by systematically organising outstanding tasks.
+The key stakeholder was the supervisor, Professor Mike Joy, with whom 12 meetings were held across both terms using the Cornell-inspired Obsidian notes described in Section~\ref{sec:methodology}. Each meeting followed a repeatable process: before the meeting, progress updates and questions were prepared; during the meeting, responses were noted beside each item; afterwards, action items were summarised and converted into the next week's tasks. This structured approach reduced rework by systematically organising outstanding tasks.
 
 Due to the author's course transfer from MEng to BSc Computer Science, the
 supervision meeting recordings on Tabula are split across two pages
@@ -305,15 +304,15 @@ Evaluation risk was reduced by preparing a seeded merge-conflict repository and 
 \section{Unforeseen Issues and How They Were Handled}
 Several unforeseen issues required adaptation:
 
-\textbf{API quota exhaustion.} OpenRouteService rate limits were hit during intensive testing, causing the planner to return errors. This was addressed with a Time-To-Live (TTL) cache, bounded concurrency (maximum four simultaneous requests), and a Haversine-based fallback so the planner degrades gracefully rather than failing entirely. The required schedule adjustment was absorbed by buffer time.
+\textbf{API quota exhaustion.} OpenRouteService rate limits were hit during intensive testing, causing the planner to return errors. A Time-To-Live (TTL) cache, bounded concurrency (maximum four simultaneous requests), and Haversine fallback were added so the planner degrades gracefully rather than failing entirely. The schedule adjustment was absorbed by buffer time.
 
-\textbf{Merge edge cases.} Early merge testing revealed that \texttt{JSON.stringify}-based comparison produced false positives when key ordering differed between branches. The merge engine was reworked to use deep structural equality and stable stop identifiers, completed before Evaluation Day and backed by 16 automated tests.
+\textbf{Merge edge cases.} \texttt{JSON.stringify}-based comparison produced false positives when key ordering differed between branches. The merge engine was reworked to use deep structural equality and stable stop identifiers, completed before Evaluation Day and backed by 16 automated tests.
 
-\textbf{Place search typo sensitivity.} Nominatim's exact index matching meant near-miss queries (e.g.\ ``stick n sushi'' for ``Sticks'n'Sushi'') often returned no results. This was resolved by adding Photon as a fuzzy-search fallback, called only when Nominatim returns zero results; Photon uses the same OpenStreetMap data but with Elasticsearch-based typo-tolerant indexing.
+\textbf{Place search typo sensitivity.} Nominatim's exact index matching meant near-miss queries (e.g.\ ``stick n sushi'' for ``Sticks'n'Sushi'') returned no results. Adding Photon as a fuzzy-search fallback resolved this using the same OpenStreetMap data with typo-tolerant indexing.
 
-\textbf{Constraint-aware interactive editing.} Timeline drag-and-drop interactions could easily produce invalid plans (overlaps, insufficient travel time, or violations of daily active hours). A two-tier validation strategy was adopted: UI-level constraint enforcement with immediate visual feedback during edits, and server-side feasibility checks on commit.
+\textbf{Constraint-aware interactive editing.} Timeline drag-and-drop could produce invalid plans. A two-tier strategy was adopted: UI-level constraint enforcement with visual feedback, and server-side feasibility checks on commit.
 
-\textbf{Increased operational work.} Deployment hardening (security headers, Content Security Policy (CSP), HTTPS, rate limiting) and public Fly.io deployment were not originally scoped but proved necessary for reliable demonstrations and remote testing. The boundary excluding generative Artificial Intelligence (AI) remained unchanged to avoid scope creep.
+\textbf{Increased operational work.} Deployment hardening (security headers, Content Security Policy (CSP), HTTPS, rate limiting) and Fly.io deployment were not originally scoped but proved necessary for reliable demonstrations. The boundary excluding generative Artificial Intelligence (AI) remained unchanged to avoid scope creep.
 
 \section{Legal, Ethical, Social and Professional Issues}
 
@@ -341,7 +340,7 @@ Accessibility followed Web Content Accessibility Guidelines (WCAG)~2.2~\cite{ref
   \begin{subfigure}[t]{\linewidth}
     \centering
     \includegraphics[width=0.85\linewidth]{Figures/ui-accessibility-2.png}
-    \caption{Quick explore page with high-contrast and large font enabled.}
+    \caption{Quick explore page with high-contrast, read-aloud mode, and large font enabled.}
   \end{subfigure}
   \caption{Accessibility features: font-size adjustment, high-contrast mode,
   and read-aloud mode.}
@@ -387,7 +386,7 @@ comparison with the updated timeline in the main body
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.92\linewidth]{Figures/github-backup.png}
+  \includegraphics[width=\linewidth]{Figures/github-backup.png}
   \caption{Supervisor meeting notes backed up on GitHub every 15 minutes
            (if any changes are made).}
   \label{fig:github-backup}
@@ -403,13 +402,8 @@ are filled in during and after.
 
 \begin{figure}[H]
   \centering
-  % \includegraphics[width=0.85\linewidth]{Figures/meeting-note-sample.png}
-  \fbox{\parbox{0.85\linewidth}{\centering TODO: screenshot of one Obsidian
-  meeting note showing the three sections: ``Updates from Last Meeting and
-  General Notes'', ``Questions to Ask and Answers'', and ``To-dos and
-  Summary''.}}
-  \caption{Sample supervision meeting note in Obsidian (Cornell-inspired
-           structure).}
+  \includegraphics[width=\linewidth]{Figures/meeting-note-sample.png}
+  \caption{Sample supervision meeting note in Obsidian (Cornell-inspired structure).}
   \label{fig:meeting-note}
 \end{figure}
 

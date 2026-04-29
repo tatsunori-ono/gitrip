@@ -185,14 +185,22 @@
     }
 
     .merge-timeline {
-      margin-top: 6px;
+      margin-top: 4px;
     }
 
     .merge-timeline svg {
-      width: 100%;
-      height: 100px;
+      width: 96%;
+      height: auto;
+      max-height: 110px;
       display: block;
-      overflow: hidden;
+      overflow: visible;
+    }
+
+    .merge-timeline-col {
+      padding: 6px 8px;
+    }
+    .merge-timeline-grid {
+      gap: 6px;
     }
 
     .merge-conflict rect.tl-block-rect {
@@ -279,6 +287,15 @@
     .merge-stop-toggle .stop-option .opt-time {
       color: var(--muted);
       font-size: 11px;
+    }
+    .merge-stop-toggle .stop-option .opt-name {
+      display: block;
+      width: 100%;
+      color: var(--text, #111);
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: 2px;
+      line-height: 1.2;
     }
 
     @media (max-width: 900px) {
@@ -445,23 +462,49 @@
     .high-contrast .diff-view-toggle button { background: #1a1a2e; color: #e0e0e0; border-color: #444; }
     .high-contrast .diff-view-toggle button.active { background: #6366f1; color: #fff; }
     .high-contrast .merged-preview-card { background: #1a1a2e; border-color: #444; color: #e0e0e0; }
+
+    .schedule-overlap-warning {
+      margin: 8px 0;
+      padding: 10px 12px;
+      border: 1px solid #f97316;
+      background: #fff7ed;
+      border-radius: 8px;
+      color: #7c2d12;
+      font-size: 13px;
+    }
+    .schedule-overlap-warning .so-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .schedule-overlap-warning ul {
+      margin: 4px 0 0 0;
+      padding-left: 18px;
+    }
+    .schedule-overlap-warning li { margin: 2px 0; }
+    .schedule-overlap-warning code {
+      font-size: 12px;
+      background: #fed7aa;
+      padding: 0 4px;
+      border-radius: 3px;
+    }
     .high-contrast .unified-stop-label.source-label { background: #064e3b; color: #f8f8f8; }
     .high-contrast .unified-stop-label.target-label { background: #1e3a5f; color: #f8f8f8; }
   </style>
 
+  <% const _mergedSet = new Set(typeof mergedBranchNames === 'undefined' ? [] : (mergedBranchNames || [])); %>
   <div class="card">
     <form class="row" method="get" action="">
       <label>Source
         <select name="source">
           <% branches.forEach(b=>{ %>
-            <option value="<%= b.name %>" <%= b.name===source?'selected':'' %>><%= b.name %></option>
+            <option value="<%= b.name %>" <%= b.name===source?'selected':'' %>><%= b.name %><%= _mergedSet.has(b.name) ? ' (merged)' : '' %></option>
           <% }) %>
         </select>
       </label>
       <label>Target
         <select name="target">
           <% branches.forEach(b=>{ %>
-            <option value="<%= b.name %>" <%= b.name===target?'selected':'' %>><%= b.name %></option>
+            <option value="<%= b.name %>" <%= b.name===target?'selected':'' %>><%= b.name %><%= _mergedSet.has(b.name) ? ' (merged)' : '' %></option>
           <% }) %>
         </select>
       </label>
@@ -485,7 +528,7 @@
         No merge conflicts detected. Review the plan comparison below, then merge into
         <strong><%= target %></strong>.
       </p>
-      <form method="post"
+      <form id="mergeDirectForm" method="post"
             action="/api/repos/<%= repo.id %>/merge"
             onsubmit="return mergeDirect(event)">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -498,7 +541,7 @@
     <% } else { %>
       <p>There are <strong><%= conflicts.length %></strong> conflicts. Resolve them below.</p>
 
-      <form method="post"
+      <form id="mergeResolveForm" method="post"
             action="/ui/repos/<%= repo.id %>/merge-resolve"
             onsubmit="return submitResolutions()">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -532,28 +575,53 @@
                   </div>
                 </div>
               <% } else if (c.type==='plan-stop-time') { %>
+                <%
+                  const tHasBase = !!c.base;
+                  const tDefault = tHasBase ? 'base' : (c.ours ? 'ours' : 'theirs');
+                  const tShortName = (n) => {
+                    const s = String(n || '').trim();
+                    if (!s) return 'Untitled';
+                    const i = s.indexOf(',');
+                    return (i > 0 ? s.slice(0, i) : s).trim();
+                  };
+                  const tOursName = tShortName(c.ours?.name);
+                  const tTheirsName = tShortName(c.theirs?.name);
+                  const tBaseName = tShortName(c.base?.name);
+                  const tNameLabel = tOursName === tTheirsName
+                    ? tOursName
+                    : `${tOursName} ↔ ${tTheirsName}`;
+                %>
                 <div>
                   <strong>Stop time conflict:</strong>
-                  day <code><%= c.dayId %></code>,
-                  stop <code><%= c.stopId %></code>
+                  <span><%= tNameLabel %></span>
+                  <span class="time"> on <%= c.dayId.startsWith('day-') ? c.dayId.slice(4) : c.dayId %></span>
+                </div>
+                <div class="time" style="margin-top:2px">
+                  <code style="font-size:11px;opacity:0.7"><%= c.stopId %></code>
                 </div>
                 <div class="row">
                   <label>
-                    <input type="radio" name="c<%= idx %>" value="base" checked />
-                    Keep base times
-                    <span class="time">
-                      (<%= c.base?.arrive || '??:??' %> → <%= c.base?.depart || '??:??' %>)
-                    </span>
+                    <input type="radio" name="c<%= idx %>" value="base"
+                           <%= tDefault === 'base' ? 'checked' : '' %>
+                           <%= !tHasBase ? 'disabled' : '' %> />
+                    <%= tHasBase ? 'Keep base times' : 'Remove on merge (no base version)' %>
+                    <% if (tHasBase) { %>
+                      <span class="time">
+                        (<%= c.base.arrive || '??:??' %> → <%= c.base.depart || '??:??' %>)
+                      </span>
+                    <% } %>
                   </label>
                   <label>
-                    <input type="radio" name="c<%= idx %>" value="ours" />
+                    <input type="radio" name="c<%= idx %>" value="ours"
+                           <%= tDefault === 'ours' ? 'checked' : '' %> />
                     Use source times
                     <span class="time">
                       (<%= c.ours?.arrive || '??:??' %> → <%= c.ours?.depart || '??:??' %>)
                     </span>
                   </label>
                   <label>
-                    <input type="radio" name="c<%= idx %>" value="theirs" />
+                    <input type="radio" name="c<%= idx %>" value="theirs"
+                           <%= tDefault === 'theirs' ? 'checked' : '' %> />
                     Use target times
                     <span class="time">
                       (<%= c.theirs?.arrive || '??:??' %> → <%= c.theirs?.depart || '??:??' %>)
@@ -564,7 +632,7 @@
                 <div class="conflict-compare">
                   <div class="conflict-compare-card">
                     <div class="label">Base</div>
-                    <div><%= c.base?.arrive || '??:??' %> &rarr; <%= c.base?.depart || '??:??' %></div>
+                    <div><%= tHasBase ? `${c.base.arrive || '??:??'} → ${c.base.depart || '??:??'}` : '— (not present)' %></div>
                   </div>
                   <div class="conflict-compare-card" style="background:#ecfdf3;border-color:#bbf7d0">
                     <div class="label">Source</div>
@@ -576,10 +644,26 @@
                   </div>
                 </div>
               <% } else if (c.type==='plan-stop-delete') { %>
+                <%
+                  const dShortName = (n) => {
+                    const s = String(n || '').trim();
+                    if (!s) return 'Untitled';
+                    const i = s.indexOf(',');
+                    return (i > 0 ? s.slice(0, i) : s).trim();
+                  };
+                  const dName = dShortName(
+                    (c.ours && c.ours.name) ||
+                    (c.theirs && c.theirs.name) ||
+                    (c.base && c.base.name)
+                  );
+                %>
                 <div>
                   <strong>Stop deleted vs edited:</strong>
-                  day <code><%= c.dayId %></code>,
-                  stop <code><%= c.stopId %></code>
+                  <span><%= dName %></span>
+                  <span class="time"> on <%= c.dayId.startsWith('day-') ? c.dayId.slice(4) : c.dayId %></span>
+                </div>
+                <div class="time" style="margin-top:2px">
+                  <code style="font-size:11px;opacity:0.7"><%= c.stopId %></code>
                 </div>
                 <p class="time">
                   One branch deleted this stop while the other edited it. Choose what to keep.
@@ -806,7 +890,7 @@
                   </div>
                 </div>
               <% } %>
-              <input type="hidden" id="meta<%= idx %>" value='<%- JSON.stringify(c) %>' />
+              <input type="hidden" id="meta<%= idx %>" value="<%= JSON.stringify(c) %>" />
             </li>
           <% }) %>
         </ul>
@@ -815,6 +899,7 @@
         <div style="margin-top:16px">
           <h3 class="merged-preview-heading">Merged plan preview</h3>
           <p class="time">Updates live as you change conflict resolutions and per-stop toggles.</p>
+          <div id="scheduleOverlapWarning" class="schedule-overlap-warning" style="display:none"></div>
           <div class="merged-preview-card" id="mergedPlanPreview">
             <div class="plan-preview-empty">Calculating merged plan...</div>
           </div>
@@ -845,32 +930,60 @@
         });
       }
 
-      function computeDiffStatus(plan) {
-        var status = {};
-        if (!plan || !Array.isArray(plan.days)) return status;
-        plan.days.forEach(function(d) {
-          if (!d || !Array.isArray(d.stops)) return;
-          d.stops.forEach(function(s) {
-            if (!s) return;
-            var key = d.id + '::' + s.id;
-            var bs = baseStopIndex[key];
-            if (!bs) {
-              status[key] = 'added';
-            } else if (bs.arrive !== s.arrive || bs.depart !== s.depart) {
-              status[key] = 'modified';
-            } else {
-              status[key] = 'unchanged';
-            }
+      function indexPlanStops(plan) {
+        var idx = {};
+        if (plan && Array.isArray(plan.days)) {
+          plan.days.forEach(function(d) {
+            if (!d || !Array.isArray(d.stops)) return;
+            d.stops.forEach(function(s) {
+              if (s) idx[d.id + '::' + s.id] = s;
+            });
           });
-        });
+        }
+        return idx;
+      }
+
+      var ourStopIndex = indexPlanStops(ourPlan);
+      var theirStopIndex = indexPlanStops(theirPlan);
+
+      // Status reflects what the merge user cares about:
+      // "unchanged" → both branches agree (no attention needed);
+      // "added"     → only this branch has it (and base didn't either);
+      // "modified"  → both have it but with different times,
+      //               OR this branch kept it while the other removed it;
+      // "removed"   → base had it but this branch doesn't.
+      function computeDiffStatus(plan, otherIndex) {
+        var status = {};
+        if (plan && Array.isArray(plan.days)) {
+          plan.days.forEach(function(d) {
+            if (!d || !Array.isArray(d.stops)) return;
+            d.stops.forEach(function(s) {
+              if (!s) return;
+              var key = d.id + '::' + s.id;
+              var os = otherIndex[key];
+              var bs = baseStopIndex[key];
+              if (os) {
+                if (os.arrive === s.arrive && os.depart === s.depart) {
+                  status[key] = 'unchanged';
+                } else {
+                  status[key] = 'modified';
+                }
+              } else if (!bs) {
+                status[key] = 'added';
+              } else {
+                status[key] = 'modified';
+              }
+            });
+          });
+        }
         Object.keys(baseStopIndex).forEach(function(key) {
           if (!(key in status)) status[key] = 'removed';
         });
         return status;
       }
 
-      var ourDiffStatus = computeDiffStatus(ourPlan);
-      var theirDiffStatus = computeDiffStatus(theirPlan);
+      var ourDiffStatus = computeDiffStatus(ourPlan, theirStopIndex);
+      var theirDiffStatus = computeDiffStatus(theirPlan, ourStopIndex);
 
       function diffClass(statusMap, dayId, stopId) {
         var key = dayId + '::' + stopId;
@@ -1151,6 +1264,25 @@
     <p class="time">Pick which version of each changed stop to include. Unchanged stops are kept automatically.</p>
     <div id="mergeStopToggles"></div>
     <div id="timelineMerged" style="margin-top:10px"></div>
+    <div id="scheduleOverlapWarningBottom" class="schedule-overlap-warning" style="display:none"></div>
+    <% if (baseId) { %>
+      <% if (!conflicts.length) { %>
+        <div class="section-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px">
+          <button class="btn btn-primary" type="submit" form="mergeDirectForm">
+            Merge now
+          </button>
+        </div>
+      <% } else { %>
+        <div class="section-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px">
+          <div class="conflict-badge" id="conflictBadgeBottom">
+            <span class="badge-count" id="conflictBadgeCountBottom">0</span> / <span id="conflictBadgeTotalBottom">0</span> resolved
+          </div>
+          <button class="btn btn-primary" type="submit" form="mergeResolveForm">
+            Apply resolutions &amp; Merge
+          </button>
+        </div>
+      <% } %>
+    <% } %>
   </div>
 </section>
 
@@ -1175,7 +1307,7 @@ function buildBaseIndex(plan) {
   }
   return idx;
 }
-function buildDiffMap(plan, baseIdx) {
+function buildDiffMap(plan, baseIdx, otherIdx) {
   const status = {};
   if (!plan || !Array.isArray(plan.days)) return status;
   plan.days.forEach(d => {
@@ -1183,18 +1315,27 @@ function buildDiffMap(plan, baseIdx) {
     d.stops.forEach(s => {
       if (!s) return;
       const key = d.id + '::' + s.id;
+      const os = otherIdx ? otherIdx[key] : null;
       const bs = baseIdx[key];
-      if (!bs) status[key] = 'added';
-      else if (bs.arrive !== s.arrive || bs.depart !== s.depart) status[key] = 'modified';
-      else status[key] = 'unchanged';
+      if (os) {
+        status[key] = (os.arrive === s.arrive && os.depart === s.depart)
+          ? 'unchanged'
+          : 'modified';
+      } else if (!bs) {
+        status[key] = 'added';
+      } else {
+        status[key] = 'modified';
+      }
     });
   });
   Object.keys(baseIdx).forEach(key => { if (!(key in status)) status[key] = 'removed'; });
   return status;
 }
 const _baseIdx = buildBaseIndex(basePlan);
-const ourDiffMap = buildDiffMap(ourPlan, _baseIdx);
-const theirDiffMap = buildDiffMap(theirPlan, _baseIdx);
+const _ourIdx = buildBaseIndex(ourPlan);
+const _theirIdx = buildBaseIndex(theirPlan);
+const ourDiffMap = buildDiffMap(ourPlan, _baseIdx, _theirIdx);
+const theirDiffMap = buildDiffMap(theirPlan, _baseIdx, _ourIdx);
 
 async function mergeDirect(e){
   e.preventDefault();
@@ -1280,6 +1421,44 @@ function toMin(t) {
   return (parts[0] || 0) * 60 + (parts[1] || 0);
 }
 
+// Visible timeline range: take the union of each plan's user-defined
+// active hours (so a plan extended to e.g. 4:00–23:00 is honoured on the
+// merge screen). Also expand to cover any stops that happen to fall
+// outside that window, so nothing is clipped. Falls back to 8:00–22:00.
+const timelineRange = (() => {
+  let lo = Infinity;
+  let hi = -Infinity;
+  const consider = (m) => {
+    if (m == null) return;
+    if (m < lo) lo = m;
+    if (m > hi) hi = m;
+  };
+  [basePlan, ourPlan, theirPlan].forEach((plan) => {
+    if (!plan) return;
+    if (plan.activeHours) {
+      consider(toMin(plan.activeHours.start));
+      consider(toMin(plan.activeHours.end));
+    }
+    if (Array.isArray(plan.days)) {
+      plan.days.forEach((d) => {
+        if (!d || !Array.isArray(d.stops)) return;
+        d.stops.forEach((s) => {
+          consider(toMin(s && s.arrive));
+          consider(toMin(s && s.depart));
+        });
+      });
+    }
+  });
+  if (lo === Infinity || hi === -Infinity) {
+    return { actStart: 8 * 60, actEnd: 22 * 60 };
+  }
+  const start = Math.max(0, Math.floor(lo / 60) * 60);
+  const end = Math.min(24 * 60, Math.ceil(hi / 60) * 60);
+  // Always show at least a 4-hour window so a single short stop doesn't render absurdly.
+  if (end - start < 240) return { actStart: start, actEnd: start + 240 };
+  return { actStart: start, actEnd: end };
+})();
+
 function renderTimeline(container, plan, conflictSet, diffMap) {
   if (!container) return;
   container.innerHTML = '';
@@ -1288,8 +1467,8 @@ function renderTimeline(container, plan, conflictSet, diffMap) {
     return;
   }
 
-  const actStart = 8 * 60;
-  const actEnd = 22 * 60;
+  const actStart = timelineRange.actStart;
+  const actEnd = timelineRange.actEnd;
   const span = actEnd - actStart;
 
   plan.days.forEach((d) => {
@@ -1308,44 +1487,72 @@ function renderTimeline(container, plan, conflictSet, diffMap) {
 
     const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     bg.setAttribute('x', '0');
-    bg.setAttribute('y', '26');
+    bg.setAttribute('y', '22');
     bg.setAttribute('width', '1000');
-    bg.setAttribute('height', '28');
+    bg.setAttribute('height', '18');
     bg.setAttribute('fill', '#ffffff');
     bg.setAttribute('stroke', '#e0e0e6');
     svg.appendChild(bg);
 
-    for (let h = 8; h <= 22; h++) {
+    const startH = Math.floor(actStart / 60);
+    const endH = Math.ceil(actEnd / 60);
+    for (let h = startH; h <= endH; h++) {
       const x = ((h * 60 - actStart) / span) * 1000;
+      if (x < 0 || x > 1000) continue;
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', String(x));
-      line.setAttribute('y1', '26');
+      line.setAttribute('y1', '18');
       line.setAttribute('x2', String(x));
-      line.setAttribute('y2', '54');
+      line.setAttribute('y2', '42');
       line.setAttribute('stroke', '#e5e7eb');
       svg.appendChild(line);
 
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('x', String(x + 4));
-      text.setAttribute('y', '20');
-      text.setAttribute('font-size', '10');
+      text.setAttribute('y', '14');
+      text.setAttribute('font-size', '9');
       text.setAttribute('fill', '#6b7280');
       text.textContent = `${h}:00`;
       svg.appendChild(text);
     }
 
-    const stops = Array.isArray(d.stops) ? d.stops : [];
-    stops.forEach((s) => {
-      const a = toMin(s.arrive);
-      const b = toMin(s.depart);
-      if (a == null || b == null) return;
-      let left = ((a - actStart) / span) * 1000;
-      let width = Math.max(8, ((b - a) / span) * 1000);
-      if (left < 0) { width = Math.max(8, width + left); left = 0; }
-      if (left + width > 1000) { width = Math.max(8, 1000 - left); }
-      if (left >= 1000) return;
-      const labelYOffset = (Math.floor(left / 50) % 2) ? 22 : 38;
-      const labelY = 68 + labelYOffset;
+    // First pass: compute geometry + assign each label a row that doesn't
+    // collide with previously placed labels (greedy row allocation).
+    const rawStops = Array.isArray(d.stops) ? d.stops : [];
+    const placed = [];
+    const rowEndX = []; // last used right edge per row
+    const labelBaseY = 50;
+    const rowSpacing = 10;
+    // Approx label-width per glyph at font-size 9 (sans-serif average).
+    const charWidth = 5.0;
+    const labelGap = 4;
+
+    rawStops
+      .map((s) => ({ s, a: toMin(s.arrive), b: toMin(s.depart) }))
+      .filter(({ a, b }) => a != null && b != null)
+      .sort((x, y) => x.a - y.a)
+      .forEach(({ s, a, b }) => {
+        let left = ((a - actStart) / span) * 1000;
+        let width = Math.max(8, ((b - a) / span) * 1000);
+        if (left < 0) { width = Math.max(8, width + left); left = 0; }
+        if (left + width > 1000) { width = Math.max(8, 1000 - left); }
+        if (left >= 1000) return;
+
+        const text = shortName(s.name);
+        const labelLeft = left + 6;
+        const estWidth = Math.max(20, text.length * charWidth + 6);
+        const labelRight = Math.min(1000, labelLeft + estWidth);
+
+        let rowIdx = 0;
+        while (rowIdx < rowEndX.length && rowEndX[rowIdx] > labelLeft - labelGap) {
+          rowIdx++;
+        }
+        rowEndX[rowIdx] = labelRight;
+        placed.push({ s, left, width, labelLeft, labelRight, rowIdx, text });
+      });
+
+    placed.forEach(({ s, left, width, labelLeft, labelRight, rowIdx, text }) => {
+      const labelY = labelBaseY + rowIdx * rowSpacing;
 
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       const stopKey = `${d.id}::${s.id}`;
@@ -1362,18 +1569,18 @@ function renderTimeline(container, plan, conflictSet, diffMap) {
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       rect.setAttribute('class', 'tl-block-rect');
       rect.setAttribute('x', String(left));
-      rect.setAttribute('y', '30');
+      rect.setAttribute('y', '24');
       rect.setAttribute('width', String(width));
-      rect.setAttribute('height', '20');
-      rect.setAttribute('rx', '6');
+      rect.setAttribute('height', '14');
+      rect.setAttribute('rx', '5');
       g.appendChild(rect);
 
       const leader = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       leader.setAttribute('class', 'tl-leader');
       leader.setAttribute('x1', String(left + 6));
-      leader.setAttribute('y1', '52');
+      leader.setAttribute('y1', '40');
       leader.setAttribute('x2', String(left + 6));
-      leader.setAttribute('y2', String(labelY - 10));
+      leader.setAttribute('y2', String(labelY - 7));
       leader.setAttribute('stroke', '#9ca3af');
       leader.setAttribute('stroke-width', '1');
       leader.setAttribute('stroke-dasharray', '2,2');
@@ -1381,15 +1588,26 @@ function renderTimeline(container, plan, conflictSet, diffMap) {
 
       const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       label.setAttribute('class', 'tl-label');
-      label.setAttribute('x', String(left + 6));
+      label.setAttribute('x', String(labelLeft));
       label.setAttribute('y', String(labelY));
-      label.setAttribute('font-size', '10');
+      label.setAttribute('font-size', '9');
       label.setAttribute('fill', '#111');
-      label.textContent = shortName(s.name);
+      label.textContent = text;
+      // Truncate visually if even after row allocation the text would
+      // run past the SVG's right edge.
+      if (labelRight >= 1000) {
+        label.setAttribute('textLength', String(Math.max(20, 1000 - labelLeft - 4)));
+        label.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      }
       g.appendChild(label);
 
       svg.appendChild(g);
     });
+
+    // Resize the viewBox so all rows fit; CSS height:auto preserves aspect.
+    const usedRows = Math.max(1, rowEndX.length);
+    const totalHeight = labelBaseY + usedRows * rowSpacing + 4;
+    svg.setAttribute('viewBox', `0 0 1000 ${totalHeight}`);
 
     tl.appendChild(svg);
     dayWrap.appendChild(tl);
@@ -1426,15 +1644,30 @@ function applyResolutions() {
       r.choice === 'ours' ? ourPlan :
       r.choice === 'theirs' ? theirPlan :
       basePlan;
-    if (!pick || !pick.days) return;
-    const pd = pick.days.find((d) => d.id === r.dayId);
-    const ps = pd ? (pd.stops || []).find((s) => s.id === r.stopId) : null;
-    if (!ps) return;
-    const md = merged.days?.find((d) => d.id === r.dayId);
-    const ms = md ? (md.stops || []).find((s) => s.id === r.stopId) : null;
-    if (ms) {
-      ms.arrive = ps.arrive;
-      ms.depart = ps.depart;
+    const pd = pick?.days?.find((d) => d.id === r.dayId);
+    const ps = pd ? (pd.stops || []).find((s) => s && s.id === r.stopId) : null;
+
+    if (!Array.isArray(merged.days)) merged.days = [];
+    let md = merged.days.find((d) => d.id === r.dayId);
+    if (!md) {
+      if (!ps) return;
+      const dayDate =
+        ourPlan?.days?.find((d) => d.id === r.dayId)?.date ||
+        theirPlan?.days?.find((d) => d.id === r.dayId)?.date ||
+        basePlan?.days?.find((d) => d.id === r.dayId)?.date ||
+        r.dayId;
+      md = { id: r.dayId, date: dayDate, stops: [] };
+      merged.days.push(md);
+    }
+    if (!Array.isArray(md.stops)) md.stops = [];
+
+    const idx = md.stops.findIndex((s) => s && s.id === r.stopId);
+    if (ps) {
+      const copy = JSON.parse(JSON.stringify(ps));
+      if (idx >= 0) md.stops[idx] = copy;
+      else md.stops.push(copy);
+    } else if (idx >= 0) {
+      md.stops.splice(idx, 1);
     }
   });
 
@@ -1550,6 +1783,7 @@ function renderMergeToggles() {
       const key = info.dayId + '::' + info.stopId;
       const row = document.createElement('div');
       row.className = 'merge-stop-toggle';
+      row.__mergeStopInfo = info;
 
       /* Stop info */
       const infoDiv = document.createElement('div');
@@ -1572,6 +1806,12 @@ function renderMergeToggles() {
       const radioName = 'stop-' + key;
       const defaultChoice = _toggleDefaults[key] || 'base';
 
+      // Show per-version name only when the versions disagree on it,
+      // so the user can see which actual stop each option represents.
+      const names = [info.base?.name, info.ours?.name, info.theirs?.name]
+        .filter(Boolean);
+      const namesDiffer = new Set(names).size > 1;
+
       [
         { value: 'base', label: 'Base', stop: info.base },
         { value: 'ours', label: 'Source', stop: info.ours },
@@ -1586,7 +1826,7 @@ function renderMergeToggles() {
         radio.value = opt.value;
         if (opt.value === defaultChoice) radio.checked = true;
         if (!opt.stop) radio.disabled = true;
-        radio.addEventListener('change', onToggleChange);
+        radio.addEventListener('change', () => onToggleChange());
         lbl.appendChild(radio);
 
         const text = document.createElement('span');
@@ -1605,6 +1845,13 @@ function renderMergeToggles() {
           lbl.appendChild(gone);
         }
 
+        if (namesDiffer && opt.stop && opt.stop.name) {
+          const optName = document.createElement('span');
+          optName.className = 'opt-name';
+          optName.textContent = shortName(opt.stop.name);
+          lbl.appendChild(optName);
+        }
+
         opts.appendChild(lbl);
       });
 
@@ -1614,6 +1861,27 @@ function renderMergeToggles() {
   });
 
   container.appendChild(list);
+  refreshToggleTitles();
+}
+
+function refreshToggleTitles() {
+  document.querySelectorAll('.merge-stop-toggle').forEach((row) => {
+    const info = row.__mergeStopInfo;
+    if (!info) return;
+    const nameEl = row.querySelector('.stop-name');
+    if (!nameEl) return;
+    const radioName = 'stop-' + info.dayId + '::' + info.stopId;
+    const checked = document.querySelector(
+      'input[name="' + CSS.escape(radioName) + '"]:checked'
+    );
+    const choice = checked ? checked.value : null;
+    const chosen =
+      choice === 'ours' ? info.ours :
+      choice === 'theirs' ? info.theirs :
+      choice === 'base' ? info.base :
+      (info.ours || info.theirs || info.base);
+    nameEl.textContent = shortName((chosen && chosen.name) || 'Stop');
+  });
 }
 
 function buildMergedFromToggles() {
@@ -1664,6 +1932,7 @@ function buildMergedFromToggles() {
 function onToggleChange() {
   const merged = buildMergedFromToggles();
   renderTimeline(document.getElementById('timelineMerged'), merged, conflictSet, null);
+  refreshToggleTitles();
 }
 
 /* Collect per-stop toggle decisions for form submission */
@@ -1690,10 +1959,43 @@ renderTimeline(document.getElementById('timelineTheirs'), theirPlan, conflictSet
 renderMergeToggles();
 onToggleChange(); /* initial merged timeline render */
 
+function syncConflictToToggle(conflictRadio) {
+  const m = conflictRadio.name.match(/^c(\d+)$/);
+  if (!m) return;
+  const ci = Number(m[1]);
+  const conflict = Array.isArray(conflictMeta) ? conflictMeta[ci] : null;
+  if (!conflict) return;
+  if (conflict.type !== 'plan-stop-time' && conflict.type !== 'plan-stop-delete') return;
+  const radioName = 'stop-' + conflict.dayId + '::' + conflict.stopId;
+  const target = document.querySelector(
+    'input[name="' + CSS.escape(radioName) + '"][value="' + conflictRadio.value + '"]'
+  );
+  if (target && !target.disabled) target.checked = true;
+}
+
+function syncToggleToConflict(toggleRadio) {
+  if (!toggleRadio.name.startsWith('stop-')) return;
+  const key = toggleRadio.name.slice(5);
+  if (!Array.isArray(conflictMeta)) return;
+  conflictMeta.forEach((conflict, ci) => {
+    if (!conflict || (conflict.type !== 'plan-stop-time' && conflict.type !== 'plan-stop-delete')) return;
+    if (conflict.dayId + '::' + conflict.stopId !== key) return;
+    const target = document.querySelector(
+      'input[name="c' + ci + '"][value="' + toggleRadio.value + '"]'
+    );
+    if (target && !target.disabled) target.checked = true;
+  });
+}
+
 document.querySelectorAll('input[type="radio"][name^="c"]').forEach((el) => {
   el.addEventListener('change', () => {
+    syncConflictToToggle(el);
     onToggleChange();
   });
+});
+
+document.querySelectorAll('input[type="radio"][name^="stop-"]').forEach((el) => {
+  el.addEventListener('change', () => syncToggleToConflict(el));
 });
 
 /* ----- Diff Map ----- */
@@ -1820,14 +2122,23 @@ document.querySelectorAll('input[type="radio"][name^="c"]').forEach((el) => {
 
 /* ---- Feature 3: Conflict count badge ---- */
 (function initConflictBadge() {
-  const badge = document.getElementById('conflictBadge');
-  const countEl = document.getElementById('conflictBadgeCount');
-  const totalEl = document.getElementById('conflictBadgeTotal');
-  if (!badge || !countEl || !totalEl) return;
+  const badges = [
+    {
+      badge: document.getElementById('conflictBadge'),
+      countEl: document.getElementById('conflictBadgeCount'),
+      totalEl: document.getElementById('conflictBadgeTotal'),
+    },
+    {
+      badge: document.getElementById('conflictBadgeBottom'),
+      countEl: document.getElementById('conflictBadgeCountBottom'),
+      totalEl: document.getElementById('conflictBadgeTotalBottom'),
+    },
+  ].filter(b => b.badge && b.countEl && b.totalEl);
+  if (!badges.length) return;
 
   const metas = document.querySelectorAll('input[id^="meta"]');
   const total = metas.length;
-  totalEl.textContent = total;
+  badges.forEach(b => { b.totalEl.textContent = total; });
 
   function updateBadge() {
     /* Count resolved: any conflict with a checked radio is considered resolved */
@@ -1836,8 +2147,10 @@ document.querySelectorAll('input[type="radio"][name^="c"]').forEach((el) => {
       const checked = document.querySelector('input[name="c' + i + '"]:checked');
       if (checked) resolved++;
     });
-    countEl.textContent = resolved;
-    badge.classList.toggle('all-resolved', resolved === total);
+    badges.forEach(b => {
+      b.countEl.textContent = resolved;
+      b.badge.classList.toggle('all-resolved', resolved === total);
+    });
   }
 
   updateBadge();
@@ -1890,18 +2203,102 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Detect schedule overlaps in the merged plan: pairs of stops on the same
+// day whose [arrive, depart] intervals overlap. This is NOT a merge conflict
+// in the data model (different stops can coexist in the data), but it IS a
+// real-world problem since you can't be at two places at once.
+function findScheduleOverlaps(plan) {
+  const overlaps = [];
+  if (!plan || !Array.isArray(plan.days)) return overlaps;
+  plan.days.forEach((d) => {
+    if (!d || !Array.isArray(d.stops)) return;
+    const stops = d.stops
+      .filter((s) => s && s.arrive && s.depart)
+      .map((s) => ({ ...s, _a: toMin(s.arrive), _b: toMin(s.depart) }))
+      .filter((s) => s._a != null && s._b != null)
+      .sort((x, y) => x._a - y._a);
+    for (let i = 0; i < stops.length; i++) {
+      for (let j = i + 1; j < stops.length; j++) {
+        if (stops[j]._a >= stops[i]._b) break; // sorted, no further overlap
+        const ovStart = Math.max(stops[i]._a, stops[j]._a);
+        const ovEnd = Math.min(stops[i]._b, stops[j]._b);
+        if (ovEnd > ovStart) {
+          overlaps.push({
+            dayId: d.id,
+            dayDate: d.date || d.id,
+            a: stops[i],
+            b: stops[j],
+            ovStart,
+            ovEnd,
+          });
+        }
+      }
+    }
+  });
+  return overlaps;
+}
+
+function renderScheduleOverlaps() {
+  const targets = [
+    document.getElementById('scheduleOverlapWarning'),
+    document.getElementById('scheduleOverlapWarningBottom'),
+  ].filter(Boolean);
+  if (!targets.length) return;
+  const merged = buildMergedFromToggles();
+  const overlaps = findScheduleOverlaps(merged);
+  if (!overlaps.length) {
+    targets.forEach((el) => {
+      el.style.display = 'none';
+      el.innerHTML = '';
+    });
+    return;
+  }
+  const formatRange = (a, b) =>
+    `${escapeHtml(a)} → ${escapeHtml(b)}`;
+  const items = overlaps.map((o) => {
+    const aName = escapeHtml(shortName(o.a.name) || 'Stop');
+    const bName = escapeHtml(shortName(o.b.name) || 'Stop');
+    const overlapWindow = `${escapeHtml(toHHMM(o.ovStart))}–${escapeHtml(toHHMM(o.ovEnd))}`;
+    return (
+      `<li><strong>${aName}</strong> (${formatRange(o.a.arrive, o.a.depart)})` +
+      ` and <strong>${bName}</strong> (${formatRange(o.b.arrive, o.b.depart)})` +
+      ` overlap on ${escapeHtml(o.dayDate)} <code>${overlapWindow}</code>.</li>`
+    );
+  });
+  const html =
+    `<div class="so-title">⚠ ${overlaps.length} schedule overlap${overlaps.length > 1 ? 's' : ''} in merged plan</div>` +
+    `<div>You can't be at two places at once. The merge will go through, but you'll want to fix this in the timeline editor afterwards.</div>` +
+    `<ul>${items.join('')}</ul>`;
+  targets.forEach((el) => {
+    el.innerHTML = html;
+    el.style.display = '';
+  });
+}
+
+function toHHMM(min) {
+  if (!Number.isFinite(min)) return '??:??';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
 /* Initial render + hook into change events */
 renderMergedPlanPreview();
+renderScheduleOverlaps();
 
 /* Re-render preview whenever conflict radios or stop toggles change */
 const _origOnToggleChange = onToggleChange;
 onToggleChange = function() {
   _origOnToggleChange();
   renderMergedPlanPreview();
+  renderScheduleOverlaps();
 };
 
 /* Also listen to conflict resolution radios for preview updates */
 document.querySelectorAll('input[type="radio"][name^="c"]').forEach(el => {
-  el.addEventListener('change', renderMergedPlanPreview);
+  el.addEventListener('change', () => {
+    renderMergedPlanPreview();
+    renderScheduleOverlaps();
+  });
 });
 </script>

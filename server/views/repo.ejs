@@ -1,5 +1,6 @@
 <!-- server/views/repo.ejs -->
 <% const isOwner = repo.owner_user_id && currentUser && currentUser.id === repo.owner_user_id; %>
+<% const _mergedSet = new Set(typeof mergedBranchNames === 'undefined' ? [] : (mergedBranchNames || [])); %>
 
 <section class="container repo-container">
   <!-- Title + meta row -->
@@ -97,7 +98,7 @@
         <label>View branch
           <select id="branchSelect">
             <% branches.forEach(b=> { %>
-              <option value="<%= b.name %>" <%=b.name===currentBranch ? 'selected' : '' %>><%= b.name %></option>
+              <option value="<%= b.name %>" <%=b.name===currentBranch ? 'selected' : '' %>><%= b.name %><%= _mergedSet.has(b.name) ? ' (merged)' : '' %></option>
             <% }) %>
           </select>
         </label>
@@ -124,14 +125,14 @@
         <label>Source <span class="time">(merge from)</span>
           <select name="source">
             <% branches.forEach(b=> { %>
-              <option value="<%= b.name %>" <%=b.name===currentBranch ? 'selected' : '' %>><%= b.name %></option>
+              <option value="<%= b.name %>" <%=b.name===currentBranch ? 'selected' : '' %>><%= b.name %><%= _mergedSet.has(b.name) ? ' (merged)' : '' %></option>
             <% }) %>
           </select>
         </label>
         <label>Target <span class="time">(merge into)</span>
           <select name="target">
             <% branches.forEach(b=> { %>
-              <option value="<%= b.name %>" <%=b.name==='main' ? 'selected' : '' %>><%= b.name %></option>
+              <option value="<%= b.name %>" <%=b.name==='main' ? 'selected' : '' %>><%= b.name %><%= _mergedSet.has(b.name) ? ' (merged)' : '' %></option>
             <% }) %>
           </select>
         </label>
@@ -614,13 +615,31 @@
           <h2><i class="fa-solid fa-code-branch" aria-hidden="true"></i> Branches</h2>
           <div class="chips">
             <% branches.forEach(b=> { %>
-              <span class="chip">
+              <% const _isMerged = _mergedSet.has(b.name); %>
+              <span class="chip<%= _isMerged ? ' chip-merged' : '' %>">
                 <strong>
                   <%= b.name %>
                 </strong>
+                <% if (_isMerged) { %>
+                  <span class="branch-merged-badge" title="This branch has been merged into main">
+                    <i class="fa-solid fa-check" aria-hidden="true"></i> Merged
+                  </span>
+                <% } %>
                 <span class="time">
                   HEAD: <code><%= (b.head_commit_id || '').slice(0,8) || 'null' %></code>
                 </span>
+                <% if (_isMerged && b.name !== 'main' && canEdit) { %>
+                  <form method="post"
+                        action="/ui/repos/<%= repo.id %>/branches/<%= encodeURIComponent(b.name) %>/delete"
+                        onsubmit="return confirm('Delete merged branch &quot;<%= b.name %>&quot;? This cannot be undone.');"
+                        style="display:inline">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button class="btn sm branch-delete-btn" type="submit"
+                            title="Delete this merged branch">
+                      <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    </button>
+                  </form>
+                <% } %>
               </span>
             <% }); %>
           </div>
@@ -951,8 +970,13 @@
       body: JSON.stringify({ name, fromCommitId: headCommit ? headCommit.id : null })
     });
     const msg = document.getElementById('branchMsg');
-    if (r.ok) { msg.textContent = 'Created.'; location.reload(); }
-    else { msg.textContent = 'Failed.'; }
+    if (r.ok) {
+      msg.textContent = 'Created.';
+      window.location.href =
+        '/ui/repos/<%= repo.id %>?branch=' + encodeURIComponent(name);
+    } else {
+      msg.textContent = 'Failed.';
+    }
   }
 
   // Restore / rollback helper

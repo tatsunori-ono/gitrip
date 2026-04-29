@@ -26,7 +26,27 @@
 
       <label>
         Password
-        <input type="password" name="password" id="signupPassword" required minlength="10">
+        <span class="pw-wrap">
+          <input type="password" name="password" id="signupPassword" required minlength="10">
+          <button type="button" class="pw-toggle" data-pw-target="signupPassword"
+                  aria-label="Show password" aria-pressed="false">
+            <svg class="pw-icon pw-icon-show" viewBox="0 0 24 24" width="18" height="18"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg class="pw-icon pw-icon-hide" viewBox="0 0 24 24" width="18" height="18"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                 style="display:none">
+              <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.77 19.77 0 0 1 5.06-5.94"/>
+              <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a19.86 19.86 0 0 1-3.17 4.19"/>
+              <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </button>
+        </span>
       </label>
       <ul class="pw-rules" id="pwRules">
         <li id="pwLen"><span class="pw-circle"></span> At least 10 characters</li>
@@ -37,7 +57,27 @@
 
       <label>
         Confirm password
-        <input type="password" name="confirm" id="signupConfirm" required minlength="10">
+        <span class="pw-wrap">
+          <input type="password" name="confirm" id="signupConfirm" required minlength="10">
+          <button type="button" class="pw-toggle" data-pw-target="signupConfirm"
+                  aria-label="Show password" aria-pressed="false">
+            <svg class="pw-icon pw-icon-show" viewBox="0 0 24 24" width="18" height="18"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg class="pw-icon pw-icon-hide" viewBox="0 0 24 24" width="18" height="18"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                 style="display:none">
+              <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.77 19.77 0 0 1 5.06-5.94"/>
+              <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a19.86 19.86 0 0 1-3.17 4.19"/>
+              <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </button>
+        </span>
       </label>
       <ul class="pw-rules" id="pwMatchRules" style="display:none">
         <li id="pwMatch"><span class="pw-circle"></span> Passwords match</li>
@@ -101,6 +141,35 @@
   .pw-rules li.pass {
     color: #16a34a;
   }
+  .pw-wrap {
+    position: relative;
+    display: block;
+  }
+  .pw-wrap input {
+    width: 100%;
+    padding-right: 40px;
+    box-sizing: border-box;
+  }
+  .pw-toggle {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    background: transparent;
+    border: 0;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--muted, #667085);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+  }
+  .pw-toggle:hover { color: var(--text, #111827); }
+  .pw-toggle:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+  }
 </style>
 
 <script>
@@ -150,5 +219,20 @@
 
     pw.addEventListener('input', checkPassword);
     confirm.addEventListener('input', checkMatch);
+
+    document.querySelectorAll('.pw-toggle').forEach(function (btn) {
+      var target = document.getElementById(btn.getAttribute('data-pw-target'));
+      if (!target) return;
+      var showIcon = btn.querySelector('.pw-icon-show');
+      var hideIcon = btn.querySelector('.pw-icon-hide');
+      btn.addEventListener('click', function () {
+        var visible = target.type === 'text';
+        target.type = visible ? 'password' : 'text';
+        btn.setAttribute('aria-pressed', String(!visible));
+        btn.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+        showIcon.style.display = visible ? '' : 'none';
+        hideIcon.style.display = visible ? 'none' : '';
+      });
+    });
   })();
 </script>

@@ -213,8 +213,8 @@
         </label>
         <label id="focusField">Focus
           <select name="focus">
-            <option value="morning">Morning</option>
-            <option value="midday" selected>Midday</option>
+            <option value="morning" selected>Morning</option>
+            <option value="midday">Midday</option>
             <option value="night">Night</option>
           </select>
         </label>
@@ -1144,8 +1144,8 @@
     const focusSelect = document.querySelector('select[name="focus"]');
     const focusValue =
       compactness === 'sparse'
-        ? 'midday' // ignored by backend in sparse mode, but keep something sane
-        : (focusSelect && focusSelect.value) || 'midday';
+        ? 'morning' // ignored by backend in sparse mode, but keep something sane
+        : (focusSelect && focusSelect.value) || 'morning';
     const transport =
       document.querySelector('select[name="transport"]').value || 'driving';
     const branchName =

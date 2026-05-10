@@ -597,6 +597,18 @@ pre.code{
 }
 
 /* Timeline inline editor */
+.timeline,
+.timeline text,
+.timeline tspan{
+  user-select:none;
+  -webkit-user-select:none;
+}
+body.timeline-dragging,
+body.timeline-dragging *{
+  user-select:none !important;
+  -webkit-user-select:none !important;
+  cursor:grabbing !important;
+}
 .tl-block{ cursor:grab }
 .tl-block:active{ cursor:grabbing }
 .tl-handle{
@@ -665,6 +677,17 @@ pre.code{
 .branch-label-current{
   font-weight:700;
   fill:var(--primary);
+}
+.branch-label-msg{
+  font-size:11px;
+  fill:#6b7280;
+  font-weight:400;
+}
+.branch-label-guide{
+  stroke:#cbd5e1;
+  stroke-width:1;
+  stroke-dasharray:2 3;
+  opacity:.7;
 }
 
 /* ── About page: hero ── */

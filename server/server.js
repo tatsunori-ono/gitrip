@@ -1127,7 +1127,7 @@ function planToAutoPayload(plan) {
     targetDays: undefined,
     compactness: 'compact',
     orderingMode: 'relative',
-    focus: 'midday',
+    focus: 'morning',
     transport: plan?.transport || 'driving',
     places
   };
@@ -1811,6 +1811,7 @@ app.post('/api/quick/start-repo', (req, res) => {
         depart: toHHMM(departMin),
         prevTravelMin: prevTravel,
         routeMode: mode,
+        startFirst: i === 0,
       });
     }
 
@@ -1832,7 +1833,7 @@ app.post('/api/quick/start-repo', (req, res) => {
       activeHours: { start: '08:00', end: '21:00' },
       breakMinBetweenStops: breakMin,
       compactness: 'compact',
-      focus: 'midday',
+      focus: 'morning',
       transport: mode,
       places: dayStops.map((s, idx) => ({
         id: s.id || `place-${Date.now()}-${idx}`,
@@ -1843,7 +1844,6 @@ app.post('/api/quick/start-repo', (req, res) => {
         stayMin,
         enabled: true,
         startFirst: idx === 0,
-        strictOrder: idx + 1,
       })),
     };
 
@@ -2042,7 +2042,10 @@ app.get('/ui/repos/:repoId', (req, res) => {
   const canEdit = !requireWriteAccess(repo, req.user);
 
   // Determine which branches are already merged into main: a branch is
-  // considered merged when its HEAD commit is reachable from main's HEAD.
+  // considered merged when its HEAD commit is a strict ancestor of main's
+  // HEAD. A branch sharing the exact same HEAD as main hasn't diverged at
+  // all (e.g. just created off main), so it isn't "merged" — there's
+  // nothing to have been merged.
   const mergedBranchNames = (() => {
     const mainBr = branches.find((b) => b.name === 'main');
     if (!mainBr || !mainBr.head_commit_id) return [];
@@ -2052,6 +2055,7 @@ app.get('/ui/repos/:repoId', (req, res) => {
         (b) =>
           b.name !== 'main' &&
           b.head_commit_id &&
+          b.head_commit_id !== mainBr.head_commit_id &&
           mainAncestors.has(b.head_commit_id)
       )
       .map((b) => b.name);
@@ -3490,6 +3494,7 @@ app.get('/ui/repos/:repoId/merge', (req, res) => {
       (b) =>
         b.name !== 'main' &&
         b.head_commit_id &&
+        b.head_commit_id !== mainHeadId &&
         mainAncestors.has(b.head_commit_id)
     )
     .map((b) => b.name);

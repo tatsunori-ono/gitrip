@@ -1213,6 +1213,11 @@
       const stop = d.stops[idx];
       const a0 = parseHHMM(stop.arrive), b0 = parseHHMM(stop.depart);
 
+      // Stop the browser from starting a text selection on the SVG text or
+      // surrounding elements while the user drags a block.
+      ev.preventDefault();
+      try { window.getSelection()?.removeAllRanges(); } catch (e) {}
+
       const pt = svg.createSVGPoint();
       pt.x = ev.clientX; pt.y = ev.clientY;
       const matrix = svg.getScreenCTM().inverse();
@@ -1225,6 +1230,7 @@
       } else {
         drag = { type: 'move', index: idx, startX: relX, a0, b0 };
       }
+      document.body.classList.add('timeline-dragging');
       svg.setPointerCapture(ev.pointerId);
     });
 
@@ -1302,6 +1308,7 @@
         try { svg.releasePointerCapture(ev.pointerId); } catch (e) { }
       }
       drag = null;
+      document.body.classList.remove('timeline-dragging');
     }
 
     svg.addEventListener('pointerup', clearDrag);
@@ -3128,7 +3135,7 @@
     const rowGap = 38;
     const radius = 7;
     const margin = 16;
-    const labelSpace = 180;
+    const labelSpace = 240;
     // One stable colour per side-lane so two overlapping curves can be told
     // apart even when their midpoints coincide. Lane 0 (main) stays neutral.
     const LANE_COLOURS = ['', '#2563eb', '#7c3aed', '#db2777', '#0d9488', '#b45309', '#059669'];
@@ -3195,7 +3202,15 @@
       });
     });
 
-    // Nodes + branch labels
+    // Every commit's label sits in a single right-side column so labels never
+    // collide with the lane edges and you can identify every dot — including
+    // intermediate commits that aren't a branch HEAD.
+    const labelX = margin + (laneCount - 1) * laneGap + radius + 16;
+    const truncate = (s, n) => {
+      const str = String(s || '').split('\n')[0];
+      return str.length > n ? str.slice(0, n - 1) + '…' : str;
+    };
+
     commits.forEach(c => {
       const pos = posForId(c.id);
       const info = nodeInfo.get(c.id);
@@ -3203,6 +3218,19 @@
       const isHead = !!headNames && headNames.length > 0;
       const isCurrent = isHead && headNames.includes(currentBranch);
       const colour = laneColour(info?.lane || 0);
+
+      // Faint connector from the dot to the right-side label column so the
+      // eye can trace which label belongs to which dot when the dot sits in
+      // a left lane.
+      if (labelX > pos.x + radius + 4) {
+        const guide = document.createElementNS(ns, 'line');
+        guide.setAttribute('x1', pos.x + radius + 2);
+        guide.setAttribute('y1', pos.y);
+        guide.setAttribute('x2', labelX - 4);
+        guide.setAttribute('y2', pos.y);
+        guide.setAttribute('class', 'branch-label-guide');
+        svg.appendChild(guide);
+      }
 
       const circle = document.createElementNS(ns, 'circle');
       circle.setAttribute('cx', pos.x);
@@ -3223,17 +3251,37 @@
 
       svg.appendChild(circle);
 
-      if (headNames && headNames.length) {
-        const label = document.createElementNS(ns, 'text');
-        label.setAttribute('x', pos.x + radius + 10);
-        label.setAttribute('y', pos.y + 5);
+      const label = document.createElementNS(ns, 'text');
+      label.setAttribute('x', labelX);
+      label.setAttribute('y', pos.y + 4);
+      const msgSnippet = truncate(c.message, 36) || c.id.slice(0, 8);
+
+      if (isHead) {
         let lcls = 'branch-label';
         if (isCurrent) lcls += ' branch-label-current';
         label.setAttribute('class', lcls);
-        label.textContent = headNames.join(', ');
-        if (colour && !isCurrent) label.setAttribute('fill', colour);
-        svg.appendChild(label);
+        const headSpan = document.createElementNS(ns, 'tspan');
+        headSpan.textContent = headNames.join(', ');
+        label.appendChild(headSpan);
+        if (msgSnippet) {
+          const sep = document.createElementNS(ns, 'tspan');
+          sep.setAttribute('class', 'branch-label-msg');
+          sep.setAttribute('dx', '8');
+          sep.textContent = `· ${msgSnippet}`;
+          label.appendChild(sep);
+        }
+        if (colour && !isCurrent) headSpan.setAttribute('fill', colour);
+      } else {
+        label.setAttribute('class', 'branch-label branch-label-msg');
+        label.textContent = msgSnippet;
+        if (colour) label.setAttribute('fill', colour);
       }
+
+      const lblTitle = document.createElementNS(ns, 'title');
+      lblTitle.textContent = `${c.id.slice(0, 8)} — ${c.message}`;
+      label.appendChild(lblTitle);
+
+      svg.appendChild(label);
     });
 
     holder.innerHTML = '';

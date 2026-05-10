@@ -79,7 +79,7 @@
     },
     time: {
       label: 'Time Conflict',
-      desc: 'Both branches change the arrival time for Tower Bridge to different values. Source says 10:00, Target says 11:00 — a time conflict that needs manual resolution.',
+      desc: 'Both branches change the arrival time for Tower Bridge to different values. Source says 10:00, Target says 11:00 - a time conflict that needs manual resolution.',
       base: [
         stop('bm', 'British Museum', '09:00', '11:00'),
         stop('tb', 'Tower Bridge', '11:30', '12:30'),
@@ -101,7 +101,7 @@
     },
     delete: {
       label: 'Delete Conflict',
-      desc: 'Source deletes Covent Garden from the plan; Target changes its departure time. One side deleted what the other edited — a delete-vs-edit conflict.',
+      desc: 'Source deletes Covent Garden from the plan; Target changes its departure time. One side deleted what the other edited - a delete-vs-edit conflict.',
       base: [
         stop('bm', 'British Museum', '09:00', '11:00'),
         stop('tb', 'Tower Bridge', '11:30', '12:30'),

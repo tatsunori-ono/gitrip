@@ -565,7 +565,7 @@ export async function autoPlan({
   breakMinBetweenStops = 0,
   targetDays,
   compactness = 'compact',
-  focus = 'midday',
+  focus = 'morning',
   transport = 'driving',
   orderingMode = 'relative',
 } = {}) {
@@ -625,7 +625,7 @@ export async function autoPlan({
   if (compactness === 'sparse') {
     focusShift = 0;
   } else {
-    const f = focus || 'midday';
+    const f = focus || 'morning';
     focusShift =
       f === 'morning'
         ? 0

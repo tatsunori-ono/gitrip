@@ -1,7 +1,43 @@
+# Runtime image only needs: server/, cli/, package*.json, docker-entrypoint.sh, fly.toml.
+# Everything below is build/dev/academic-doc clutter that shouldn't go in the build context.
+
 node_modules
 .env
+.env.*
+.git
+.github
+.gitignore
+.vscode
+.idea
+.DS_Store
+
+# Local dev DB / WAL artefacts
 gitrip.db
 gitrip.db-journal
 gitrip.db-wal
+gitrip.db-shm
 .gitrip
+
+# Bundles / archives
 *.zip
+*.tar
+*.tar.gz
+
+# Academic / project documentation (not needed at runtime)
+final-report
+progress-report
+past-examples
+project-management
+project-specification
+plan
+requirements.md
+repo-structure.txt
+
+# Tests
+test
+**/__tests__
+**/*.test.js
+
+# Misc
+*.log
+npm-debug.log*
